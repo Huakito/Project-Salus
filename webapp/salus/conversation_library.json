@@ -1,12 +1,18 @@
 {
   "questions": [
-    {"id": "pace", "topic": "pace", "text": "What pace feels right from here?"},
     {"id": "small_win", "topic": "reflection", "text": "What is one small thing that went okay today?"},
     {"id": "easier", "topic": "support", "text": "What would make the rest of today feel a little easier?"},
-    {"id": "attention", "topic": "focus", "text": "Where would you like your attention to be for the next few minutes?"},
-    {"id": "set_down", "topic": "pause", "text": "Is there something you would like to set down for the next minute?"},
     {"id": "look_forward", "topic": "motivation", "text": "Is there anything small you are looking forward to?"},
-    {"id": "comfortable", "topic": "comfort", "text": "What would feel comfortable for the next part?"},
-    {"id": "helped", "topic": "patterns", "text": "Has anything helped the day feel more manageable so far?"}
+    {"id": "helped", "topic": "patterns", "text": "Has anything helped the day feel more manageable so far?"},
+    {"id": "headspace", "topic": "reflection", "text": "What has been taking up most of your headspace today?"},
+    {"id": "smile", "topic": "positive", "text": "Has anything made you smile lately, even for a second?"},
+    {"id": "enjoying", "topic": "interests", "text": "What have you been enjoying lately?"},
+    {"id": "missing", "topic": "connection", "text": "Is there anyone or anything you have been missing recently?"},
+    {"id": "energy_for", "topic": "motivation", "text": "What is something you wish you had a little more energy for?"},
+    {"id": "surprisingly_hard", "topic": "reflection", "text": "Has anything felt surprisingly difficult today?"},
+    {"id": "tomorrow", "topic": "future", "text": "What would make tomorrow feel like a decent day?"},
+    {"id": "proud", "topic": "positive", "text": "What is something you have done recently that you feel good about?"},
+    {"id": "change_today", "topic": "reflection", "text": "If you could change one part of today, what would it be?"},
+    {"id": "want_to_do", "topic": "interests", "text": "Is there something you have wanted to do but have not got around to yet?"}
   ]
 }
