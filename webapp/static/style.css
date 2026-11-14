@@ -1007,6 +1007,18 @@ input[type="color"] {
 .checkin-card .eyebrow, .checkin-hint, .checkin-status { color: var(--muted); }
 .checkin-transcript { border-radius: 0; background: var(--panel); color: var(--ink); }
 .checkin-reply { border-top-color: var(--line); }
+.game-board > .pose-card {
+  position: static;
+  margin-top: 14px;
+  border: 1px solid var(--edge);
+  background: var(--field);
+  color: var(--ink);
+  backdrop-filter: none;
+}
+.game-board > .pose-card #pose-count,
+.game-board > .pose-card #pose-cue { color: var(--muted); }
+.game-board > .pose-card .hold-track { background: var(--line); }
+.game-board > .pose-card .hold-track span { background: var(--ink); }
 
 /* ---- visual refinement: return to the quiet, card-based original ---- */
 
