@@ -5,6 +5,11 @@ let seenEvents = 0;
 let careStarted = 0;
 let careCleanup = () => {};
 const EARLY_STAGE_SPRITES = [0, 8, 13];
+const PLANT_SPOTS = [[24,27],[42,27],[60,27],[78,27],[24,62],[42,62],[60,62],[78,62]];
+const player = {x:50, y:82, direction:0, frame:0};
+const robot = {x:46, y:86};
+const heldKeys = new Set();
+let lastWalkFrame = 0;
 
 async function request(path, body) {
   const response = await fetch(path, body === undefined ? {} : {
@@ -31,25 +36,28 @@ function selectedPlant() {
 function render() {
   el("garden-day").textContent = state.today;
   const plot = el("garden-plot");
-  plot.replaceChildren(...state.plants.map((plant) => {
+  plot.replaceChildren(...state.plants.map((plant, index) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "garden-plant";
+    button.className = "garden-plant world-plant";
     button.classList.toggle("selected", plant.id === selectedId);
     button.classList.toggle("due", plant.needs_care);
     button.dataset.id = plant.id;
+    const spot = PLANT_SPOTS[index % PLANT_SPOTS.length];
+    button.style.left = `${spot[0]}%`; button.style.top = `${spot[1] + Math.floor(index / PLANT_SPOTS.length) * 7}%`;
     button.title = plant.needs_care ? `${plant.nickname} is ready for care` : `${plant.nickname} is settled for today`;
     const picture = document.createElement("span");
-    sprite(picture, stageSprite(plant));
-    picture.style.setProperty("--growth", plant.growth < 3 ? .72 + plant.growth * .12 : .96 + (plant.growth - 3) * .05);
+    picture.className = "world-crop";
+    const crop = ["carrot", "tomato", "wheat"][index % 3];
+    const cropStage = Math.min(4, Math.max(1, Math.ceil((plant.growth + 1) / 1.5)));
+    picture.style.backgroundImage = `url("assets/cozy-farm/crops/4x/${crop}/${crop}-${cropStage}-${["seeds","sprout","growing","ready"][cropStage - 1]}.png")`;
     picture.classList.toggle("resting", plant.needs_care && plant.care_count > 0);
-    picture.classList.toggle("flowering", plant.growth === 5);
     const label = document.createElement("strong");
     label.textContent = plant.nickname;
     const status = document.createElement("span");
     status.textContent = plant.needs_care ? "ready" : "settled";
     button.append(picture, label, status);
-    button.addEventListener("click", () => selectPlant(plant.id));
+    button.addEventListener("click", () => approachPlant(plant.id, spot));
     return button;
   }));
 
@@ -87,6 +95,50 @@ async function selectPlant(id) {
   render();
   const plant = selectedPlant();
   if (plant) request("/api/face", {text: `${plant.nickname}\n${plant.needs_care ? plant.care_label : "settled today"}`, colour: "#00ff00"}).catch(() => {});
+}
+
+function distanceTo(spot) { return Math.hypot(player.x - spot[0], player.y - spot[1]); }
+
+function sayAsRobot(text) {
+  el("robot-dialogue-text").textContent = text;
+  el("robot-dialogue").hidden = false;
+  speechSynthesis?.cancel();
+  if ("speechSynthesis" in window) {
+    const line = new SpeechSynthesisUtterance(text); line.rate = .92; speechSynthesis.speak(line);
+  }
+  request("/api/face", {text:"(o_o)\nlistening", colour:"#00ff00"}).catch(() => {});
+}
+
+function approachPlant(id, spot) {
+  if (distanceTo(spot) > 18) {
+    sayAsRobot("That plant is over there. Let's walk a little closer first.");
+    return;
+  }
+  selectPlant(id);
+  const plant = state.plants.find((item) => item.id === id);
+  sayAsRobot(plant.needs_care ? `${plant.nickname} is ready. ${plant.care_label}.` : `${plant.nickname} is settled for today.`);
+}
+
+function updateActors() {
+  const character = el("game-character");
+  character.style.left = `${player.x}%`; character.style.top = `${player.y}%`;
+  character.style.backgroundPosition = `${-player.frame * 64}px ${-player.direction * 96}px`;
+  robot.x += (player.x - 5 - robot.x) * .055; robot.y += (player.y + 3 - robot.y) * .055;
+  el("robot-follower").style.left = `${robot.x}%`; el("robot-follower").style.top = `${robot.y}%`;
+}
+
+function walkLoop(now) {
+  let dx = 0, dy = 0;
+  if (heldKeys.has("ArrowLeft") || heldKeys.has("a")) { dx = -1; player.direction = 1; }
+  if (heldKeys.has("ArrowRight") || heldKeys.has("d")) { dx = 1; player.direction = 2; }
+  if (heldKeys.has("ArrowUp") || heldKeys.has("w")) { dy = -1; player.direction = 3; }
+  if (heldKeys.has("ArrowDown") || heldKeys.has("s")) { dy = 1; player.direction = 0; }
+  if (dx || dy) {
+    player.x = Math.max(5, Math.min(94, player.x + dx * .55));
+    player.y = Math.max(12, Math.min(90, player.y + dy * .75));
+    if (now - lastWalkFrame > 95) { player.frame = (player.frame + 1) % 6; lastWalkFrame = now; }
+  } else player.frame = 0;
+  updateActors(); requestAnimationFrame(walkLoop);
 }
 
 async function loadGarden() {
@@ -244,6 +296,12 @@ function tellAboutSelected() {
 
 el("plant-care").addEventListener("click", startCareGame);
 el("care-cancel").addEventListener("click", () => { careCleanup(); el("care-game").hidden = true; });
+el("dialogue-close").addEventListener("click", () => { el("robot-dialogue").hidden = true; speechSynthesis?.cancel(); });
+window.addEventListener("keydown", (event) => {
+  if (el("garden-view").hidden || !["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","w","a","s","d"].includes(event.key)) return;
+  event.preventDefault(); heldKeys.add(event.key);
+});
+window.addEventListener("keyup", (event) => heldKeys.delete(event.key));
 el("plant-tell").addEventListener("click", tellAboutSelected);
 el("seed-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -273,3 +331,5 @@ window.setInterval(async () => {
 }, 1000);
 
 loadGarden().catch((error) => { el("garden-plot").textContent = error.message; });
+el("plant-panel").append(el("seed-shelf"), el("admin-tools"), el("garden-journal"));
+requestAnimationFrame(walkLoop);

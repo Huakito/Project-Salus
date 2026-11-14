@@ -116,16 +116,26 @@
           <div>
             <p class="eyebrow">A quiet place to return to</p>
             <h2>Your garden</h2>
-            <p>Care helps plants grow, but missing a day only pauses them. Nothing here can die.</p>
+            <p>Walk with WASD or the arrow keys. Click a plant when you are nearby.</p>
           </div>
           <div class="garden-day"><span>Garden day</span><strong id="garden-day">—</strong></div>
         </header>
 
         <section class="garden-layout">
-          <div class="greenhouse">
-            <div class="greenhouse-sky" aria-hidden="true"><span class="sun"></span><span class="cloud one"></span><span class="cloud two"></span></div>
-            <div class="greenhouse-frame" aria-hidden="true"></div>
+          <div class="garden-world" id="garden-world" tabindex="0" aria-label="Walkable garden. Use arrow keys or WASD.">
+            <div class="farm-path path-horizontal" aria-hidden="true"></div>
+            <div class="farm-path path-vertical" aria-hidden="true"></div>
+            <div class="farm-bed bed-one" aria-hidden="true"></div>
+            <div class="farm-bed bed-two" aria-hidden="true"></div>
+            <div class="farm-prop crate" aria-hidden="true"></div>
+            <div class="farm-prop barrel" aria-hidden="true"></div>
             <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
+            <div class="game-character" id="game-character" aria-hidden="true"></div>
+            <div class="robot-follower" id="robot-follower" aria-label="Salus follows you"><img src="favicon.svg" alt=""></div>
+            <div class="robot-dialogue" id="robot-dialogue" hidden>
+              <strong>Salus</strong><p id="robot-dialogue-text"></p><button type="button" id="dialogue-close">OK</button>
+            </div>
+            <div class="game-help">WASD / arrows to move · click nearby plants</div>
           </div>
           <aside class="plant-panel" id="plant-panel">
             <p class="eyebrow">Plant guide</p>
@@ -155,16 +165,17 @@
           </div>
         </section>
 
-        <section class="seed-shelf">
+        <details class="seed-shelf" id="seed-shelf">
+          <summary>Seed shelf</summary>
           <div class="section-heading"><div><p class="eyebrow">Seed shelf</p><h3>Add a plant</h3></div></div>
           <form id="seed-form">
             <div class="seed-list" id="seed-list"></div>
             <label>Nickname <input id="plant-nickname" type="text" maxlength="30" placeholder="Optional"></label>
             <button class="button" type="submit">Plant it</button>
           </form>
-        </section>
+        </details>
 
-        <details class="admin-tools">
+        <details class="admin-tools" id="admin-tools">
           <summary>Prototype admin tools</summary>
           <p>Use these to test progress without waiting for real days.</p>
           <div class="admin-actions">
@@ -174,11 +185,11 @@
             <button class="button" type="button" data-admin="flower_all">Flower everything</button>
           </div>
         </details>
-        <details class="garden-journal" open>
+        <details class="garden-journal" id="garden-journal">
           <summary>Garden journal</summary>
           <div id="garden-history"></div>
         </details>
-        <p class="asset-credit">Plant sprites: SpiderDave, CC0 via OpenGameArt.</p>
+        <p class="asset-credit">Game art: Cozy Farm Lite by Spaceyyy. Additional plants: SpiderDave, CC0.</p>
       </main>
 
       <main class="stage" id="stage" hidden>
