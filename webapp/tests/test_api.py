@@ -49,6 +49,16 @@ def test_the_page_is_served(client):
     assert "<title>Salus" in page.text
 
 
+def test_settings_survive_between_requests(client):
+    saved = client.post("/api/settings", json={
+        "spoken_guidance": False, "spoken_check_ins": True, "robot_colour": "#224466"
+    })
+    assert saved.status_code == 200
+    assert client.get("/api/settings").json() == {
+        "spoken_guidance": False, "spoken_check_ins": True, "robot_colour": "#224466"
+    }
+
+
 def test_commands_are_the_contents_of_commands_json(client, contract_file):
     served = client.get("/api/commands").json()
     on_disk = json.loads(contract_file.read_text())
@@ -339,6 +349,7 @@ def test_openai_check_in_is_bounded_and_structured():
     assert json.loads(sent["input"][1]["content"]) == {
         "check_in_question": "What pace feels right?",
         "answer": "A little slower.",
+        "local_history": "",
     }
 
 

@@ -1,0 +1,12 @@
+{
+  "questions": [
+    {"id": "pace", "topic": "pace", "text": "What pace feels right from here?"},
+    {"id": "small_win", "topic": "reflection", "text": "What is one small thing that went okay today?"},
+    {"id": "easier", "topic": "support", "text": "What would make the rest of today feel a little easier?"},
+    {"id": "attention", "topic": "focus", "text": "Where would you like your attention to be for the next few minutes?"},
+    {"id": "set_down", "topic": "pause", "text": "Is there something you would like to set down for the next minute?"},
+    {"id": "look_forward", "topic": "motivation", "text": "Is there anything small you are looking forward to?"},
+    {"id": "comfortable", "topic": "comfort", "text": "What would feel comfortable for the next part?"},
+    {"id": "helped", "topic": "patterns", "text": "Has anything helped the day feel more manageable so far?"}
+  ]
+}

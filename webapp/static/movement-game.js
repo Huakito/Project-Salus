@@ -1,72 +1,18 @@
-import { FilesetResolver, PoseLandmarker } from "./vendor/mediapipe/vision_bundle.mjs";
+import { FilesetResolver, GestureRecognizer } from "./vendor/mediapipe/vision_bundle.mjs";
 
 const el = (id) => document.getElementById(id);
 const HOLD_MS = 1600;
 const TRANSITION_SECONDS = 3;
 const POSES_PER_RUN = 5;
-const CONNECTIONS = [
-  [11, 12], [11, 13], [13, 15], [12, 14], [14, 16],
-  [11, 23], [12, 24], [23, 24], [23, 25], [24, 26], [25, 27], [26, 28],
-];
+const CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
 
 const POSES = [
-  {
-    key: "wave", name: "Wave hello", cue: "Raise either hand and give Salus a small wave", face: "(^_^)/",
-    motion: "wave",
-  },
-  {
-    key: "both_up", name: "Both hands up", cue: "Lift both hands above your shoulders", face: "\\(^o^)/",
-    matches: (p) => p[15].y < p[11].y && p[16].y < p[12].y,
-  },
-  {
-    key: "together", name: "Hands together", cue: "Bring your hands together in front of you", face: "(._.)",
-    matches: (p, s) => distance(p[15], p[16]) < s * 0.7,
-  },
-  {
-    key: "left_up", name: "Left screen hand", cue: "Lift the hand on the left of the screen", face: "(^_^)/",
-    matches: (p) => p[16].y < p[12].y && p[15].y > p[11].y,
-  },
-  {
-    key: "right_up", name: "Right screen hand", cue: "Lift the hand on the right of the screen", face: "\\(^_^)",
-    matches: (p) => p[15].y < p[11].y && p[16].y > p[12].y,
-  },
-  {
-    key: "hands_shoulders", name: "Touch shoulders", cue: "Bring each hand close to its shoulder", face: "(o_o)",
-    matches: (p, s) => distance(p[15], p[11]) < s * 0.9 && distance(p[16], p[12]) < s * 0.9,
-  },
-  {
-    key: "left_cross", name: "Cross one hand", cue: "Move the hand on the left of the screen to the opposite shoulder", face: "(^.-)",
-    matches: (p, s) => distance(p[16], p[12]) < s * 0.9,
-  },
-  {
-    key: "right_cross", name: "Cross the other hand", cue: "Move the hand on the right of the screen to the opposite shoulder", face: "(-.^)",
-    matches: (p, s) => distance(p[15], p[11]) < s * 0.9,
-  },
-  {
-    key: "crossed", name: "Cross both hands", cue: "Bring both hands toward the opposite shoulders", face: "(-_-)",
-    matches: (p, s) => distance(p[15], p[12]) < s * 1.05 && distance(p[16], p[11]) < s * 1.05,
-  },
-  {
-    key: "frame_face", name: "Frame your face", cue: "Bring both hands up beside your face", face: "\\(o_o)/",
-    required: [7, 8],
-    matches: (p, s) => distance(p[15], p[7]) < s * 1.1 && distance(p[16], p[8]) < s * 1.1,
-  },
-  {
-    key: "left_side", name: "Hand out left", cue: "Move one hand toward the left edge of the screen", face: "<(^_^)",
-    matches: (p, s) => level(p[16], p[12], s * 0.65) && p[16].x < p[12].x - s * 1.1 && p[15].y > p[11].y,
-  },
-  {
-    key: "right_side", name: "Hand out right", cue: "Move one hand toward the right edge of the screen", face: "(^_)>",
-    matches: (p, s) => level(p[15], p[11], s * 0.65) && p[15].x > p[11].x + s * 1.1 && p[16].y > p[12].y,
-  },
-];
-
-const CHECK_IN_QUESTIONS = [
-  "What pace feels right from here?",
-  "What is one small thing that went okay today?",
-  "What would make the rest of today feel a little easier?",
-  "Where would you like your attention to be for the next few minutes?",
-  "Is there something you would like to set down for the next minute?",
+  {key:"Open_Palm", name:"Open palm", cue:"Show one open hand to the camera", face:"(^_^)/"},
+  {key:"Closed_Fist", name:"Make a fist", cue:"Close one hand into a comfortable fist", face:"(•_•)"},
+  {key:"Pointing_Up", name:"Point up", cue:"Hold up one index finger", face:"(o_o)☝"},
+  {key:"Thumb_Up", name:"Thumbs up", cue:"Show one thumbs-up", face:"(^_^)b"},
+  {key:"Victory", name:"Two fingers", cue:"Show a two-finger victory sign", face:"(^_^)v"},
+  {key:"ILoveYou", name:"Three-finger sign", cue:"Show thumb, index finger and little finger", face:"\\m/(^_^)"},
 ];
 
 let landmarker;
@@ -86,6 +32,7 @@ let selectedPoses = [];
 let checkIns = [];
 let checkInAfter = null;
 let activeQuestion = "";
+let activeQuestionId = null;
 let safetyPaused = false;
 let trackingSamples = 0;
 let trackingHits = 0;
@@ -94,8 +41,6 @@ let waveSamples = [];
 let recognitionAttempts = 0;
 let recognitionHandled = false;
 
-function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
-function level(a, b, tolerance) { return Math.abs(a.y - b.y) < tolerance; }
 function delay(ms) { return new Promise((resolve) => window.setTimeout(resolve, ms)); }
 
 function shuffle(items) {
@@ -114,6 +59,12 @@ async function api(path, body) {
   const answer = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(answer.detail || `Request failed (${response.status})`);
   return answer;
+}
+
+async function getJson(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`Request failed (${response.status})`);
+  return response.json();
 }
 
 async function setRobotFace(text, colour = "#1a6964") {
@@ -142,13 +93,10 @@ async function loadTracker() {
   if (landmarker) return;
   el("camera-status").textContent = "Loading movement tracker…";
   const vision = await FilesetResolver.forVisionTasks("./vendor/mediapipe/wasm");
-  const options = {
-    baseOptions: { modelAssetPath: "./models/pose_landmarker_lite.task", delegate: "GPU" },
-    runningMode: "VIDEO", numPoses: 1,
-    minPoseDetectionConfidence: 0.55, minPosePresenceConfidence: 0.55, minTrackingConfidence: 0.55,
-  };
-  try { landmarker = await PoseLandmarker.createFromOptions(vision, options); }
-  catch { options.baseOptions.delegate = "CPU"; landmarker = await PoseLandmarker.createFromOptions(vision, options); }
+  const options = {baseOptions:{modelAssetPath:"./models/gesture_recognizer.task", delegate:"GPU"}, runningMode:"VIDEO", numHands:2,
+    minHandDetectionConfidence:0.45, minHandPresenceConfidence:0.45, minTrackingConfidence:0.45};
+  try { landmarker = await GestureRecognizer.createFromOptions(vision, options); }
+  catch { options.baseOptions.delegate = "CPU"; landmarker = await GestureRecognizer.createFromOptions(vision, options); }
 }
 
 function availablePoses() {
@@ -208,26 +156,7 @@ async function transitionToNextPose(message = "Take a moment before the next sig
   if (running && token === flowToken) showPose();
 }
 
-function visible(point) { return (point.visibility ?? 1) > 0.55; }
-
-function confidentPose(points, pose) {
-  return [0, 11, 12, 13, 14, 15, 16, ...(pose?.required ?? [])].every((index) => visible(points[index]));
-}
-
-function waveMatches(points, shoulderWidth) {
-  const wrist = points[15].y < points[11].y ? points[15] : points[16].y < points[12].y ? points[16] : null;
-  if (!wrist) {
-    waveSamples = [];
-    return false;
-  }
-  const now = performance.now();
-  waveSamples.push({ at: now, x: wrist.x });
-  waveSamples = waveSamples.filter((sample) => now - sample.at < 1400);
-  const positions = waveSamples.map((sample) => sample.x);
-  return positions.length >= 5 && Math.max(...positions) - Math.min(...positions) > shoulderWidth * 0.75;
-}
-
-function drawCamera(points) {
+function drawCamera(hands) {
   const video = el("game-video");
   const canvas = el("game-canvas");
   const context = canvas.getContext("2d");
@@ -242,20 +171,18 @@ function drawCamera(points) {
   context.globalAlpha = 0.72;
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
   context.globalAlpha = 1;
-  if (points) {
+  for (const points of hands ?? []) {
     context.strokeStyle = "#83d5c9";
     context.lineWidth = Math.max(3, canvas.width / 220);
     context.lineCap = "round";
     for (const [a, b] of CONNECTIONS) {
-      if (!visible(points[a]) || !visible(points[b])) continue;
       context.beginPath();
       context.moveTo(points[a].x * canvas.width, points[a].y * canvas.height);
       context.lineTo(points[b].x * canvas.width, points[b].y * canvas.height);
       context.stroke();
     }
     context.fillStyle = "#f8fffd";
-    for (const index of [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) {
-      if (!visible(points[index])) continue;
+    for (let index = 0; index < points.length; index += 1) {
       context.beginPath();
       context.arc(points[index].x * canvas.width, points[index].y * canvas.height, context.lineWidth * 1.2, 0, Math.PI * 2);
       context.fill();
@@ -269,10 +196,12 @@ function detectFrame() {
   const video = el("game-video");
   if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
     lastVideoTime = video.currentTime;
-    const result = landmarker.detectForVideo(video, performance.now());
-    lastPoints = result.landmarks?.[0] ?? null;
+    const result = landmarker.recognizeForVideo(video, performance.now());
+    lastPoints = result.landmarks ?? [];
+    const labels = (result.gestures ?? []).map((items) => items[0]).filter((item) => item && item.score >= 0.55).map((item) => item.categoryName);
+    lastPoints.labels = labels;
     trackingSamples += 1;
-    if (lastPoints && confidentPose(lastPoints, selectedPoses[poseIndex])) trackingHits += 1;
+    if (lastPoints.length) trackingHits += 1;
   }
   drawCamera(lastPoints);
   if (phase === "pose") updatePose(lastPoints);
@@ -281,23 +210,16 @@ function detectFrame() {
 
 function updatePose(points) {
   const pose = selectedPoses[poseIndex];
-  if (!pose || !points || !confidentPose(points, pose)) {
+  if (!pose || !points?.length) {
     holdStarted = null;
     el("hold-progress").style.width = "0%";
-    el("camera-status").textContent = "Keep your hands and shoulders in view";
+    el("camera-status").textContent = "Bring one hand into the camera view";
     return;
   }
-  const shoulderWidth = distance(points[11], points[12]);
-  const matched = pose.motion === "wave" ? waveMatches(points, shoulderWidth) : pose.matches(points, shoulderWidth);
-  if (shoulderWidth < 0.04 || !matched) {
+  if (!points.labels?.includes(pose.key)) {
     holdStarted = null;
     el("hold-progress").style.width = "0%";
     el("camera-status").textContent = "Take your time finding the shape";
-    return;
-  }
-  if (pose.motion === "wave") {
-    el("hold-progress").style.width = "100%";
-    completePose();
     return;
   }
   el("camera-status").textContent = "That’s it — stay there comfortably";
@@ -327,7 +249,14 @@ async function beginCheckIn(pose) {
   phase = "checkin";
   recognitionAttempts = 0;
   recognitionHandled = false;
-  activeQuestion = CHECK_IN_QUESTIONS[Math.floor(Math.random() * CHECK_IN_QUESTIONS.length)];
+  try {
+    const picked = await getJson("/api/check-in/question");
+    activeQuestion = picked.text;
+    activeQuestionId = picked.id;
+  } catch {
+    activeQuestion = "What pace feels right from here?";
+    activeQuestionId = null;
+  }
   el("pose-card").hidden = true;
   el("checkin-question").textContent = activeQuestion;
   el("checkin-transcript").textContent = "";
@@ -415,7 +344,7 @@ async function sendCheckIn(answer) {
   stopRecognition();
   el("checkin-status").textContent = "Putting that into words…";
   try {
-    const reply = await api("/api/check-in", { question: activeQuestion, answer });
+    const reply = await api("/api/check-in", { question_id: activeQuestionId, question: activeQuestion, answer });
     checkIns.push({
       question: activeQuestion, answer, response: reply.response,
       response_source: reply.response_source, safety_pause: reply.safety_pause,
@@ -580,5 +509,15 @@ el("game-start").addEventListener("click", startGame);
 el("game-skip").addEventListener("click", skipPose);
 el("game-stop").addEventListener("click", finishGame);
 el("game-save").addEventListener("click", saveSession);
+for (const id of ["game-voice", "game-checkins"]) {
+  el(id).addEventListener("change", () => api("/api/settings", {
+    spoken_guidance: el("game-voice").checked,
+    spoken_check_ins: el("game-checkins").checked,
+  }).catch(() => {}));
+}
+getJson("/api/settings").then((settings) => {
+  el("game-voice").checked = settings.spoken_guidance;
+  el("game-checkins").checked = settings.spoken_check_ins;
+}).catch(() => {});
 renderPoseLibrary();
 renderProgress();

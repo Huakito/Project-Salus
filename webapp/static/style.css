@@ -981,6 +981,33 @@ input[type="color"] {
   }
 }
 
+/* Keep the camera game in the original green console language. */
+:root {
+  color-scheme: dark;
+  --page: #306e59; --panel: #285d4c; --field: #204e3f; --line: #3f7a66;
+  --edge: #98c3b1; --ink: #f6f3ea; --muted: #dbe6dd; --accent: #f6f3ea;
+  --on-accent: #1f4d3f; --hover: rgb(246 243 234 / .1); --calm-wash: #285d4c;
+  --font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.topbar { border-bottom: 1px solid var(--line); background: var(--panel); }
+.game-intro, .game-board, .game-summary, .command, .console {
+  border-radius: 0; box-shadow: none; background: var(--panel);
+}
+.button, button, textarea, input[type="text"], input[type="number"],
+.main-nav, .nav-tab, .status, .notice, .pose-library span,
+.camera-shell, .camera-status, .pose-card, .hold-track, .progress-dot,
+.feeling-options label { border-radius: 0; }
+.nav-tab.active { background: var(--field); color: var(--ink); box-shadow: none; }
+.checkin-card {
+  position: static; width: auto; max-height: none; overflow: visible; margin-top: 14px;
+  padding: 16px; border: 1px solid var(--edge); border-radius: 0;
+  background: var(--field); color: var(--ink); box-shadow: none; transform: none;
+}
+.checkin-card .eyebrow, .checkin-hint, .checkin-status { color: var(--muted); }
+.checkin-transcript { border-radius: 0; background: var(--panel); color: var(--ink); }
+.checkin-reply { border-top-color: var(--line); }
+
 /* ---- visual refinement: return to the quiet, card-based original ---- */
 
 :root {
@@ -1365,3 +1392,26 @@ textarea,
     padding: 18px;
   }
 }
+
+/* Final theme authority: match the original green, squared-off interface. */
+:root {
+  color-scheme: dark;
+  --page: #306e59; --panel: #285d4c; --field: #204e3f; --line: #3f7a66;
+  --edge: #98c3b1; --ink: #f6f3ea; --muted: #dbe6dd; --accent: #f6f3ea;
+  --on-accent: #1f4d3f; --hover: rgb(246 243 234 / .1); --calm-wash: #285d4c;
+  --font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+.topbar { border-bottom: 1px solid var(--line); background: var(--panel); }
+.game-intro, .game-board, .game-summary, .command, .console { border-radius: 0; box-shadow: none; background: var(--panel); }
+.button, button, textarea, input[type="text"], input[type="number"], .main-nav, .nav-tab,
+.status, .notice, #pose-library-list span, .camera-shell, .camera-status, .pose-card,
+.hold-track, .hold-track span, .progress-dot, .feeling-options label { border-radius: 0; }
+.nav-tab.active { background: var(--field); color: var(--ink); box-shadow: none; }
+.checkin-card {
+  position: static; width: auto; max-height: none; overflow: visible; margin-top: 14px;
+  padding: 16px; border: 1px solid var(--edge); border-radius: 0;
+  background: var(--field); color: var(--ink); box-shadow: none; transform: none; backdrop-filter: none;
+}
+.checkin-card .eyebrow, .checkin-hint, .checkin-status { color: var(--muted); }
+.checkin-transcript { border-radius: 0; background: var(--panel); color: var(--ink); }
+.checkin-reply { border-top-color: var(--line); }

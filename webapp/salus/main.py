@@ -32,6 +32,7 @@ from .board import (
 from .contract import DEFAULT_PATH, Contract, ContractError, load_contract
 from .face import FaceError, check_face, rgb565
 from .feedback import FeedbackService
+from .memory import HistoryStore
 
 log = logging.getLogger("salus")
 
@@ -89,6 +90,14 @@ class CheckInRequest(BaseModel):
 
     question: str = Field(min_length=1, max_length=300)
     answer: str = Field(min_length=1, max_length=1000)
+    question_id: str | None = Field(default=None, max_length=80)
+
+
+class SettingsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    spoken_guidance: bool | None = None
+    spoken_check_ins: bool | None = None
+    robot_colour: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
 
 
 class _HideStatusPolls(logging.Filter):
@@ -136,6 +145,7 @@ def create_app(
     session_path = session_dir / "movement-sessions.jsonl"
     session_lock = threading.Lock()
     feedback_service = feedback_service or FeedbackService.from_environment()
+    history = HistoryStore(session_dir, Path(__file__).with_name("conversation_library.json"))
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -263,13 +273,28 @@ def create_app(
     @app.post("/api/check-in")
     def answer_check_in(request: CheckInRequest) -> dict:
         """Reply to a typed or browser-transcribed answer. No audio reaches the server."""
-        reply = feedback_service.check_in_reply(request.question, request.answer)
+        reply = feedback_service.check_in_reply(request.question, request.answer, history.context())
+        history.record(question_id=request.question_id, question=request.question, answer=request.answer,
+                       response=reply.message, response_source=reply.source,
+                       safety_pause=reply.safety_pause, memory_note=reply.memory_note)
         return {
             "ok": True,
             "response": reply.message,
             "response_source": reply.source,
             "safety_pause": reply.safety_pause,
         }
+
+    @app.get("/api/check-in/question")
+    def next_check_in_question() -> dict:
+        return history.next_question()
+
+    @app.get("/api/settings")
+    def get_settings() -> dict:
+        return history.settings()
+
+    @app.post("/api/settings")
+    def save_settings(request: SettingsRequest) -> dict:
+        return history.save_settings(request.model_dump(exclude_none=True))
 
     # Everything else is the page. Mounted last so it cannot shadow the API.
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="page")

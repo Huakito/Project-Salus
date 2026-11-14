@@ -397,7 +397,10 @@ function faceEdited() {
 }
 
 el("face-text").addEventListener("input", faceEdited);
-el("face-colour").addEventListener("input", faceEdited);
+el("face-colour").addEventListener("input", () => {
+  faceEdited();
+  api("/api/settings", { robot_colour: el("face-colour").value }).catch(() => {});
+});
 
 el("face-text").addEventListener("keydown", (event) => {
   // Enter makes a new line of art; Ctrl+Enter (Cmd+Enter on a Mac) sends it.
@@ -416,6 +419,12 @@ el("face-form").addEventListener("submit", (event) => {
 // ---- start ----
 
 refreshFace();
+api("/api/settings").then((settings) => {
+  if (settings.robot_colour) {
+    el("face-colour").value = settings.robot_colour;
+    refreshFace();
+  }
+}).catch(() => {});
 watchStatus();
 loadCommands().then(() => {
   const preview = el("preview");
