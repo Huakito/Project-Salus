@@ -30,6 +30,16 @@ class HistoryStore:
             db.execute("""CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL
             )""")
+            db.execute("""CREATE TABLE IF NOT EXISTS conversation_meta (
+                key TEXT PRIMARY KEY, value TEXT NOT NULL
+            )""")
+            if not db.execute(
+                "SELECT 1 FROM conversation_meta WHERE key='question_stage_v1'"
+            ).fetchone():
+                db.execute(
+                    "INSERT INTO conversation_meta VALUES ('question_stage_v1', ?)",
+                    (datetime.now(timezone.utc).isoformat(),),
+                )
 
     def settings(self) -> dict[str, object]:
         defaults = {"spoken_guidance": True, "spoken_check_ins": True, "robot_colour": "#1a6964"}
@@ -71,7 +81,20 @@ class HistoryStore:
             used = {row[0] for row in db.execute(
                 "SELECT question_id FROM check_ins WHERE question_id IS NOT NULL ORDER BY id DESC LIMIT 4"
             )}
-        choices = [item for item in self.library if item["id"] not in used] or self.library
+            conversation_count = db.execute(
+                """SELECT COUNT(*) FROM check_ins
+                   WHERE safety_pause=0 AND recorded_at >= (
+                     SELECT value FROM conversation_meta WHERE key='question_stage_v1'
+                   )"""
+            ).fetchone()[0]
+        if conversation_count < 5:
+            allowed_levels = {"light"}
+        elif conversation_count < 15:
+            allowed_levels = {"light", "familiar"}
+        else:
+            allowed_levels = {"light", "familiar", "reflective"}
+        level_choices = [item for item in self.library if item.get("level", "light") in allowed_levels]
+        choices = [item for item in level_choices if item["id"] not in used] or level_choices
         return random.choice(choices)
 
     def record(self, *, question_id: str | None, question: str, answer: str, response: str,

@@ -422,6 +422,34 @@ def test_vague_check_in_gets_a_direct_comment_without_a_strange_follow_up(client
     assert response.json()["follow_up"] == ""
 
 
+def test_questions_start_light_and_deepen_with_conversation_history(
+    contract_file, data_dir, monkeypatch
+):
+    monkeypatch.setattr("salus.memory.random.choice", lambda choices: choices[-1])
+    app = create_app(
+        mode="fake", contract_path=contract_file, data_dir=data_dir,
+        feedback_service=FeedbackService(),
+    )
+    with TestClient(app, base_url="http://127.0.0.1:8000") as staged_client:
+        assert staged_client.get("/api/check-in/question").json()["level"] == "light"
+
+        for index in range(5):
+            staged_client.post("/api/check-in", json={
+                "question_id": f"light-{index}",
+                "question": "What have you been up to today?",
+                "answer": "I worked on a small project.",
+            })
+        assert staged_client.get("/api/check-in/question").json()["level"] == "familiar"
+
+        for index in range(10):
+            staged_client.post("/api/check-in", json={
+                "question_id": f"familiar-{index}",
+                "question": "What have you been enjoying lately?",
+                "answer": "I have been enjoying music.",
+            })
+        assert staged_client.get("/api/check-in/question").json()["level"] == "reflective"
+
+
 def test_check_in_uses_a_scripted_pause_for_direct_self_harm_language(client):
     response = client.post(
         "/api/check-in",
