@@ -51,3 +51,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 *.swp
+
+# Piper voice models (downloaded locally)
+firmware/models/
