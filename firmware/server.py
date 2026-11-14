@@ -49,6 +49,7 @@ from fastapi import FastAPI
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 import chat   # firmware/chat.py: the script's folder is on sys.path (tests add it too)
+import crisis  # firmware/crisis.py: the scripted response to a self-harm signal
 
 AUDIO_PORT = 9000          # LAPTOP_PORT in project.yaml
 HTTP_PORT = 8001           # the web app already uses 8000
@@ -85,11 +86,17 @@ class Pipeline:
 
 pipeline: Pipeline | None = None     # built in the lifespan; tests put fakes here
 fallback_audio: bytes | None = None  # chat.FALLBACK_LINE, spoken when the reply fails
+crisis_message: str = crisis.message()   # what is said instead of asking the model; the helpline is added in build_pipeline
+crisis_audio: bytes | None = None    # crisis_message as audio, made at warm-up so it never waits on anything
 
 
 def build_pipeline() -> Pipeline:
+    global crisis_message
     config = chat.load_config()
+    crisis_message = crisis.message(config.crisis_helpline)
     problems = []
+    if not config.crisis_helpline:
+        problems.append("SALUS_CRISIS_HELPLINE is not set: the crisis message names no local helpline (see firmware/.env.example)")
     if not config.gemini_api_key:
         problems.append("GEMINI_API_KEY is not set: copy firmware/.env.example to firmware/.env and add your key")
     return Pipeline(
@@ -114,9 +121,10 @@ async def warm_up(pipe: Pipeline) -> None:
                   "run pip install -r firmware/requirements.txt; the first run also downloads the model")
 
     async def load_piper() -> None:
-        global fallback_audio
+        global fallback_audio, crisis_audio
         try:
             fallback_audio = await asyncio.to_thread(pipe.speak, chat.FALLBACK_LINE) or None
+            crisis_audio = await asyncio.to_thread(pipe.speak, chat.clean_for_speech(crisis_message)) or None
         except FileNotFoundError as error:   # the message already says how to download the voice
             print(f"[chat] {error}")
         except Exception as error:
@@ -308,9 +316,22 @@ async def converse(robot: Robot, pcm: bytes, turn: Turn) -> None:
         return
     entry["heard"] = heard
 
-    # TODO(crisis): deterministic crisis screening MUST run on `heard` here, BEFORE respond()
-    # is called (CLAUDE.md invariant 2). Not implemented yet: a self-harm signal must get a
-    # scripted escalation to a person or crisis line, never an LLM-improvised answer.
+    # Crisis screening, BEFORE respond() (CLAUDE.md invariant 2): a self-harm signal gets the
+    # scripted message. The model is not asked, and the words never enter robot.history, so
+    # they are not sent to it with a later turn either.
+    if crisis.is_crisis(heard):
+        print("[crisis] signal heard: saying the scripted message, the model is not asked")
+        entry["crisis"] = True
+        entry["said"] = crisis_message
+        if crisis_audio:
+            await send_audio(robot, turn, crisis_audio)
+        else:   # warm-up could not make it: speak it now
+            await speak_sentences(robot, turn, chat.split_sentences(chat.clean_for_speech(crisis_message)))
+        if not turn.spoke:
+            print("[crisis] the scripted message could NOT be spoken")
+            entry["said"] = ""
+            turn.failed = True
+        return
 
     started = time.monotonic()
     try:

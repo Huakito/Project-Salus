@@ -23,6 +23,8 @@ from pathlib import Path
 
 import numpy as np
 
+import crisis   # firmware/crisis.py, beside this file
+
 SAMPLE_RATE = 16000
 MAX_HISTORY_TURNS = 10
 FALLBACK_LINE = "Sorry, I lost my train of thought, could you say that again?"
@@ -31,7 +33,8 @@ _HERE = Path(__file__).resolve().parent
 _NO_SPEECH_LIMIT = 0.6
 _GEMINI_TIMEOUT_MS = 15_000
 
-# TODO(crisis): deterministic crisis screening is NOT implemented yet - it must run on the transcript BEFORE Gemini is called (see CLAUDE.md invariant 2).
+# Crisis screening (crisis.py) runs on the transcript BEFORE this prompt is ever used: a
+# self-harm signal gets the scripted message and Gemini is not called (CLAUDE.md invariant 2).
 SYSTEM_PROMPT = """\
 You are Salus, a gentle companion robot sitting on someone's desk. You are speaking \
 aloud to a person who may be living with low mood or depression. Everything you write \
@@ -69,6 +72,7 @@ class Config:
     whisper_model: str = "small.en"
     voice: str = "en_US-amy-medium"
     models_dir: Path = _HERE / "models"
+    crisis_helpline: str = ""   # a sentence naming the local crisis line, added to the scripted message
 
 
 def load_config() -> Config:
@@ -82,6 +86,7 @@ def load_config() -> Config:
         gemini_model=env.get("GEMINI_MODEL") or Config.gemini_model,
         whisper_model=env.get("SALUS_WHISPER_MODEL") or Config.whisper_model,
         voice=env.get("SALUS_VOICE") or Config.voice,
+        crisis_helpline=env.get("SALUS_CRISIS_HELPLINE", "").strip(),
     )
 
 
@@ -309,7 +314,10 @@ def _main() -> int:
     if not args.text:
         parser.error("give some text to say, or use --download-voice")
 
-    reply = Chatter(cfg.gemini_api_key, cfg.gemini_model).respond([], args.text)
+    if crisis.is_crisis(args.text):   # the same rule as the server: scripted, and Gemini is not asked
+        reply = crisis.message(cfg.crisis_helpline)
+    else:
+        reply = Chatter(cfg.gemini_api_key, cfg.gemini_model).respond([], args.text)
     print(reply)
     if args.wav:
         pcm = Speaker(cfg.voice, cfg.models_dir).speak(clean_for_speech(reply))

@@ -51,7 +51,7 @@ Not built yet:
 
 - Live button presses on the page (the server already collects them at `/api/events`).
 - Storage, the mood and questionnaire pages, and the summary for a GP.
-- Speech in and out runs as a prototype (see Voice chat); crisis screening and a fully local language model do not exist yet.
+- Speech in and out runs as a prototype (see Voice chat); a first, unreviewed crisis screening runs before the model is asked; a fully local language model does not exist yet.
 
 The face, melody, volume and stop commands have been run from the page against
 the real robot over USB, and each was acknowledged by the board.
@@ -73,8 +73,13 @@ python firmware/server.py                   # run the audio server
 The audio server needs Python 3.11 or newer (the web app below still works on
 3.10).
 
-Crisis screening is not built yet: it must run on the transcript before Gemini
-is called.
+Crisis screening runs on every transcript before Gemini is called
+(`firmware/crisis.py`). If the words match its list of self-harm phrases, the
+robot says a fixed message pointing to a trusted person, a crisis line and the
+emergency number; Gemini is not asked and the words are not kept in the chat
+history. Set `SALUS_CRISIS_HELPLINE` in `firmware/.env` to add the helpline for
+where the robot is used. The phrase list and the message are a first version
+and have not been reviewed by a clinician.
 
 ## Run the web app
 
