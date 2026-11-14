@@ -105,7 +105,7 @@ function render() {
     const status = document.createElement("span");
     status.textContent = plant.needs_care ? "ready" : "settled";
     button.append(picture, label, status);
-    button.addEventListener("click", () => approachPlant(plant.id, spot));
+    button.addEventListener("click", () => approachPlant(plant.id));
     return button;
   }));
 
@@ -205,8 +205,6 @@ async function selectPlant(id) {
   if (plant) gardenHardwareCue({face: `${plant.nickname}\n${plant.needs_care ? plant.care_label : "settled today"}`});
 }
 
-function distanceTo(spot) { return Math.hypot(player.x - spot[0], player.y - spot[1]); }
-
 function sayAsRobot(text) {
   el("robot-dialogue-text").textContent = text;
   el("robot-dialogue").hidden = false;
@@ -214,11 +212,7 @@ function sayAsRobot(text) {
   robotCommand("led_animation", {r:48,g:170,b:126});
 }
 
-function approachPlant(id, spot) {
-  if (distanceTo(spot) > 18) {
-    sayAsRobot("That plant is over there. Let's walk a little closer first.");
-    return;
-  }
+function approachPlant(id) {
   selectPlant(id);
   const plant = state.plants.find((item) => item.id === id);
   sayAsRobot(plant.needs_care ? `${plant.nickname} is ready. ${plant.care_label}.` : `${plant.nickname} is settled for today.`);
