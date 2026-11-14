@@ -378,5 +378,5 @@ window.setInterval(async () => {
 }, 1000);
 
 loadGarden().catch((error) => { el("garden-plot").textContent = error.message; });
-el("plant-panel").append(el("seed-shelf"), el("admin-tools"), el("garden-journal"));
+el("garden-tools").append(el("seed-shelf"), el("admin-tools"), el("garden-journal"));
 requestAnimationFrame(walkLoop);

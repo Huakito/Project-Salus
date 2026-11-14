@@ -113,16 +113,15 @@
 
         <aside class="play-hardware command" aria-labelledby="play-hardware-title">
           <div class="command-heading">
-            <h2 id="play-hardware-title">Robot feedback</h2>
-            <code class="command-key">live</code>
+            <h2 id="play-hardware-title">Session info</h2>
+            <code class="command-key">local</code>
           </div>
-          <p class="hint">Salus mirrors each signal on its face, flashes the light grid and plays a short success sound.</p>
-          <div class="play-led-grid" aria-hidden="true">
-            <span></span><span></span><span></span>
-            <span></span><span></span><span></span>
-            <span></span><span></span><span></span>
-          </div>
-          <p class="hardware-readout">Camera stays local · results are saved without video</p>
+          <dl class="session-facts">
+            <div><dt>Camera</dt><dd>Never recorded</dd></div>
+            <div><dt>Saved</dt><dd>Scores and check-ins</dd></div>
+            <div><dt>Robot</dt><dd>Face, lights and sound react</dd></div>
+          </dl>
+          <p class="hardware-readout">The square shown here before was a preview of the robot's 3×3 light grid.</p>
         </aside>
       </main>
 
@@ -177,6 +176,7 @@
               <p class="hardware-hint">Robot: turn the knob to choose a plant · press the main button or knob to care for it</p>
             </div>
           </aside>
+          <aside class="garden-tools" id="garden-tools" aria-label="Seeds, developer options and garden journal"></aside>
         </section>
 
         <section class="care-game" id="care-game" hidden aria-labelledby="care-game-title">

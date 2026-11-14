@@ -7,7 +7,7 @@ const toggle = document.getElementById("floating-screen-toggle");
 const canvas = document.getElementById("floating-screen-canvas");
 const status = document.getElementById("floating-screen-status");
 const screen = {width:160, height:80};
-const positionKey = "salus-floating-screen-position";
+const positionKey = "salus-floating-screen-position-v3";
 const collapsedKey = "salus-floating-screen-collapsed";
 let drag = null;
 let lastFace = "";
@@ -33,7 +33,7 @@ function initialPosition() {
     const saved = JSON.parse(localStorage.getItem(positionKey));
     if (Number.isFinite(saved?.x) && Number.isFinite(saved?.y)) return saved;
   } catch { /* Use the default corner. */ }
-  return {x:window.innerWidth - 300, y:window.innerHeight - 190};
+  return {x:8, y:window.innerHeight - 170};
 }
 
 function setCollapsed(collapsed) {
