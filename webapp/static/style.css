@@ -1020,6 +1020,55 @@ input[type="color"] {
 .game-board > .pose-card .hold-track { background: var(--line); }
 .game-board > .pose-card .hold-track span { background: var(--ink); }
 
+/* ---- garden ---- */
+.garden-view { display: grid; gap: 24px; }
+.garden-heading, .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.garden-heading h2 { margin: 2px 0 6px; font-size: clamp(2rem, 5vw, 4rem); text-transform: uppercase; }
+.garden-heading p { max-width: 680px; }
+.garden-day { min-width: 150px; padding: 12px; border: 1px solid var(--edge); background: var(--panel); }
+.garden-day span, .garden-day strong { display: block; }
+.garden-day span { color: var(--muted); font-size: .72rem; text-transform: uppercase; }
+.garden-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .65fr); gap: 18px; }
+.garden-plot {
+  min-height: 450px; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  align-content: end; gap: 10px; padding: 28px; border: 1px solid var(--line);
+  background: linear-gradient(transparent 70%, rgb(20 49 39 / .32) 70%),
+    repeating-linear-gradient(90deg, transparent 0 95px, rgb(246 243 234 / .025) 95px 96px), var(--panel);
+}
+.garden-plant { min-height: 170px; display: grid; place-items: end center; align-content: end; gap: 6px; padding: 12px; border: 1px solid transparent; background: transparent; color: var(--ink); }
+.garden-plant:hover, .garden-plant.selected { border-color: var(--edge); background: var(--hover); }
+.garden-plant > strong { font-size: .85rem; }
+.garden-plant > span:last-child { color: var(--muted); font-size: .68rem; text-transform: uppercase; }
+.garden-plant.due > span:last-child { color: var(--note); }
+.plant-sprite {
+  --growth: 1; display: block; width: 72px; height: 144px;
+  background-image: url("assets/plants-cc0.png"); background-repeat: no-repeat;
+  background-size: 5616px 144px; background-position: calc(var(--sprite) * -72px) 0;
+  image-rendering: pixelated; transform: scale(var(--growth)); transform-origin: bottom center;
+}
+.plant-panel, .seed-shelf, .admin-tools { padding: 20px; border: 1px solid var(--line); background: var(--panel); }
+.plant-large { margin: 0 auto 8px; }
+.plant-panel h3 { margin: 8px 0; font-size: 1.25rem; }
+.plant-state { margin: 18px 0; padding: 10px; border-left: 3px solid var(--edge); background: var(--field); }
+.plant-panel .button { width: 100%; margin-top: 8px; }
+.hardware-hint, .asset-credit { margin-top: 16px; color: var(--muted); font-size: .72rem; }
+.seed-shelf h3 { margin: 2px 0 16px; }
+.seed-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-bottom: 16px; }
+.seed-card { position: relative; display: grid; place-items: center; gap: 4px; min-height: 160px; padding: 8px; border: 1px solid var(--line); cursor: pointer; }
+.seed-card:has(input:checked) { border-color: var(--edge); background: var(--hover); }
+.seed-card input { position: absolute; top: 8px; left: 8px; }
+.seed-card .plant-sprite { transform: scale(.72); margin: -20px 0; }
+.seed-card small { color: var(--muted); text-align: center; }
+#seed-form > label { display: inline-flex; align-items: center; gap: 10px; margin: 0 10px 0 0; }
+#seed-form input[type="text"] { padding: 8px; border: 1px solid var(--edge); background: var(--field); color: var(--ink); }
+.admin-tools summary { cursor: pointer; font-weight: 700; }
+.admin-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+@media (max-width: 820px) {
+  .garden-layout { grid-template-columns: 1fr; }
+  .garden-heading { align-items: flex-start; flex-direction: column; }
+  .garden-plot { min-height: 330px; padding: 14px; }
+}
+
 /* ---- visual refinement: return to the quiet, card-based original ---- */
 
 :root {

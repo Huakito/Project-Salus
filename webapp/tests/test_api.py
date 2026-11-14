@@ -208,6 +208,23 @@ def test_movement_session_is_saved_without_camera_data(contract_file, data_dir):
     assert saved["feedback_source"] == "local"
 
 
+def test_garden_persists_and_never_kills_a_missed_plant(contract_file, data_dir):
+    app = create_app(mode="fake", contract_path=contract_file, data_dir=data_dir, feedback_service=FeedbackService())
+    with TestClient(app, base_url="http://127.0.0.1:8000") as garden_client:
+        initial = garden_client.get("/api/garden").json()
+        assert initial["plants"][0]["needs_care"] is True
+        added = garden_client.post("/api/garden/plants", json={"species": "sunflower", "nickname": "Sunny"}).json()["plant"]
+        cared = garden_client.post(f"/api/garden/plants/{added['id']}/care", json={}).json()
+        assert cared["changed"] is True
+        assert cared["plant"]["growth"] == 1
+        garden_client.post("/api/garden/admin", json={"action": "advance_day", "days": 10})
+        later = garden_client.get("/api/garden").json()
+        sunny = next(plant for plant in later["plants"] if plant["nickname"] == "Sunny")
+        assert sunny["needs_care"] is True
+        assert sunny["growth"] == 1
+        assert "dead" not in sunny
+
+
 def test_openai_feedback_receives_only_derived_session_data():
     class Parsed:
         output_parsed = type("Output", (), {"message": "Nice work — three steady shapes found."})()

@@ -492,16 +492,17 @@ async function saveSession() {
 
 for (const tab of document.querySelectorAll("[data-view]")) {
   tab.addEventListener("click", () => {
-    const play = tab.dataset.view === "play";
-    el("play-view").hidden = !play;
-    el("stage").hidden = play;
-    el("commands-note").hidden = play;
+    const view = tab.dataset.view;
+    el("play-view").hidden = view !== "play";
+    el("garden-view").hidden = view !== "garden";
+    el("stage").hidden = view !== "workshop";
+    el("commands-note").hidden = view !== "workshop";
     for (const item of document.querySelectorAll("[data-view]")) {
       const active = item === tab;
       item.classList.toggle("active", active);
       item.setAttribute("aria-pressed", String(active));
     }
-    if (!play && running) stopCamera();
+    if (view !== "play" && running) stopCamera();
   });
 }
 

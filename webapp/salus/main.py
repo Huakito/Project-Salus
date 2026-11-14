@@ -33,6 +33,7 @@ from .contract import DEFAULT_PATH, Contract, ContractError, load_contract
 from .face import FaceError, check_face, rgb565
 from .feedback import FeedbackService
 from .memory import HistoryStore
+from .garden import GardenStore
 
 log = logging.getLogger("salus")
 
@@ -100,6 +101,18 @@ class SettingsRequest(BaseModel):
     robot_colour: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
 
 
+class AddPlantRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    species: str = Field(min_length=1, max_length=40)
+    nickname: str = Field(default="", max_length=30)
+
+
+class GardenAdminRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["advance_day", "grow_all", "make_due"]
+    days: int = Field(default=1, ge=1, le=30)
+
+
 class _HideStatusPolls(logging.Filter):
     """The page asks for /api/status every second or two; keep that out of the terminal."""
 
@@ -146,6 +159,7 @@ def create_app(
     session_lock = threading.Lock()
     feedback_service = feedback_service or FeedbackService.from_environment()
     history = HistoryStore(session_dir, Path(__file__).with_name("conversation_library.json"))
+    garden = GardenStore(session_dir)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -295,6 +309,32 @@ def create_app(
     @app.post("/api/settings")
     def save_settings(request: SettingsRequest) -> dict:
         return history.save_settings(request.model_dump(exclude_none=True))
+
+    @app.get("/api/garden")
+    def garden_state() -> dict:
+        return garden.state()
+
+    @app.post("/api/garden/plants")
+    def add_garden_plant(request: AddPlantRequest) -> dict:
+        try:
+            return {"ok": True, "plant": garden.add(request.species, request.nickname)}
+        except ValueError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=422)
+
+    @app.post("/api/garden/plants/{plant_id}/care")
+    def care_for_garden_plant(plant_id: int) -> dict:
+        try:
+            plant, changed = garden.care(plant_id)
+            return {"ok": True, "changed": changed, "plant": plant}
+        except ValueError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=404)
+
+    @app.post("/api/garden/admin")
+    def garden_admin(request: GardenAdminRequest) -> dict:
+        try:
+            return garden.admin(request.action, request.days)
+        except ValueError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=422)
 
     # Everything else is the page. Mounted last so it cannot shadow the API.
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="page")

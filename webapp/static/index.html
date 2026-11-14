@@ -18,6 +18,7 @@
         </div>
         <nav class="main-nav" aria-label="Main sections">
           <button class="nav-tab active" type="button" data-view="play" aria-pressed="true">Play</button>
+          <button class="nav-tab" type="button" data-view="garden" aria-pressed="false">Garden</button>
           <button class="nav-tab" type="button" data-view="workshop" aria-pressed="false">Workshop</button>
         </nav>
         <div class="link">
@@ -108,6 +109,55 @@
             <p class="result" id="game-save-result" role="status"></p>
           </section>
         </section>
+      </main>
+
+      <main class="garden-view" id="garden-view" hidden>
+        <header class="garden-heading">
+          <div>
+            <p class="eyebrow">A quiet place to return to</p>
+            <h2>Your garden</h2>
+            <p>Care helps plants grow, but missing a day only pauses them. Nothing here can die.</p>
+          </div>
+          <div class="garden-day"><span>Garden day</span><strong id="garden-day">—</strong></div>
+        </header>
+
+        <section class="garden-layout">
+          <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
+          <aside class="plant-panel" id="plant-panel">
+            <p class="eyebrow">Plant guide</p>
+            <div id="plant-empty">Choose a plant to see what it needs.</div>
+            <div id="plant-details" hidden>
+              <div class="plant-large" id="plant-large" aria-hidden="true"></div>
+              <h3 id="plant-name"></h3>
+              <p id="plant-about"></p>
+              <p class="plant-state" id="plant-state"></p>
+              <button class="button primary" id="plant-care" type="button"></button>
+              <button class="button quiet" id="plant-tell" type="button">Tell me about it</button>
+              <p class="result" id="garden-result" role="status"></p>
+              <p class="hardware-hint">Robot: Yes cares for this plant · No chooses the next one</p>
+            </div>
+          </aside>
+        </section>
+
+        <section class="seed-shelf">
+          <div class="section-heading"><div><p class="eyebrow">Seed shelf</p><h3>Add a plant</h3></div></div>
+          <form id="seed-form">
+            <div class="seed-list" id="seed-list"></div>
+            <label>Nickname <input id="plant-nickname" type="text" maxlength="30" placeholder="Optional"></label>
+            <button class="button" type="submit">Plant it</button>
+          </form>
+        </section>
+
+        <details class="admin-tools">
+          <summary>Prototype admin tools</summary>
+          <p>Use these to test progress without waiting for real days.</p>
+          <div class="admin-actions">
+            <button class="button" type="button" data-admin="advance_day">Advance one day</button>
+            <button class="button" type="button" data-admin="grow_all">Grow everything</button>
+            <button class="button" type="button" data-admin="make_due">Make all care due</button>
+          </div>
+        </details>
+        <p class="asset-credit">Plant sprites: SpiderDave, CC0 via OpenGameArt.</p>
       </main>
 
       <main class="stage" id="stage" hidden>
