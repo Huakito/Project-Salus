@@ -661,7 +661,6 @@ const viewTabs = [...document.querySelectorAll("[data-view]")];
 function activateView(tab, moveFocus = false) {
   const view = tab.dataset.view;
   el("play-view").hidden = view !== "play";
-  el("garden-view").hidden = view !== "garden";
   el("stage").hidden = view !== "home";
   el("commands-note").hidden = view !== "home";
   for (const item of viewTabs) {
@@ -671,7 +670,6 @@ function activateView(tab, moveFocus = false) {
     item.tabIndex = active ? 0 : -1;
   }
   if (moveFocus) tab.focus();
-  if (view === "garden") el("garden-world").focus({preventScroll:true});
   if (view !== "play" && running) stopCamera();
 }
 

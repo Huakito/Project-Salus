@@ -19,7 +19,6 @@
         <nav class="main-nav" aria-label="Main sections" role="tablist">
           <button class="nav-tab active" id="home-tab" type="button" role="tab" data-view="home" aria-controls="stage" aria-selected="true">Home</button>
           <button class="nav-tab" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="false" tabindex="-1">Movement</button>
-          <button class="nav-tab" id="garden-tab" type="button" role="tab" data-view="garden" aria-controls="garden-view" aria-selected="false" tabindex="-1">Garden</button>
         </nav>
         <div class="link">
           <p class="mic-note" id="mic-note" role="status" hidden></p>
@@ -129,110 +128,6 @@
         </aside>
       </main>
 
-      <main class="garden-view" id="garden-view" role="tabpanel" aria-labelledby="garden-tab" hidden>
-        <header class="garden-heading">
-          <div>
-            <p class="eyebrow">A quiet place to return to</p>
-            <h2>Your garden</h2>
-            <p>Walk with WASD or the arrow keys. Click a plant when you are nearby.</p>
-          </div>
-          <div class="garden-day"><span>Garden day</span><strong id="garden-day">—</strong></div>
-        </header>
-
-        <section class="garden-layout">
-          <div class="garden-world" id="garden-world" tabindex="0" aria-label="Walkable garden. Use arrow keys or WASD.">
-            <div class="farm-path path-horizontal" aria-hidden="true"></div>
-            <div class="farm-path path-vertical" aria-hidden="true"></div>
-            <div class="farm-bed bed-one" aria-hidden="true"></div>
-            <div class="farm-bed bed-two" aria-hidden="true"></div>
-            <div class="farm-bed bed-three" aria-hidden="true"></div>
-            <div class="farm-bed bed-four" aria-hidden="true"></div>
-            <div class="farm-prop crate" aria-hidden="true"></div>
-            <div class="farm-prop barrel" aria-hidden="true"></div>
-            <div class="farm-decoration oak oak-left" aria-hidden="true"></div>
-            <div class="farm-decoration oak oak-right" aria-hidden="true"></div>
-            <div class="farm-decoration bush bush-left" aria-hidden="true"></div>
-            <div class="farm-decoration bush bush-right" aria-hidden="true"></div>
-            <div class="farm-decoration flowers flowers-left" aria-hidden="true"></div>
-            <div class="farm-decoration flowers flowers-right" aria-hidden="true"></div>
-            <div class="farm-decoration rock" aria-hidden="true"></div>
-            <div class="farm-decoration hay" aria-hidden="true"></div>
-            <div class="farm-decoration chicken" aria-hidden="true"></div>
-            <div class="spring-prop spring-bench" aria-hidden="true"></div>
-            <div class="spring-prop spring-pot" aria-hidden="true"></div>
-            <div class="spring-prop spring-tulips tulips-one" aria-hidden="true"></div>
-            <div class="spring-prop spring-tulips tulips-two" aria-hidden="true"></div>
-            <div class="spring-prop spring-daffodils daffodils-one" aria-hidden="true"></div>
-            <div class="spring-prop spring-daffodils daffodils-two" aria-hidden="true"></div>
-            <div class="spring-pond" aria-hidden="true">
-              <span class="pond-nw"></span><span class="pond-ne"></span>
-              <span class="pond-sw"></span><span class="pond-se"></span>
-            </div>
-            <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
-            <div class="game-character" id="game-character" aria-hidden="true"></div>
-            <div class="robot-follower" id="robot-follower" aria-label="Salus follows you"><img src="favicon.svg" alt=""></div>
-            <div class="game-help">WASD / arrows to move · click nearby plants</div>
-          </div>
-          <aside class="plant-panel" id="plant-panel" aria-label="Garden information and controls">
-            <div class="robot-dialogue" id="robot-dialogue" role="status" aria-live="polite" hidden>
-              <strong>Salus</strong><p id="robot-dialogue-text"></p><button type="button" id="dialogue-close">OK</button>
-            </div>
-            <p class="eyebrow">Plant guide</p>
-            <div id="plant-empty">Choose a plant to see what it needs.</div>
-            <div id="plant-details" hidden>
-              <div class="plant-large" id="plant-large" aria-hidden="true"></div>
-              <h3 id="plant-name"></h3>
-              <p id="plant-about"></p>
-              <p class="plant-state" id="plant-state"></p>
-              <button class="button primary" id="plant-care" type="button"></button>
-              <button class="button quiet" id="plant-tell" type="button">Tell me about it</button>
-              <p class="result" id="garden-result" role="status"></p>
-              <p class="hardware-hint">Robot: turn the knob to choose a plant · press the main button or knob to care for it</p>
-            </div>
-          </aside>
-          <aside class="garden-tools" id="garden-tools" aria-label="Seeds, developer options and garden journal"></aside>
-        </section>
-
-        <section class="care-game" id="care-game" hidden aria-labelledby="care-game-title">
-          <div class="care-game-card">
-            <p class="eyebrow" id="care-game-type">Daily care</p>
-            <h3 id="care-game-title">Care activity</h3>
-            <p id="care-game-copy"></p>
-            <div class="care-stage" id="care-stage"></div>
-            <div class="care-progress" aria-hidden="true"><span id="care-progress"></span></div>
-            <p id="care-game-status" role="status"></p>
-            <button class="button quiet" id="care-cancel" type="button">Not now</button>
-          </div>
-        </section>
-
-        <details class="seed-shelf" id="seed-shelf">
-          <summary>Seed shelf</summary>
-          <div class="section-heading"><div><p class="eyebrow">Seed shelf</p><h3>Add a plant</h3></div></div>
-          <form id="seed-form">
-            <div class="seed-list" id="seed-list"></div>
-            <label>Nickname <input id="plant-nickname" type="text" maxlength="30" placeholder="Optional"></label>
-            <button class="button" type="submit">Plant it</button>
-          </form>
-        </details>
-
-        <details class="admin-tools" id="admin-tools">
-          <summary>Developer options</summary>
-          <p>Test progress without waiting for real days.</p>
-          <a class="screen-preview-link" href="screen.html" target="_blank" rel="noopener">Open live robot screen</a>
-          <div class="admin-actions">
-            <button class="button" type="button" data-admin="advance_day">Advance one day</button>
-            <button class="button" type="button" data-admin="grow_all">Grow everything</button>
-            <button class="button" type="button" data-admin="make_due">Make all care due</button>
-            <button class="button" type="button" data-admin="flower_all">Flower everything</button>
-          </div>
-        </details>
-        <details class="garden-journal" id="garden-journal">
-          <summary>Garden journal</summary>
-          <div id="garden-history"></div>
-        </details>
-        <p class="asset-credit">Garden art: Tulipmere Village Lite by Zmuda KI and Cozy Farm Lite by Spaceyyy. Additional plants: SpiderDave, CC0.</p>
-      </main>
-
       <main class="stage" id="stage" role="tabpanel" aria-labelledby="home-tab">
         <section class="home-intro" aria-labelledby="home-intro-title">
           <div class="command-heading">
@@ -240,7 +135,7 @@
             <span class="command-key">our aims</span>
           </div>
           <p>Depression often comes back, and it tends to creep in quietly: a skipped walk, a day spent in bed, plans that slip away one at a time. We built SALUS to help stop that slide before it starts. It's a small robot friend that sits beside you, with a face, a voice, a knob to turn and lights that glow, and it's there every day, not just on the hard ones.</p>
-          <p>Our main goal is to help prevent relapse by building a steady routine and the motivation to reach your daily tasks and bigger goals. Hand Signals is a short camera game of gentle movements, with one spoken check-in. The Garden grows as you come back to care for it each day. You can talk to SALUS out loud, and it replies in its own voice. Camera video stays on this computer and is never saved, and the voice chat sends only the written words of what you say, never the audio, to write its reply. If anything you say suggests you are in danger, SALUS points you to a real person or a crisis line.</p>
+          <p>Our main goal is to help prevent relapse by building a steady routine and the motivation to reach your daily tasks and bigger goals. Hand Signals is a short camera game of gentle movements, with one spoken check-in. You can talk to SALUS out loud, and it replies in its own voice. Camera video stays on this computer and is never saved, and the voice chat sends only the written words of what you say, never the audio, to write its reply. If anything you say suggests you are in danger, SALUS points you to a real person or a crisis line.</p>
           <p class="hint">SALUS is here to support you, alongside the people and care already in your life, never instead of them. The modules below test the robot's parts.</p>
         </section>
         <section class="console" id="console" aria-labelledby="face-title" data-board="offline">

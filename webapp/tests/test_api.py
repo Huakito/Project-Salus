@@ -306,52 +306,6 @@ def test_movement_session_is_saved_without_camera_data(contract_file, data_dir):
     assert saved["feedback_source"] == "local"
 
 
-def test_garden_persists_and_never_kills_a_missed_plant(contract_file, data_dir):
-    app = create_app(mode="fake", contract_path=contract_file, data_dir=data_dir, feedback_service=FeedbackService())
-    with TestClient(app, base_url="http://127.0.0.1:8000") as garden_client:
-        initial = garden_client.get("/api/garden").json()
-        assert len(initial["plants"]) == 24
-        assert initial["plants"][0]["needs_care"] is True
-        assert initial["plants"][0]["plot_slot"] == 0
-        generated_species = {"sunflower", "rose", "iris", "marigold"}
-        assert generated_species <= {plant["species"] for plant in initial["plants"]}
-        for plant in initial["plants"]:
-            if plant["species"] in generated_species:
-                assert plant["growth_asset"].endswith(f"{plant['species']}-growth.png")
-                assert plant["stage_count"] == 3
-                assert plant["visual_stage"] == min(2, plant["growth"])
-        sunflower = next(plant for plant in initial["plants"] if plant["nickname"] == "Sunflower")
-        original_growth = sunflower["growth"]
-        moved = garden_client.post(f"/api/garden/plants/{sunflower['id']}/move", json={"plot_slot": 9})
-        assert moved.status_code == 200
-        assert moved.json()["plant"]["plot_slot"] == 9
-        swapped = garden_client.get("/api/garden").json()["plants"]
-        assert next(plant for plant in swapped if plant["nickname"] == "Lemon Queen")["plot_slot"] == 1
-        full = garden_client.post("/api/garden/plants", json={"species": "tulip"})
-        assert full.status_code == 422
-        field_poppy = next(plant for plant in swapped if plant["nickname"] == "Field Poppy")
-        deleted = garden_client.post(f"/api/garden/plants/{field_poppy['id']}/delete", json={})
-        assert deleted.status_code == 200
-        replacement = garden_client.post("/api/garden/plants", json={
-            "species": "tulip", "nickname": "Test Tulip", "plot_slot": 23
-        })
-        assert replacement.status_code == 200
-        cared = garden_client.post(f"/api/garden/plants/{sunflower['id']}/care", json={
-            "activity": "water", "duration_seconds": 12, "score": 1
-        }).json()
-        assert cared["changed"] is True
-        assert cared["plant"]["growth"] == min(5, original_growth + 1)
-        assert cared["plant"]["visual_stage"] == min(2, original_growth + 1)
-        garden_client.post("/api/garden/admin", json={"action": "advance_day", "days": 10})
-        later = garden_client.get("/api/garden").json()
-        sunflower_later = next(plant for plant in later["plants"] if plant["nickname"] == "Sunflower")
-        assert sunflower_later["needs_care"] is True
-        assert sunflower_later["growth"] == min(5, original_growth + 1)
-        assert "dead" not in sunflower_later
-        assert later["history"][0]["activity"] == "water"
-        assert later["history"][0]["duration_seconds"] == 12
-
-
 def test_openai_feedback_receives_only_derived_session_data():
     class Parsed:
         output_parsed = type("Output", (), {"message": "Nice work — three steady shapes found."})()

@@ -65,7 +65,7 @@
   --alarm-edge: #7a1510;
   --on-alarm: #fff6f2;
   --font: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
-  --mono: var(--font); /* the Movement and Garden tabs ask for this by name */
+  --mono: var(--font); /* the Movement interface asks for this by name */
 }
 
 /* The same palette, deeper, for a computer set to its dark appearance. */

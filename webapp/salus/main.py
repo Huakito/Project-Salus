@@ -33,7 +33,6 @@ from .contract import DEFAULT_PATH, Contract, ContractError, load_contract
 from .face import FaceError, check_face, rgb565
 from .feedback import FeedbackService
 from .memory import HistoryStore
-from .garden import GardenStore, PLOT_SLOT_COUNT
 from .voice import ElevenLabsVoice, MAX_SPEECH_CHARS, VoiceError
 
 log = logging.getLogger("salus")
@@ -108,31 +107,6 @@ class SettingsRequest(BaseModel):
     robot_colour: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
 
 
-class AddPlantRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    species: str = Field(min_length=1, max_length=40)
-    nickname: str = Field(default="", max_length=30)
-    plot_slot: int | None = Field(default=None, ge=0, lt=PLOT_SLOT_COUNT)
-
-
-class MovePlantRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    plot_slot: int = Field(ge=0, lt=PLOT_SLOT_COUNT)
-
-
-class GardenAdminRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    action: Literal["advance_day", "grow_all", "make_due", "flower_all"]
-    days: int = Field(default=1, ge=1, le=30)
-
-
-class GardenCareRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    activity: Literal["water", "mist", "turn", "sun", "check"]
-    duration_seconds: int = Field(default=0, ge=0, le=600)
-    score: float = Field(default=1, ge=0, le=1)
-
-
 class _HideStatusPolls(logging.Filter):
     """The page asks for /api/status every second or two; keep that out of the terminal."""
 
@@ -188,7 +162,6 @@ def create_app(
             return ElevenLabsVoice.from_environment()
         return voice_service
     history = HistoryStore(session_dir, Path(__file__).with_name("conversation_library.json"))
-    garden = GardenStore(session_dir)
     screen_lock = threading.Lock()
     screen_state: dict[str, Any] = {
         "kind": "face",
@@ -378,47 +351,6 @@ def create_app(
     @app.post("/api/settings")
     def save_settings(request: SettingsRequest) -> dict:
         return history.save_settings(request.model_dump(exclude_none=True))
-
-    @app.get("/api/garden")
-    def garden_state() -> dict:
-        return garden.state()
-
-    @app.post("/api/garden/plants")
-    def add_garden_plant(request: AddPlantRequest) -> dict:
-        try:
-            return {"ok": True, "plant": garden.add(request.species, request.nickname, request.plot_slot)}
-        except ValueError as exc:
-            return JSONResponse({"detail": str(exc)}, status_code=422)
-
-    @app.post("/api/garden/plants/{plant_id}/move")
-    def move_garden_plant(plant_id: int, request: MovePlantRequest) -> dict:
-        try:
-            return {"ok": True, "plant": garden.move(plant_id, request.plot_slot)}
-        except ValueError as exc:
-            return JSONResponse({"detail": str(exc)}, status_code=422)
-
-    @app.post("/api/garden/plants/{plant_id}/delete")
-    def delete_garden_plant(plant_id: int) -> dict:
-        try:
-            garden.delete(plant_id)
-            return {"ok": True}
-        except ValueError as exc:
-            return JSONResponse({"detail": str(exc)}, status_code=404)
-
-    @app.post("/api/garden/plants/{plant_id}/care")
-    def care_for_garden_plant(plant_id: int, request: GardenCareRequest) -> dict:
-        try:
-            plant, changed = garden.care(plant_id, request.activity, request.duration_seconds, request.score)
-            return {"ok": True, "changed": changed, "plant": plant}
-        except ValueError as exc:
-            return JSONResponse({"detail": str(exc)}, status_code=404)
-
-    @app.post("/api/garden/admin")
-    def garden_admin(request: GardenAdminRequest) -> dict:
-        try:
-            return garden.admin(request.action, request.days)
-        except ValueError as exc:
-            return JSONResponse({"detail": str(exc)}, status_code=422)
 
     # Everything else is the page. Mounted last so it cannot shadow the API.
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="page")
