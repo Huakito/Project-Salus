@@ -1,0 +1,392 @@
+:root {
+  color-scheme: light dark;
+  --page: #f4f1eb;
+  --panel: #fffdfa;
+  --field: #ffffff;
+  --line: #e1dbcf;
+  --ink: #1f2428;
+  --muted: #5f666d;
+  --accent: #1a6964;
+  --on-accent: #ffffff;
+  --good: #1f7a44;
+  --bad: #b23328;
+  --bad-wash: #fbe9e6;
+  --note: #6f4a00;
+  --note-wash: #fbf1d6;
+  --calm-wash: #e8edef;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #131619;
+    --panel: #1b1f23;
+    --field: #14171a;
+    --line: #30363c;
+    --ink: #e8e5df;
+    --muted: #a0a7ae;
+    --accent: #56b9b1;
+    --on-accent: #0c1a19;
+    --good: #74d394;
+    --bad: #f19288;
+    --bad-wash: #3b1f1c;
+    --note: #ecc96f;
+    --note-wash: #372e16;
+    --calm-wash: #242a2f;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Several elements below set their own display, which would otherwise beat `hidden`. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 1rem/1.5 var(--sans);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.page {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 20px 20px 56px;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ---- top bar ---- */
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.brand h1 {
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+}
+
+.brand-face {
+  color: var(--accent);
+  font: 600 1.05rem var(--mono);
+}
+
+.brand-sub {
+  color: var(--muted);
+}
+
+.link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  font-weight: 600;
+}
+
+.status-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.status[data-state="connected"] .status-dot {
+  background: #2fa85a;
+}
+
+.status[data-state="searching"] .status-dot {
+  background: #d9483b;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.status-port {
+  color: var(--muted);
+  font: 400 0.85rem var(--mono);
+}
+
+.status-port:empty {
+  display: none;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot {
+    animation: none !important;
+  }
+}
+
+/* ---- notices under the top bar ---- */
+
+.notice {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+
+.notice.fake {
+  background: var(--note-wash);
+  color: var(--note);
+}
+
+.notice.trouble {
+  background: var(--bad-wash);
+  color: var(--bad);
+}
+
+/* Letting go of the port on purpose is not trouble. */
+.notice.trouble[data-state="released"] {
+  background: var(--calm-wash);
+  color: var(--ink);
+}
+
+/* ---- panels ---- */
+
+main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+@media (min-width: 900px) {
+  main {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+.panel {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+}
+
+.panel h2 {
+  font-size: 1.1rem;
+}
+
+/* ---- the screen preview ---- */
+
+.lcd {
+  margin: 14px 0 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #16191c;
+  box-shadow: inset 0 0 0 1px #2c3136;
+}
+
+.lcd canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 5px;
+  background: #000;
+}
+
+/* ---- form controls ---- */
+
+label {
+  display: block;
+  margin: 16px 0 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+textarea,
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--field);
+  color: var(--ink);
+  font: 0.95rem/1.4 var(--mono);
+}
+
+textarea {
+  display: block;
+  resize: vertical;
+}
+
+input[type="color"] {
+  width: 48px;
+  height: 34px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  cursor: pointer;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-top: 14px;
+}
+
+.row label {
+  margin: 0;
+}
+
+.row textarea,
+.row input[type="text"],
+.row input[type="number"] {
+  flex: 1 1 180px;
+  width: auto;
+  min-width: 0;
+}
+
+.row .hint,
+.row .result {
+  flex: 1 1 200px;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.chip {
+  padding: 4px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: 0.9rem var(--mono);
+  cursor: pointer;
+}
+
+.button {
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: 600 0.95rem var(--sans);
+  cursor: pointer;
+}
+
+.chip:hover,
+.button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.problem {
+  margin-top: 8px;
+  color: var(--bad);
+  font-size: 0.9rem;
+}
+
+.result {
+  min-height: 1.35em; /* keeps its line, so nothing jumps when the answer arrives */
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.result[data-kind="ok"] {
+  color: var(--good);
+}
+
+.result[data-kind="error"] {
+  color: var(--bad);
+}
+
+/* ---- commands ---- */
+
+.command {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.command:first-child {
+  margin-top: 14px;
+}
+
+.command:last-child {
+  padding-bottom: 0;
+}
+
+.command-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.command h3 {
+  font-size: 1rem;
+}
+
+.command-key {
+  color: var(--muted);
+  font: 0.8rem var(--mono);
+}
+
+.command .result {
+  margin-top: 8px;
+}

@@ -1,0 +1,202 @@
+"""The web server: a few JSON endpoints in front of the board, and the page itself."""
+
+from __future__ import annotations
+
+import logging
+import os
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any
+from urllib.parse import urlsplit
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+from .board import (
+    BoardError,
+    BoardManager,
+    Busy,
+    CommandFailed,
+    InvalidCommand,
+    NotConnected,
+    fake_board,
+    real_board,
+)
+from .contract import DEFAULT_PATH, Contract, ContractError, load_contract
+from .face import FaceError, check_face, rgb565
+
+log = logging.getLogger("salus")
+
+STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
+
+# What the browser is told when a command is not carried out.
+HTTP_STATUS = {
+    InvalidCommand: 422,  # the request itself is wrong
+    NotConnected: 409,  # right request, but there is no board at the moment
+    Busy: 503,  # try again shortly
+    CommandFailed: 502,  # the board refused, or did not answer
+}
+
+
+class CommandRequest(BaseModel):
+    key: str
+    value: Any = None
+
+
+class FaceRequest(BaseModel):
+    text: str = Field(max_length=4000)
+    colour: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+
+
+class _HideStatusPolls(logging.Filter):
+    """The page asks for /api/status every second or two; keep that out of the terminal."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        return not (isinstance(args, tuple) and len(args) == 5 and args[2] == "/api/status" and args[4] == 200)
+
+
+def _log_to_terminal() -> None:
+    """Show this app's own log lines (board connected, board unplugged...) next to uvicorn's."""
+    logger = logging.getLogger("salus")
+    if logger.handlers:
+        return  # already set up
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(levelname)s:     %(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    logging.getLogger("uvicorn.access").addFilter(_HideStatusPolls())
+
+
+def create_app(
+    *,
+    mode: str = "real",
+    board_port: str | None = None,
+    contract_path: Path = DEFAULT_PATH,
+) -> FastAPI:
+    """Build the app. ``mode`` is "real" (the robot on USB) or "fake" (no hardware needed)."""
+    if mode not in ("real", "fake"):
+        raise ValueError(f'mode must be "real" or "fake", not {mode!r}')
+
+    _log_to_terminal()
+
+    def contract() -> Contract:
+        return load_contract(contract_path)
+
+    if mode == "fake":
+        log.warning("Using the FAKE board: nothing is sent to a real robot.")
+    manager = BoardManager(fake_board(contract) if mode == "fake" else real_board(board_port), mode=mode)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        manager.start()
+        yield
+        manager.stop()  # lets go of the USB port
+
+    # The interactive /docs page is switched off: it loads its scripts from the
+    # internet, and this app is meant to work without it.
+    app = FastAPI(title="Salus", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app.state.manager = manager
+
+    # ---- only this computer, and only our own page ----
+    # The server listens on 127.0.0.1, but a web page on any site the person visits
+    # can still make their browser send requests here. Two checks stop that:
+    #  - the Host header must name this computer, which defeats a site that points
+    #    its own domain name at 127.0.0.1;
+    #  - a request that changes something must come from our own page. Browsers
+    #    label a request made by another site with that site's Origin.
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost"])
+
+    @app.middleware("http")
+    async def own_page_only(request: Request, call_next):
+        origin = request.headers.get("origin")
+        changes_something = request.method not in ("GET", "HEAD", "OPTIONS")
+        if changes_something and origin is not None and urlsplit(origin).netloc != request.headers.get("host"):
+            return JSONResponse({"detail": "Requests from other websites are not accepted."}, status_code=403)
+        response = await call_next(request)
+        # The page loads nothing from anywhere else, so say so; and always check
+        # for a newer copy of the page's files instead of using a stale one.
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+    # ---- errors, as {"detail": "a sentence the page can show"} ----
+
+    @app.exception_handler(BoardError)
+    async def board_error(request: Request, exc: BoardError):
+        return JSONResponse({"detail": str(exc)}, status_code=HTTP_STATUS.get(type(exc), 500))
+
+    @app.exception_handler(ContractError)
+    async def contract_error(request: Request, exc: ContractError):
+        return JSONResponse({"detail": str(exc)}, status_code=500)
+
+    @app.exception_handler(RequestValidationError)
+    async def bad_request(request: Request, exc: RequestValidationError):
+        problems = "; ".join(f"{error['loc'][-1]}: {error['msg']}" for error in exc.errors())
+        return JSONResponse({"detail": f"The request was not understood ({problems})."}, status_code=422)
+
+    # ---- the API ----
+    # These are plain (not async) functions on purpose: they wait for the board,
+    # and FastAPI runs plain functions on spare threads so the server stays responsive.
+
+    @app.get("/api/status")
+    def status() -> dict:
+        return manager.status()
+
+    @app.post("/api/connect")
+    def connect() -> dict:
+        return manager.connect()
+
+    @app.post("/api/disconnect")
+    def disconnect() -> dict:
+        return manager.disconnect()
+
+    @app.get("/api/commands")
+    def commands() -> dict:
+        return contract().model_dump(exclude_none=True)
+
+    @app.post("/api/command")
+    def command(request: CommandRequest) -> dict:
+        spec = contract().command(request.key)
+        if spec is None:
+            raise InvalidCommand(f'"{request.key}" is not a command in {contract_path.name}.')
+        try:
+            value = spec.check(request.value)
+        except ValueError as exc:
+            raise InvalidCommand(str(exc)) from None
+        manager.send(spec.key, value)
+        return {"ok": True}
+
+    @app.post("/api/face")
+    def face(request: FaceRequest) -> dict:
+        current = contract()
+        if current.command("face") is None:
+            raise InvalidCommand(f'There is no "face" command in {contract_path.name}.')
+        try:
+            lines = check_face(request.text, current.screen.width, current.screen.height)
+        except FaceError as exc:
+            raise InvalidCommand(str(exc)) from None
+        value = {"text": "\n".join(lines), "colour": rgb565(request.colour)}
+        manager.send("face", value)
+        return {"ok": True, **value}
+
+    @app.get("/api/events")
+    def events() -> list[dict]:
+        return manager.recent_events()
+
+    # Everything else is the page. Mounted last so it cannot shadow the API.
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="page")
+    return app
+
+
+# What `uvicorn salus.main:app` and `python -m salus` run.
+app = create_app(
+    mode=os.environ.get("SALUS_BOARD", "real"),
+    board_port=os.environ.get("SALUS_BOARD_PORT") or None,
+)

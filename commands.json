@@ -1,0 +1,42 @@
+{
+  "screen": { "width": 320, "height": 240 },
+
+  "commands": [
+    {
+      "key": "face",
+      "label": "Show face",
+      "description": "Draw ASCII art on the screen: plain keyboard characters, in the biggest text size that fits, centred. colour is RGB565.",
+      "value": "json",
+      "example": { "text": "(^_^)", "colour": 2016 },
+      "editor": "face"
+    },
+    {
+      "key": "spk_play_rtttl",
+      "label": "Play melody",
+      "description": "Play a ringtone-style (RTTTL) melody through the speaker.",
+      "value": "text",
+      "example": "hello:d=8,o=5,b=160:c,e,g,4c6"
+    },
+    {
+      "key": "spk_set_volume",
+      "label": "Set volume",
+      "description": "Speaker volume from 0 (silent) to 1 (loudest). 0.3 to 0.5 is comfortable; 1 distorts.",
+      "value": "number",
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "example": 0.4
+    },
+    {
+      "key": "spk_stop",
+      "label": "Stop sound",
+      "description": "Stop any sound immediately.",
+      "value": "none"
+    }
+  ],
+
+  "events": [
+    { "key": "yes_btn", "type": "button", "description": "1 when pressed, 0 when released." },
+    { "key": "no_btn", "type": "button", "description": "1 when pressed, 0 when released." }
+  ]
+}

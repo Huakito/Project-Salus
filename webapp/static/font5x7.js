@@ -1,0 +1,47 @@
+// The font built into the robot's screen: the 95 printable ASCII characters
+// (space to ~) of the "classic" 5x7 font in the Adafruit GFX library, which is
+// what the screen draws text with. Each character is 5 bytes, written here as
+// 10 hex digits: one byte per column, left to right, lowest bit at the top.
+//
+// Generated from glcdfont.c in Adafruit GFX Library 1.12.6, the version the
+// Atech SDK builds firmware with. That file is distributed under this licence:
+//
+//   Software License Agreement (BSD License)
+//
+//   Copyright (c) 2012 Adafruit Industries.  All rights reserved.
+//
+//   Redistribution and use in source and binary forms, with or without
+//   modification, are permitted provided that the following conditions are met:
+//
+//   - Redistributions of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//   - Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+//   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+//   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+//   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+//   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+//   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+//   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+//   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+//   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+//   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+//   POSSIBILITY OF SUCH DAMAGE.
+
+export const FONT_5X7 = [
+  "000000000000005f00000007000700147f147f14242a7f2a12231308646236495620500008070300", //  !"#$%&'
+  "001c2241000041221c002a1c7f1c2a08083e08080080703000080808080800006060002010080402", // ()*+,-./
+  "3e5149453e00427f400072494949462141494d331814127f1027454545393c4a4949314121110907", // 01234567
+  "3649494936464949291e000014000000403400000008142241141414141400412214080201590906", // 89:;<=>?
+  "3e415d594e7c1211127c7f494949363e414141227f4141413e7f494949417f090909013e41415173", // @ABCDEFG
+  "7f0808087f00417f41002040413f017f081422417f404040407f021c027f7f0408107f3e4141413e", // HIJKLMNO
+  "7f090909063e4151215e7f09192946264949493203017f01033f4040403f1f2040201f3f4038403f", // PQRSTUVW
+  "631408146303047804036159494d43007f4141410204081020004141417f04020102044040404040", // XYZ[\]^_
+  "000307080020545478407f284444383844444428384444287f385454541800087e090218a4a49c78", // `abcdefg
+  "7f0804047800447d40002040403d007f1028440000417f40007c047804787c080404783844444438", // hijklmno
+  "fc1824241818242418fc7c08040408485454542404043f44243c4040207c1c2040201c3c4030403c", // pqrstuvw
+  "44281028444c9090907c4464544c440008364100000077000000413608000201020402", // xyz{|}~
+].join("");

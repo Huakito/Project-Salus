@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------
+# Patient data. None of this may ever reach GitHub.
+# ---------------------------------------------------------------------------
+# Databases (mood history, questionnaire answers)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Voice recordings and generated speech.
+# To commit a non-patient sound (e.g. a startup chime), add an exception
+# below, such as:  !firmware/assets/chime.wav
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+*.pcm
+recordings/
+
+# Anything the app writes at runtime, and summaries exported for a GP
+webapp/data/
+exports/
+
+# Secrets and per-machine settings
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------------------
+# Build output
+# ---------------------------------------------------------------------------
+# Atech / PlatformIO firmware builds
+build/
+.pio/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ---------------------------------------------------------------------------
+# OS and editor clutter
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp

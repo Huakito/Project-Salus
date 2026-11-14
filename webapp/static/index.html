@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Salus robot control</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-face" aria-hidden="true">(^_^)</span>
+          <h1>Salus</h1>
+          <span class="brand-sub">Robot control</span>
+        </div>
+        <div class="link">
+          <p class="status" id="status" role="status" data-state="offline">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="status-text">Starting…</span>
+            <span class="status-port" id="status-port"></span>
+          </p>
+          <button class="button quiet" id="link-button" type="button" hidden>Disconnect</button>
+        </div>
+      </header>
+
+      <p class="notice fake" id="fake-notice" hidden>
+        <strong>Fake board.</strong>
+        No robot is attached: commands go to a stand-in that accepts whatever commands.json lists.
+      </p>
+      <p class="notice trouble" id="notice" role="status" hidden></p>
+
+      <main>
+        <section class="panel" aria-labelledby="face-title">
+          <h2 id="face-title">Face</h2>
+          <p class="hint">What the robot shows on its screen, drawn here in the screen's own font.</p>
+
+          <div class="lcd">
+            <canvas id="preview" width="960" height="720" role="img" aria-label="Preview of the robot's screen"></canvas>
+          </div>
+          <p class="hint" id="face-size"></p>
+
+          <form id="face-form">
+            <label for="face-text">ASCII art</label>
+            <textarea id="face-text" rows="5" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off"
+              aria-describedby="face-problem">(^_^)</textarea>
+            <p class="problem" id="face-problem" role="alert" hidden></p>
+
+            <div class="presets" id="presets" role="group" aria-label="Ready-made faces"></div>
+
+            <div class="row">
+              <label for="face-colour">Colour</label>
+              <input id="face-colour" type="color" value="#00ff00">
+              <span class="hint" id="face-colour-value"></span>
+            </div>
+
+            <div class="row">
+              <button class="button primary" id="face-send" type="submit" data-needs-board disabled>Send to robot</button>
+              <p class="result" id="face-result" role="status"></p>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel" aria-labelledby="commands-title">
+          <h2 id="commands-title">Commands</h2>
+          <p class="hint">One control for each command in commands.json.</p>
+          <div id="commands"></div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
