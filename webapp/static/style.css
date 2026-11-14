@@ -2255,6 +2255,132 @@ body:has(.play-view:not([hidden])) .topbar-inner,
   }
 }
 
+/* Tulipmere spring pass: keep the game layout, replace the mixed scenery. */
+.garden-world {
+  background-color: #70ad59;
+  background-image: url("assets/tulipmere-lite/tiles/grass.png");
+  background-size: 64px 64px;
+}
+
+.farm-path {
+  background-image: url("assets/tulipmere-lite/tiles/path_c.png");
+  background-size: 64px 64px;
+  box-shadow: inset 0 4px rgb(255 232 177 / .18), inset 0 -4px rgb(92 63 45 / .12);
+}
+
+.farm-bed {
+  border: 8px solid #8b6042;
+  border-radius: 8px;
+  background-image: url("assets/tulipmere-lite/tiles/soil.png");
+  background-size: 64px 64px;
+  box-shadow: 0 6px 0 rgb(67 45 34 / .42), inset 0 0 0 4px rgb(232 183 115 / .18);
+}
+
+.farm-decoration.oak {
+  width: 112px;
+  height: 112px;
+  background-image: url("assets/tulipmere-lite/objects/cherry_tree.png");
+  background-size: 112px 112px;
+  filter: drop-shadow(0 7px 0 rgb(56 69 42 / .25));
+  transform-origin: 50% 90%;
+  animation: cherry-breathe 4.6s steps(2, end) infinite;
+}
+
+.oak-left { left: 1.5%; top: 1.5%; }
+.oak-right { right: 1.5%; top: 1.5%; animation-delay: -2.2s; }
+.farm-decoration.bush,
+.farm-decoration.flowers,
+.farm-decoration.rock,
+.farm-decoration.hay,
+.farm-decoration.chicken,
+.farm-prop.crate,
+.farm-prop.barrel { display: none; }
+
+.spring-prop {
+  position: absolute;
+  z-index: 3;
+  width: 64px;
+  height: 64px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 64px 64px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.spring-bench {
+  left: 5%;
+  top: 43%;
+  background-image: url("assets/tulipmere-lite/tiles/bench.png");
+}
+
+.spring-pot {
+  right: 5%;
+  bottom: 4%;
+  background-image: url("assets/tulipmere-lite/tiles/flower_pot.png");
+  animation: flower-bob 2.8s steps(2, end) infinite;
+}
+
+.spring-tulips { background-image: url("assets/tulipmere-lite/tiles/tulips_red.png"); }
+.spring-daffodils { background-image: url("assets/tulipmere-lite/tiles/daffodils.png"); }
+.tulips-one { left: 5%; top: 25%; }
+.tulips-two { right: 5%; top: 53%; animation: flower-bob 3.2s steps(2, end) -1.4s infinite; }
+.daffodils-one { right: 5%; top: 25%; }
+.daffodils-two { left: 5%; top: 55%; animation: flower-bob 3.4s steps(2, end) -.7s infinite; }
+
+.spring-pond {
+  position: absolute;
+  z-index: 3;
+  left: 3.5%;
+  bottom: 3.5%;
+  display: grid;
+  grid-template-columns: repeat(2, 48px);
+  width: 96px;
+  height: 96px;
+  filter: drop-shadow(0 5px 0 rgb(51 72 47 / .25));
+  pointer-events: none;
+}
+
+.spring-pond span {
+  width: 48px;
+  height: 48px;
+  background-size: 48px 48px;
+  image-rendering: pixelated;
+  animation: pond-shimmer 2.4s steps(2, end) infinite;
+}
+
+.pond-nw { background-image: url("assets/tulipmere-lite/tiles/water_round_nw.png"); }
+.pond-ne { background-image: url("assets/tulipmere-lite/tiles/water_round_ne.png"); }
+.pond-sw { background-image: url("assets/tulipmere-lite/tiles/water_round_sw.png"); }
+.pond-se { background-image: url("assets/tulipmere-lite/tiles/water_round_se.png"); }
+
+.game-character {
+  width: 64px;
+  height: 96px;
+  background-image: url("assets/tulipmere-lite/characters/gardener_spritesheet.png");
+  background-size: 256px 384px;
+}
+
+@keyframes cherry-breathe {
+  50% { transform: translateY(-2px) rotate(-1deg); }
+}
+
+@keyframes flower-bob {
+  50% { transform: translateY(-2px); filter: brightness(1.08); }
+}
+
+@keyframes pond-shimmer {
+  50% { filter: brightness(1.1) saturate(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .farm-decoration.oak,
+  .spring-pot,
+  .tulips-two,
+  .daffodils-two,
+  .spring-pond span { animation: none; }
+}
+
 /* Vertically centre the garden instead of pinning its lower edge to the viewport. */
 .garden-view:not([hidden]) {
   grid-template-rows: 48px minmax(0, 1fr);

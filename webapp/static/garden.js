@@ -167,14 +167,14 @@ function updateActors() {
 
 function walkLoop(now) {
   let dx = 0, dy = 0;
-  if (heldKeys.has("ArrowLeft") || heldKeys.has("a")) { dx = -1; player.direction = 1; }
-  if (heldKeys.has("ArrowRight") || heldKeys.has("d")) { dx = 1; player.direction = 2; }
-  if (heldKeys.has("ArrowUp") || heldKeys.has("w")) { dy = -1; player.direction = 3; }
+  if (heldKeys.has("ArrowLeft") || heldKeys.has("a")) { dx = -1; player.direction = 2; }
+  if (heldKeys.has("ArrowRight") || heldKeys.has("d")) { dx = 1; player.direction = 3; }
+  if (heldKeys.has("ArrowUp") || heldKeys.has("w")) { dy = -1; player.direction = 1; }
   if (heldKeys.has("ArrowDown") || heldKeys.has("s")) { dy = 1; player.direction = 0; }
   if (dx || dy) {
     player.x = Math.max(5, Math.min(94, player.x + dx * .55));
     player.y = Math.max(12, Math.min(90, player.y + dy * .75));
-    if (now - lastWalkFrame > 95) { player.frame = (player.frame + 1) % 6; lastWalkFrame = now; }
+    if (now - lastWalkFrame > 125) { player.frame = (player.frame + 1) % 4; lastWalkFrame = now; }
   } else player.frame = 0;
   updateActors(); requestAnimationFrame(walkLoop);
 }
