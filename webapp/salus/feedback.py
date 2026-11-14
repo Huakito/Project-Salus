@@ -45,7 +45,7 @@ def local_feedback(session: Mapping[str, Any]) -> Feedback:
 class FeedbackService:
     """Generate a brief response; always fall back locally on API failure."""
 
-    def __init__(self, client: Any | None = None, model: str = "gpt-6-astra"):
+    def __init__(self, client: Any | None = None, model: str = "gpt-6-luna"):
         self.client = client
         self.model = model
 
@@ -68,7 +68,7 @@ class FeedbackService:
 
             return cls(
                 client=OpenAI(timeout=8.0, max_retries=1),
-                model=os.environ.get("SALUS_LLM_MODEL", "gpt-6-astra"),
+                model=os.environ.get("SALUS_LLM_MODEL", "gpt-6-luna"),
             )
         except Exception:
             log.exception("OpenAI feedback could not be configured; using local feedback.")
