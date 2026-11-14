@@ -17,9 +17,9 @@
           <span class="brand-sub">Handheld helper</span>
         </div>
         <nav class="main-nav" aria-label="Main sections" role="tablist">
-          <button class="nav-tab active" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="true">Movement</button>
+          <button class="nav-tab active" id="home-tab" type="button" role="tab" data-view="home" aria-controls="stage" aria-selected="true">Home</button>
+          <button class="nav-tab" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="false" tabindex="-1">Movement</button>
           <button class="nav-tab" id="garden-tab" type="button" role="tab" data-view="garden" aria-controls="garden-view" aria-selected="false" tabindex="-1">Garden</button>
-          <button class="nav-tab" id="workshop-tab" type="button" role="tab" data-view="workshop" aria-controls="stage" aria-selected="false" tabindex="-1">Workshop</button>
         </nav>
         <div class="link">
           <p class="mic-note" id="mic-note" role="status" hidden></p>
@@ -40,7 +40,7 @@
       </p>
       <p class="notice trouble" id="notice" role="status" hidden></p>
 
-      <main class="play-view" id="play-view" role="tabpanel" aria-labelledby="play-tab">
+      <main class="play-view" id="play-view" role="tabpanel" aria-labelledby="play-tab" hidden>
         <section class="game-intro" aria-labelledby="game-title">
           <p class="eyebrow">Camera demo</p>
           <h2 id="game-title">Hand Signals</h2>
@@ -229,7 +229,16 @@
         <p class="asset-credit">Garden art: Tulipmere Village Lite by Zmuda KI and Cozy Farm Lite by Spaceyyy. Additional plants: SpiderDave, CC0.</p>
       </main>
 
-      <main class="stage" id="stage" role="tabpanel" aria-labelledby="workshop-tab" hidden>
+      <main class="stage" id="stage" role="tabpanel" aria-labelledby="home-tab">
+        <section class="home-intro" aria-labelledby="home-intro-title">
+          <div class="command-heading">
+            <h2 id="home-intro-title">About SALUS</h2>
+            <span class="command-key">our aims</span>
+          </div>
+          <p>Depression often comes back, and it tends to creep in quietly: a skipped walk, a day spent in bed, plans that slip away one at a time. We built SALUS to help stop that slide before it starts. It's a small robot friend that sits beside you, with a face, a voice, a knob to turn and lights that glow, and it's there every day, not just on the hard ones.</p>
+          <p>Our main goal is to help prevent relapse by building a steady routine and the motivation to reach your daily tasks and bigger goals. Hand Signals is a short camera game of gentle movements, with one spoken check-in. The Garden grows as you come back to care for it each day. You can talk to SALUS out loud, and it replies in its own voice. Camera video stays on this computer and is never saved, and the voice chat sends only the written words of what you say, never the audio, to write its reply. If anything you say suggests you are in danger, SALUS points you to a real person or a crisis line.</p>
+          <p class="hint">SALUS is here to support you, alongside the people and care already in your life, never instead of them. The modules below test the robot's parts.</p>
+        </section>
         <section class="console" id="console" aria-labelledby="face-title" data-board="offline">
           <div class="console-top">
             <span class="console-led" aria-hidden="true"></span>
@@ -381,18 +390,8 @@
         <svg class="wires" id="wires" aria-hidden="true"></svg>
       </main>
 
-      <p class="hint stage-note" id="commands-note" hidden></p>
+      <p class="hint stage-note" id="commands-note"></p>
     </div>
 
-    <aside class="floating-screen" id="floating-screen" aria-label="Movable live robot screen">
-      <header class="floating-screen-handle" id="floating-screen-handle" tabindex="0" aria-label="Move robot face window with pointer or arrow keys">
-        <strong>Salus face</strong>
-        <button type="button" id="floating-screen-toggle" aria-label="Minimise robot face window">−</button>
-      </header>
-      <div class="floating-screen-body" id="floating-screen-body">
-        <canvas id="floating-screen-canvas" width="480" height="240" role="img" aria-label="Live robot face"></canvas>
-        <span id="floating-screen-status" role="status" aria-live="polite">Live</span>
-      </div>
-    </aside>
   </body>
 </html>

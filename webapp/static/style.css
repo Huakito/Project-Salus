@@ -1301,7 +1301,7 @@ body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1320px; }
   .garden-layout { grid-template-columns: 1fr; grid-template-rows: minmax(520px, 68vh) auto; }
 }
 
-/* Movement page uses the same centre-console and side-module language as Workshop. */
+/* Movement page uses the same centre-console and side-module language as the Home tab. */
 body:has(.play-view:not([hidden])) .topbar-inner,
 .page:has(.play-view:not([hidden])) { max-width: 1320px; }
 .play-view {
@@ -1353,25 +1353,6 @@ body:has(.play-view:not([hidden])) .topbar-inner,
 .farm-decoration.chicken { left: 6%; top: 57%; width: 48px; height: 64px; background-image: url("assets/cozy-farm/animals/4x/chicken-white.png"); background-size: 192px 320px; animation: chicken-bob 1.2s steps(2, end) infinite; }
 @keyframes chicken-bob { 50% { transform: translateY(-3px); } }
 
-/* Movable miniature screen, visible across every page. */
-.floating-screen {
-  position: fixed;
-  z-index: 100;
-  width: 280px;
-  border: 2px solid var(--edge);
-  background: var(--panel);
-  color: var(--ink);
-  box-shadow: 10px 12px 0 rgb(19 42 33 / .35);
-}
-.floating-screen.dragging { opacity: .9; box-shadow: 14px 16px 0 rgb(19 42 33 / .28); }
-.floating-screen-handle { display: flex; align-items: center; justify-content: space-between; min-height: 38px; padding-left: 10px; border-bottom: 1px solid var(--line); background: var(--field); cursor: move; touch-action: none; user-select: none; }
-.floating-screen-handle strong { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
-.floating-screen-handle button { align-self: stretch; width: 42px; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 1.1rem; }
-.floating-screen-body { padding: 10px; }
-.floating-screen-body canvas { display: block; width: 100%; aspect-ratio: 2 / 1; border: 8px solid #0e1915; background: #000; image-rendering: pixelated; }
-.floating-screen-body span { display: block; margin-top: 6px; color: var(--muted); font-size: .65rem; text-align: right; }
-.floating-screen-handle:focus-visible { outline: 3px solid var(--note); outline-offset: 3px; }
-
 @media (max-width: 1100px) {
   .play-view { grid-template-columns: minmax(220px, .72fr) minmax(0, 1.6fr); }
   .play-hardware { grid-column: 1; }
@@ -1381,7 +1362,6 @@ body:has(.play-view:not([hidden])) .topbar-inner,
 @media (max-width: 760px) {
   .play-view { grid-template-columns: 1fr; }
   .game-intro::after { display: none; }
-  .floating-screen { width: 230px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2095,10 +2075,6 @@ body:has(.play-view:not([hidden])) .topbar-inner,
   width: 100%;
 }
 
-.floating-screen {
-  width: 220px;
-}
-
 .session-facts {
   display: grid;
   gap: 8px;
@@ -2362,9 +2338,9 @@ body:has(.play-view:not([hidden])) .topbar-inner,
   }
 }
 
-/* ---- the header and the Workshop tab keep their own look ---- */
+/* ---- the header and the Home tab keep their own look ---- */
 /* The Movement and Garden rules above set a base size and width for the whole
-   page. These put the header, the notices and the Workshop back as they were
+   page. These put the header, the notices and the Home tab back as they were
    designed, and must stay last. */
 .topbar,
 .page > .notice,
@@ -2384,7 +2360,7 @@ body:has(.play-view:not([hidden])) .topbar-inner,
   max-width: 1320px;
 }
 
-/* On the Workshop and Movement tabs the notices sit clear of the header. The
+/* On the Home and Movement tabs the notices sit clear of the header. The
    Garden fills the window instead, and shows no notices. */
 .page:has(#stage:not([hidden])),
 .page:has(.play-view:not([hidden])) {
@@ -2411,4 +2387,62 @@ body:has(.play-view:not([hidden])) .topbar-inner,
 
 .garden-layout {
   gap: 24px;
+}
+
+/* ---- Home: a short "About Salus" card above the test modules ---- */
+/* Styled like a module card and as wide as the header's contents. On a wide screen it
+   sits on its own row above the console and the modules on either side; on a
+   narrow one it is simply first in the column. The page scrolls as usual. */
+.home-intro {
+  width: 100%; /* as wide as the header's contents */
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.home-intro h2 {
+  font-size: 1rem;
+}
+
+/* Text runs the full width of the card, with tight spacing between parts. */
+#stage .home-intro {
+  line-height: 1.45;
+}
+
+.home-intro .command-heading {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+}
+
+.home-intro p + p {
+  margin-top: 8px;
+}
+
+@media (min-width: 1120px) {
+  .home-intro {
+    grid-area: 1 / 1 / 2 / -1; /* across all three columns */
+    width: auto;
+    margin-bottom: 24px;
+  }
+
+  .stage > .console {
+    grid-area: 2 / 2;
+  }
+
+  .stage > .side-left {
+    grid-area: 2 / 1;
+  }
+
+  .stage > .side-right {
+    grid-area: 2 / 3;
+  }
+}
+
+/* ---- Movement: "Hand Signals" underlined and kept to one line ---- */
+#game-title {
+  font-size: clamp(1.35rem, 2.2vw, 1.9rem);
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
 }
