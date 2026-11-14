@@ -5,6 +5,8 @@ import { checkFace, drawFace, rgb565, rgb565ToCss } from "./face.js";
 
 const POLL_MS = 1500; // how often to ask whether the board is still connected
 const ZOOM = 3; // preview pixels per screen pixel, so small text stays sharp
+const PORT_GAP = 30; // pixels between the sockets where cables leave the console's side
+const SVG = "http://www.w3.org/2000/svg";
 
 const PRESETS = [
   { name: "Happy", text: "(^_^)" },
@@ -73,6 +75,7 @@ async function api(path, body) {
 function showStatus() {
   const state = status ? status.state : "offline";
   el("status").dataset.state = state;
+  el("console").dataset.board = state; // the light on the console
   setText(el("status-text"), STATUS_TEXT[state]);
   setText(el("status-port"), state === "connected" ? status.port : "");
 
@@ -125,6 +128,7 @@ function refreshButtons() {
   for (const button of document.querySelectorAll("[data-needs-board]")) {
     button.disabled = !connected || "busy" in button.dataset || "blocked" in button.dataset;
   }
+  scheduleWires(); // a module's cable shows when it is sending
 }
 
 // ---- sending ----
@@ -196,7 +200,7 @@ function valueField(command) {
 function commandCard(command) {
   const form = node("form", "command");
   const heading = node("div", "command-heading");
-  heading.append(node("h3", "", command.label), node("code", "command-key", command.key));
+  heading.append(node("h2", "", command.label), node("code", "command-key", command.key));
   form.append(heading);
   if (command.description) form.append(node("p", "hint", command.description));
 
@@ -217,6 +221,11 @@ function commandCard(command) {
   // What the last send reported no longer describes what is in the box.
   field?.input.addEventListener("input", () => show(result, "", ""));
 
+  // The cable to this module lights up while the module is being used.
+  for (const type of ["mouseenter", "mouseleave", "focusin", "focusout"]) {
+    form.addEventListener(type, scheduleWires);
+  }
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     if (button.disabled) return;
@@ -233,20 +242,108 @@ function commandCard(command) {
 }
 
 async function loadCommands() {
-  const list = el("commands");
+  const note = el("commands-note");
   let contract;
   try {
     contract = await api("/api/commands");
   } catch (error) {
-    list.replaceChildren(node("p", "problem", error.message));
+    note.className = "problem stage-note";
+    note.textContent = error.message;
     return;
   }
   lcd = contract.screen;
-  // A command with its own editor (the face) is not repeated in this list.
+  // A command with its own editor (the face) is the console itself, not a module.
   const cards = contract.commands.filter((command) => !command.editor).map(commandCard);
-  list.replaceChildren(...cards);
-  if (!cards.length) list.append(node("p", "hint", "commands.json lists no commands yet."));
+  // The first half goes to the left of the console and the rest to the right,
+  // so reading order still follows commands.json.
+  const half = Math.ceil(cards.length / 2);
+  el("side-left").replaceChildren(...cards.slice(0, half));
+  el("side-right").replaceChildren(...cards.slice(half));
+  note.className = "hint stage-note";
+  note.textContent = cards.length
+    ? "Each module wired to the console is one command in commands.json."
+    : "commands.json lists no commands yet.";
+  for (const card of cards) sizes.observe(card);
+  scheduleWires();
 }
+
+// ---- the cables between the console and the modules ----
+
+function svgNode(tag, attributes) {
+  const made = document.createElementNS(SVG, tag);
+  for (const [name, value] of Object.entries(attributes)) made.setAttribute(name, value);
+  return made;
+}
+
+// Draw one cable from the console to every module, wherever the layout has put
+// them: out of the console's sides on a wide screen, and down from one module
+// to the next on a narrow one.
+function drawWires() {
+  const stage = el("stage");
+  const origin = stage.getBoundingClientRect();
+  const box = (element) => {
+    const r = element.getBoundingClientRect();
+    const [left, right, top, bottom] = [r.left - origin.left, r.right - origin.left, r.top - origin.top, r.bottom - origin.top];
+    return { left, right, top, bottom, midX: (left + right) / 2, midY: (top + bottom) / 2 };
+  };
+  const hub = box(el("console"));
+  const modules = [...stage.querySelectorAll(".command")]
+    .map((card) => ({ card, at: box(card) }))
+    .sort((a, b) => a.at.top - b.at.top);
+
+  const wires = [];
+  const wire = (card, path, [x0, y0], [x1, y1]) => {
+    const group = svgNode("g", { class: "wire" });
+    const sending = card.querySelector("[data-busy]") !== null;
+    group.classList.toggle("busy", sending);
+    group.classList.toggle("live", sending || card.matches(":hover, :focus-within"));
+    group.append(
+      svgNode("path", { d: path }),
+      svgNode("circle", { cx: x0, cy: y0, r: 4 }),
+      svgNode("circle", { cx: x1, cy: y1, r: 4 }),
+    );
+    wires.push(group);
+  };
+
+  // Cables from one side of the console leave from sockets spaced around its
+  // middle, and curve to the middle of each module's near edge.
+  const fan = (group, hubX, edge) => {
+    group.forEach(({ card, at }, i) => {
+      const y0 = hub.midY + (i - (group.length - 1) / 2) * PORT_GAP;
+      const [x1, y1] = [at[edge], at.midY];
+      const bend = (x1 - hubX) / 2;
+      wire(card, `M${hubX} ${y0} C${hubX + bend} ${y0} ${x1 - bend} ${y1} ${x1} ${y1}`, [hubX, y0], [x1, y1]);
+    });
+  };
+  fan(modules.filter(({ at }) => at.right <= hub.left), hub.left, "right");
+  fan(modules.filter(({ at }) => at.left >= hub.right), hub.right, "left");
+
+  // Modules stacked under the console are chained: each hangs from the one above.
+  let above = hub;
+  for (const { card, at } of modules.filter(({ at }) => at.right > hub.left && at.left < hub.right)) {
+    wire(card, `M${at.midX} ${above.bottom} V${at.top}`, [at.midX, above.bottom], [at.midX, at.top]);
+    above = at;
+  }
+
+  el("wires").replaceChildren(...wires);
+}
+
+// Redraw once before the next repaint, however many things asked for it.
+let wiresDue = false;
+function scheduleWires() {
+  if (wiresDue) return;
+  wiresDue = true;
+  requestAnimationFrame(() => {
+    wiresDue = false;
+    drawWires();
+  });
+}
+
+// The cables follow the boxes, so they are redrawn whenever a box changes size:
+// the window is resized, a message appears, a text box is dragged larger.
+const sizes = new ResizeObserver(scheduleWires);
+sizes.observe(el("stage"));
+sizes.observe(el("console"));
 
 // ---- the face editor ----
 
@@ -267,7 +364,11 @@ function refreshFace() {
     size = `${wide}, ${tall}, drawn at text size ${face.size}`;
   }
   el("face-size").textContent = size;
-  el("face-colour-value").textContent = `Sent as ${colour}, the screen's 16-bit version of this colour`;
+  el("face-colour-value").textContent = `Colour sent as ${colour}, the screen's 16-bit version`;
+
+  // Name the face if it is one of the ready-made ones.
+  const preset = PRESETS.find((made) => made.text === el("face-text").value);
+  setText(el("face-name"), preset ? preset.name : "Your own");
 
   const button = el("face-send");
   if (face.empty || face.problem) button.dataset.blocked = "";
@@ -275,18 +376,17 @@ function refreshFace() {
   refreshButtons();
 }
 
-for (const preset of PRESETS) {
-  // A one-line face is its own label; a taller one goes by its name.
-  const chip = node("button", "chip", preset.text.includes("\n") ? preset.name : preset.text);
-  chip.type = "button";
-  chip.title = preset.name;
-  chip.setAttribute("aria-label", `${preset.name} face`);
-  chip.addEventListener("click", () => {
-    el("face-text").value = preset.text;
-    faceEdited();
-  });
-  el("presets").append(chip);
+// The rocker steps through the ready-made faces, round and round. From a face
+// of your own it starts at the first (or, going back, the last).
+function stepPreset(step) {
+  const now = PRESETS.findIndex((made) => made.text === el("face-text").value);
+  const next = now === -1 ? (step > 0 ? 0 : PRESETS.length - 1) : (now + step + PRESETS.length) % PRESETS.length;
+  el("face-text").value = PRESETS[next].text;
+  faceEdited();
 }
+
+el("face-prev").addEventListener("click", () => stepPreset(-1));
+el("face-next").addEventListener("click", () => stepPreset(1));
 
 // After an edit the preview shows a face the robot has not been sent yet, so
 // "acknowledged" would no longer be true of what is on the page.
