@@ -27,6 +27,11 @@ def client(contract_file):
         yield client
 
 
+@pytest.fixture
+def data_dir(tmp_path):
+    return tmp_path / "data"
+
+
 def test_status(client):
     assert client.get("/api/status").json() == {
         "state": "connected",
@@ -162,6 +167,47 @@ def test_events_start_out_empty(client):
     assert client.get("/api/events").json() == []
 
 
+def test_movement_session_is_saved_without_camera_data(contract_file, data_dir):
+    app = create_app(mode="fake", contract_path=contract_file, data_dir=data_dir)
+    with TestClient(app, base_url="http://127.0.0.1:8000") as client:
+        session = {
+            "game": "salus_says",
+            "mode": "seated",
+            "duration_seconds": 95,
+            "movements_offered": ["wings", "reach"],
+            "movements_completed": ["wings"],
+            "movements_skipped": ["reach"],
+            "tracking_quality": 0.91,
+            "feeling": "good",
+        }
+        response = client.post("/api/movement-sessions", json=session)
+        assert response.status_code == 200
+        assert response.json()["feedback"] == "Saved. You found 1 of 2 shapes."
+
+    saved = json.loads((data_dir / "movement-sessions.jsonl").read_text())
+    assert saved["game"] == "salus_says"
+    assert saved["mode"] == "seated"
+    assert "video" not in saved
+
+
+def test_movement_session_rejects_unexpected_camera_data(client):
+    response = client.post(
+        "/api/movement-sessions",
+        json={
+            "game": "salus_says",
+            "mode": "standing",
+            "duration_seconds": 30,
+            "movements_offered": ["wings"],
+            "movements_completed": [],
+            "movements_skipped": [],
+            "tracking_quality": 0.5,
+            "video": "should not be accepted",
+        },
+    )
+    assert response.status_code == 422
+    assert "video" in response.json()["detail"]
+
+
 # ---- only this computer, and only our own page ----
 
 
@@ -187,6 +233,7 @@ def test_responses_forbid_loading_anything_from_elsewhere(client):
     for path in ("/", "/api/status"):
         headers = client.get(path).headers
         assert headers["content-security-policy"] == "default-src 'self'; frame-ancestors 'none'"
+        assert headers["permissions-policy"] == "camera=(self), microphone=(self)"
         assert headers["cache-control"] == "no-cache"
 
 

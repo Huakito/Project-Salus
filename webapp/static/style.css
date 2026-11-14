@@ -688,3 +688,295 @@ input[type="color"] {
 .command .result {
   margin-top: 8px;
 }
+
+/* ---- main navigation and camera game ---- */
+
+.main-nav {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  background: rgb(0 0 0 / 0.08);
+}
+
+.nav-tab {
+  padding: 7px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: 600 0.9rem var(--font);
+  cursor: pointer;
+}
+
+.nav-tab.active {
+  background: var(--ink);
+  color: var(--on-accent);
+}
+
+.play-view {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.65fr) minmax(0, 1.35fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.game-intro,
+.game-board,
+.game-summary {
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.game-intro,
+.game-board {
+  padding: clamp(18px, 3vw, 28px);
+}
+
+.eyebrow {
+  margin-bottom: 6px;
+  color: var(--note);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.game-intro h2 {
+  margin-bottom: 10px;
+  font-size: clamp(1.7rem, 4vw, 2.8rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.game-options {
+  display: grid;
+  gap: 8px;
+  margin: 24px 0 16px;
+}
+
+.option-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.option-card:has(input:checked) {
+  border-color: var(--edge);
+  background: var(--hover);
+}
+
+.option-card span,
+.option-card small {
+  display: block;
+}
+
+.option-card small {
+  color: var(--muted);
+}
+
+.game-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.game-start,
+.game-save {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--on-accent);
+}
+
+.voice-toggle {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.privacy-note {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.camera-shell {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--edge);
+  background:
+    linear-gradient(rgb(255 255 255 / 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.025) 1px, transparent 1px),
+    #07110d;
+  background-size: 32px 32px;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+}
+
+.camera-empty span:last-child {
+  color: var(--muted);
+}
+
+.camera-face {
+  color: var(--dot-on);
+  font-size: clamp(2rem, 7vw, 4.5rem);
+}
+
+.camera-status {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 5px 9px;
+  background: rgb(4 14 10 / 0.78);
+  color: #eafff3;
+  font-size: 0.72rem;
+}
+
+.pose-card {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  padding: 12px 14px;
+  background: rgb(4 14 10 / 0.86);
+  color: #f5fff9;
+  backdrop-filter: blur(8px);
+}
+
+.pose-card > span,
+.pose-card > strong {
+  display: block;
+}
+
+#pose-count,
+#pose-cue {
+  color: #b9d6c8;
+  font-size: 0.75rem;
+}
+
+#pose-name {
+  margin: 1px 0 2px;
+  font-size: 1.1rem;
+}
+
+.hold-track {
+  height: 5px;
+  margin-top: 10px;
+  background: rgb(255 255 255 / 0.18);
+}
+
+.hold-track span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #74f7ba;
+  transition: width 80ms linear;
+}
+
+.game-progress {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.progress-dot {
+  width: 100%;
+  height: 6px;
+  background: var(--line);
+}
+
+.progress-dot[data-state="current"] {
+  background: var(--note);
+}
+
+.progress-dot[data-state="done"] {
+  background: var(--dot-on);
+}
+
+.progress-dot[data-state="skipped"] {
+  background: var(--muted);
+}
+
+.game-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.game-summary {
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.game-summary h3 {
+  font-size: 1.35rem;
+}
+
+.game-summary fieldset {
+  margin: 18px 0 12px;
+  padding: 0;
+  border: 0;
+}
+
+.game-summary legend {
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.feeling-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feeling-options label {
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.feeling-options label:has(input:checked) {
+  border-color: var(--edge);
+  background: var(--hover);
+}
+
+@media (max-width: 860px) {
+  .topbar-inner {
+    align-items: flex-start;
+  }
+
+  .main-nav {
+    order: 3;
+    width: 100%;
+  }
+
+  .nav-tab {
+    flex: 1;
+  }
+
+  .play-view {
+    grid-template-columns: 1fr;
+  }
+}

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Salus robot control</title>
+    <title>Salus</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="style.css">
     <script type="module" src="app.js"></script>
@@ -14,8 +14,12 @@
         <div class="brand">
           <img class="brand-logo" src="favicon.svg" alt="" width="64" height="64">
           <h1>Salus</h1>
-          <span class="brand-sub">Robot control</span>
+          <span class="brand-sub">Your small sidekick</span>
         </div>
+        <nav class="main-nav" aria-label="Main sections">
+          <button class="nav-tab active" type="button" data-view="play" aria-pressed="true">Play</button>
+          <button class="nav-tab" type="button" data-view="workshop" aria-pressed="false">Workshop</button>
+        </nav>
         <div class="link">
           <p class="status" id="status" role="status" data-state="offline">
             <span class="status-dot" aria-hidden="true"></span>
@@ -34,7 +38,72 @@
       </p>
       <p class="notice trouble" id="notice" role="status" hidden></p>
 
-      <main class="stage" id="stage">
+      <main class="play-view" id="play-view">
+        <section class="game-intro" aria-labelledby="game-title">
+          <p class="eyebrow">Movement game 01</p>
+          <h2 id="game-title">Salus Says</h2>
+          <p>Copy five simple shapes. Salus watches the outline of the movement and keeps the game moving.</p>
+          <div class="game-options" aria-label="Game options">
+            <label class="option-card">
+              <input type="radio" name="movement-mode" value="standing" checked>
+              <span><strong>Standing</strong><small>Whole-body camera view</small></span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="movement-mode" value="seated">
+              <span><strong>Seated</strong><small>Upper-body movements</small></span>
+            </label>
+          </div>
+          <div class="game-actions">
+            <button class="button game-start" id="game-start" type="button">Start game</button>
+            <label class="voice-toggle"><input id="game-voice" type="checkbox" checked> Salus talks</label>
+          </div>
+          <p class="privacy-note">Camera frames stay on this computer. The game saves movement results, not video.</p>
+        </section>
+
+        <section class="game-board" id="game-board" aria-label="Salus Says camera game">
+          <div class="camera-shell" id="camera-shell" data-state="idle">
+            <video id="game-video" playsinline muted hidden></video>
+            <canvas id="game-canvas" width="960" height="720" aria-label="Camera view with movement guide"></canvas>
+            <div class="camera-empty" id="camera-empty">
+              <span class="camera-face" aria-hidden="true">(o_o)</span>
+              <strong>Ready when you are</strong>
+              <span>Place the laptop where it can see your upper body.</span>
+            </div>
+            <div class="camera-status" id="camera-status" role="status">Camera off</div>
+            <div class="pose-card" id="pose-card" hidden>
+              <span id="pose-count">1 / 5</span>
+              <strong id="pose-name">Open wings</strong>
+              <span id="pose-cue">Stretch both arms out to the sides</span>
+              <div class="hold-track" aria-hidden="true"><span id="hold-progress"></span></div>
+            </div>
+          </div>
+
+          <div class="game-progress" id="game-progress" aria-label="Game progress"></div>
+          <div class="game-controls">
+            <button class="button" id="game-skip" type="button" disabled>Skip</button>
+            <button class="button" id="game-stop" type="button" disabled>Stop</button>
+          </div>
+          <p class="problem" id="game-problem" role="alert" hidden></p>
+
+          <section class="game-summary" id="game-summary" hidden aria-labelledby="summary-title">
+            <p class="eyebrow">Run complete</p>
+            <h3 id="summary-title">Nice one.</h3>
+            <p id="summary-copy"></p>
+            <fieldset>
+              <legend>How was that?</legend>
+              <div class="feeling-options">
+                <label><input type="radio" name="game-feeling" value="not_for_me"> Not for me</label>
+                <label><input type="radio" name="game-feeling" value="okay"> Okay</label>
+                <label><input type="radio" name="game-feeling" value="good"> Good</label>
+              </div>
+            </fieldset>
+            <button class="button game-save" id="game-save" type="button">Save run</button>
+            <p class="result" id="game-save-result" role="status"></p>
+          </section>
+        </section>
+      </main>
+
+      <main class="stage" id="stage" hidden>
         <section class="console" id="console" aria-labelledby="face-title" data-board="offline">
           <div class="console-top">
             <span class="console-led" aria-hidden="true"></span>
@@ -90,7 +159,7 @@
         <svg class="wires" id="wires" aria-hidden="true"></svg>
       </main>
 
-      <p class="hint stage-note" id="commands-note"></p>
+      <p class="hint stage-note" id="commands-note" hidden></p>
     </div>
   </body>
 </html>

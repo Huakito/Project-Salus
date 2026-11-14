@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import logging
 import os
+import json
+import threading
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .board import (
@@ -52,6 +55,21 @@ class FaceRequest(BaseModel):
     colour: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
 
 
+class MovementSession(BaseModel):
+    """The compact result of a camera game. Camera images are never accepted."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    game: Literal["salus_says"]
+    mode: Literal["standing", "seated"]
+    duration_seconds: int = Field(ge=1, le=3600)
+    movements_offered: list[str] = Field(min_length=1, max_length=30)
+    movements_completed: list[str] = Field(max_length=30)
+    movements_skipped: list[str] = Field(max_length=30)
+    tracking_quality: float = Field(ge=0, le=1)
+    feeling: Literal["not_for_me", "okay", "good"] | None = None
+
+
 class _HideStatusPolls(logging.Filter):
     """The page asks for /api/status every second or two; keep that out of the terminal."""
 
@@ -78,6 +96,7 @@ def create_app(
     mode: str = "real",
     board_port: str | None = None,
     contract_path: Path = DEFAULT_PATH,
+    data_dir: Path | None = None,
 ) -> FastAPI:
     """Build the app. ``mode`` is "real" (the robot on USB) or "fake" (no hardware needed)."""
     if mode not in ("real", "fake"):
@@ -91,6 +110,9 @@ def create_app(
     if mode == "fake":
         log.warning("Using the FAKE board: nothing is sent to a real robot.")
     manager = BoardManager(fake_board(contract) if mode == "fake" else real_board(board_port), mode=mode)
+    session_dir = data_dir or STATIC_DIR.parent / "data"
+    session_path = session_dir / "movement-sessions.jsonl"
+    session_lock = threading.Lock()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -122,6 +144,7 @@ def create_app(
         # The page loads nothing from anywhere else, so say so; and always check
         # for a newer copy of the page's files instead of using a stale one.
         response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+        response.headers["Permissions-Policy"] = "camera=(self), microphone=(self)"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Cache-Control"] = "no-cache"
         return response
@@ -189,6 +212,29 @@ def create_app(
     @app.get("/api/events")
     def events() -> list[dict]:
         return manager.recent_events()
+
+    @app.post("/api/movement-sessions")
+    def save_movement_session(session: MovementSession) -> dict:
+        """Save derived game results locally. The endpoint has no video field by design."""
+        record = {
+            "recorded_at": datetime.now(timezone.utc).isoformat(),
+            **session.model_dump(),
+        }
+        session_dir.mkdir(parents=True, exist_ok=True)
+        with session_lock, session_path.open("a", encoding="utf-8") as file:
+            file.write(json.dumps(record, separators=(",", ":")) + "\n")
+
+        found = len(session.movements_completed)
+        offered = len(session.movements_offered)
+        if session.feeling == "not_for_me":
+            feedback = "Saved. We can try a different kind of game next time."
+        elif found == offered:
+            feedback = f"Saved. You found all {found} shapes."
+        elif found:
+            feedback = f"Saved. You found {found} of {offered} shapes."
+        else:
+            feedback = "Saved. The camera game is ready whenever you want another go."
+        return {"ok": True, "feedback": feedback, "recorded_at": record["recorded_at"]}
 
     # Everything else is the page. Mounted last so it cannot shadow the API.
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="page")

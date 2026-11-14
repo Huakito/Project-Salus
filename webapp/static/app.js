@@ -2,6 +2,7 @@
 // the face on its screen. Everything goes through the server's /api endpoints.
 
 import { checkFace, drawFace, rgb565, rgb565ToCss } from "./face.js";
+import "./movement-game.js";
 
 const POLL_MS = 1500; // how often to ask whether the board is still connected
 const ZOOM = 3; // preview pixels per screen pixel, so small text stays sharp
