@@ -232,7 +232,16 @@ def test_garden_persists_and_never_kills_a_missed_plant(contract_file, data_dir)
     with TestClient(app, base_url="http://127.0.0.1:8000") as garden_client:
         initial = garden_client.get("/api/garden").json()
         assert initial["plants"][0]["needs_care"] is True
-        added = garden_client.post("/api/garden/plants", json={"species": "sunflower", "nickname": "Sunny"}).json()["plant"]
+        assert initial["plants"][0]["plot_slot"] == 0
+        added = garden_client.post("/api/garden/plants", json={
+            "species": "sunflower", "nickname": "Sunny", "plot_slot": 5
+        }).json()["plant"]
+        assert added["plot_slot"] == 5
+        moved = garden_client.post(f"/api/garden/plants/{added['id']}/move", json={"plot_slot": 9})
+        assert moved.status_code == 200
+        assert moved.json()["plant"]["plot_slot"] == 9
+        occupied = garden_client.post("/api/garden/plants", json={"species": "tulip", "plot_slot": 9})
+        assert occupied.status_code == 422
         cared = garden_client.post(f"/api/garden/plants/{added['id']}/care", json={
             "activity": "water", "duration_seconds": 12, "score": 1
         }).json()

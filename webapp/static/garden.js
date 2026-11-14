@@ -5,13 +5,19 @@ let seenEvents = 0;
 let careStarted = 0;
 let careCleanup = () => {};
 const EARLY_STAGE_SPRITES = [0, 8, 13];
-const PLANT_SPOTS = [[22,28],[35,28],[62,28],[75,28],[22,69],[35,69],[62,69],[75,69]];
+const PLANT_SPOTS = [
+  [25,18], [39,18], [25,32], [39,32],
+  [69,18], [84,18], [69,32], [84,32],
+  [25,68], [39,68], [25,82], [39,82],
+  [69,68], [84,68], [69,82], [84,82],
+];
 const player = {x:50, y:82, direction:0, frame:0};
 const robot = {x:46, y:86};
 const heldKeys = new Set();
 let lastWalkFrame = 0;
 let lastKnobValue = null;
 let speechFaceTimer = null;
+let movingPlant = false;
 
 async function request(path, body) {
   const response = await fetch(path, body === undefined ? {} : {
@@ -84,8 +90,9 @@ function render() {
     button.classList.toggle("selected", plant.id === selectedId);
     button.classList.toggle("due", plant.needs_care);
     button.dataset.id = plant.id;
-    const spot = PLANT_SPOTS[index % PLANT_SPOTS.length];
-    button.style.left = `${spot[0]}%`; button.style.top = `${spot[1] + Math.floor(index / PLANT_SPOTS.length) * 7}%`;
+    const slot = Number.isInteger(plant.plot_slot) ? plant.plot_slot : index % PLANT_SPOTS.length;
+    const spot = PLANT_SPOTS[slot];
+    button.style.left = `${spot[0]}%`; button.style.top = `${spot[1]}%`;
     button.title = plant.needs_care ? `${plant.nickname} is ready for care` : `${plant.nickname} is settled for today`;
     const picture = document.createElement("span");
     picture.className = "world-crop";
@@ -102,10 +109,18 @@ function render() {
     return button;
   }));
 
+  renderPlacementGrid();
+  renderSlotOptions();
+  renderHistory();
+
   const plant = selectedPlant();
   el("plant-empty").hidden = Boolean(plant);
   el("plant-details").hidden = !plant;
-  if (!plant) return;
+  if (!plant) {
+    movingPlant = false;
+    el("garden-world").classList.remove("arranging");
+    return;
+  }
   sprite(el("plant-large"), stageSprite(plant));
   el("plant-name").textContent = `${plant.nickname} · ${plant.name}`;
   el("plant-about").textContent = plant.about;
@@ -114,7 +129,58 @@ function render() {
     : `Settled for today · ${plant.stage_name} · stage ${plant.growth + 1} / 6`;
   el("plant-care").textContent = plant.needs_care ? plant.care_label : "Already cared for today";
   el("plant-care").disabled = !plant.needs_care;
-  renderHistory();
+  el("plant-move").textContent = movingPlant ? "Cancel moving" : "Move on bed";
+  el("placement-hint").hidden = !movingPlant;
+}
+
+function slotName(index) {
+  return `Bed ${Math.floor(index / 4) + 1} · position ${(index % 4) + 1}`;
+}
+
+function renderPlacementGrid() {
+  const occupied = new Set(state.plants.map((plant) => plant.plot_slot));
+  el("garden-world").classList.toggle("arranging", movingPlant);
+  el("garden-slots").replaceChildren(...PLANT_SPOTS.map((spot, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "garden-slot";
+    button.style.left = `${spot[0]}%`; button.style.top = `${spot[1]}%`;
+    button.disabled = occupied.has(index);
+    button.setAttribute("aria-label", occupied.has(index) ? `${slotName(index)}, occupied` : `Move plant to ${slotName(index)}`);
+    button.addEventListener("click", () => moveSelectedPlant(index));
+    return button;
+  }));
+}
+
+function renderSlotOptions() {
+  const select = el("plant-slot");
+  const previous = Number(select.value);
+  const occupied = new Set(state.plants.map((plant) => plant.plot_slot));
+  const available = PLANT_SPOTS.map((_, index) => index).filter((index) => !occupied.has(index));
+  select.replaceChildren(...available.map((index) => {
+    const option = document.createElement("option");
+    option.value = index;
+    option.textContent = slotName(index);
+    return option;
+  }));
+  if (available.includes(previous)) select.value = previous;
+  if (!available.length) {
+    select.append(Object.assign(document.createElement("option"), {textContent:"All positions are in use"}));
+  }
+  el("plant-submit").disabled = !available.length;
+}
+
+async function moveSelectedPlant(plotSlot) {
+  const plant = selectedPlant();
+  if (!movingPlant || !plant) return;
+  try {
+    await request(`/api/garden/plants/${plant.id}/move`, {plot_slot: plotSlot});
+    movingPlant = false;
+    el("garden-result").textContent = `${plant.nickname} moved to ${slotName(plotSlot).toLowerCase()}.`;
+    await loadGarden();
+  } catch (error) {
+    el("garden-result").textContent = error.message;
+  }
 }
 
 function renderHistory() {
@@ -132,6 +198,7 @@ function renderHistory() {
 }
 
 async function selectPlant(id) {
+  if (selectedId !== Number(id)) movingPlant = false;
   selectedId = Number(id);
   render();
   const plant = selectedPlant();
@@ -181,7 +248,7 @@ function walkLoop(now) {
 
 async function loadGarden() {
   state = await request("/api/garden");
-  if (!selectedId || !state.plants.some((plant) => plant.id === selectedId)) selectedId = state.plants[0]?.id ?? null;
+  if (selectedId && !state.plants.some((plant) => plant.id === selectedId)) selectedId = null;
   render();
   if (!el("seed-list").children.length) renderSeeds();
 }
@@ -332,6 +399,10 @@ function tellAboutSelected() {
 }
 
 el("plant-care").addEventListener("click", startCareGame);
+el("plant-move").addEventListener("click", () => {
+  movingPlant = !movingPlant;
+  render();
+});
 el("care-cancel").addEventListener("click", () => { careCleanup(); el("care-game").hidden = true; });
 el("dialogue-close").addEventListener("click", () => { el("robot-dialogue").hidden = true; speechSynthesis?.cancel(); stopSpeechFace(); });
 window.addEventListener("keydown", (event) => {
@@ -344,9 +415,15 @@ el("plant-tell").addEventListener("click", tellAboutSelected);
 el("seed-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const species = new FormData(event.currentTarget).get("seed");
-  const result = await request("/api/garden/plants", {species, nickname: el("plant-nickname").value});
+  if (!el("plant-slot").value) return;
+  const result = await request("/api/garden/plants", {
+    species,
+    nickname: el("plant-nickname").value,
+    plot_slot: Number(el("plant-slot").value),
+  });
   el("plant-nickname").value = "";
   selectedId = result.plant.id;
+  movingPlant = false;
   await loadGarden();
 });
 for (const button of document.querySelectorAll("[data-admin]")) button.addEventListener("click", async () => {
@@ -365,7 +442,8 @@ window.setInterval(async () => {
         if (lastKnobValue !== null && next !== lastKnobValue && state.plants.length) {
           const step = next > lastKnobValue ? 1 : -1;
           const index = state.plants.findIndex((plant) => plant.id === selectedId);
-          selectPlant(state.plants[(index + step + state.plants.length) % state.plants.length].id);
+          const nextIndex = index < 0 ? (step > 0 ? 0 : state.plants.length - 1) : (index + step + state.plants.length) % state.plants.length;
+          selectPlant(state.plants[nextIndex].id);
         }
         lastKnobValue = next;
         continue;

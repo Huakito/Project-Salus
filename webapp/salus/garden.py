@@ -18,6 +18,7 @@ CATALOG = {
 }
 
 STAGE_NAMES = ("freshly planted", "sprout", "young plant", "growing", "established", "flowering")
+PLOT_SLOT_COUNT = 16
 
 
 class GardenStore:
@@ -30,8 +31,12 @@ class GardenStore:
             db.execute("""CREATE TABLE IF NOT EXISTS garden_plants (
                 id INTEGER PRIMARY KEY, species TEXT NOT NULL, nickname TEXT NOT NULL,
                 growth INTEGER NOT NULL DEFAULT 0, planted_day TEXT NOT NULL,
-                last_cared_day TEXT, care_count INTEGER NOT NULL DEFAULT 0
+                last_cared_day TEXT, care_count INTEGER NOT NULL DEFAULT 0,
+                plot_slot INTEGER
             )""")
+            columns = {row[1] for row in db.execute("PRAGMA table_info(garden_plants)")}
+            if "plot_slot" not in columns:
+                db.execute("ALTER TABLE garden_plants ADD COLUMN plot_slot INTEGER")
             db.execute("""CREATE TABLE IF NOT EXISTS garden_care_log (
                 id INTEGER PRIMARY KEY, plant_id INTEGER NOT NULL, garden_day TEXT NOT NULL,
                 activity TEXT NOT NULL, duration_seconds INTEGER NOT NULL, score REAL NOT NULL,
@@ -41,7 +46,8 @@ class GardenStore:
                 db.execute("INSERT INTO garden_meta VALUES ('day_offset', '0')")
             if not db.execute("SELECT 1 FROM garden_plants").fetchone():
                 today = self._day(db)
-                db.execute("INSERT INTO garden_plants(species,nickname,growth,planted_day) VALUES ('daisy','Dot',1,?)", (today,))
+                db.execute("INSERT INTO garden_plants(species,nickname,growth,planted_day,plot_slot) VALUES ('daisy','Dot',1,?,0)", (today,))
+            self._repair_plot_slots(db)
 
     def _connect(self):
         return sqlite3.connect(self.db_path, timeout=5)
@@ -50,29 +56,70 @@ class GardenStore:
         row = db.execute("SELECT value FROM garden_meta WHERE key='day_offset'").fetchone()
         return (date.today() + timedelta(days=int(row[0]) if row else 0)).isoformat()
 
+    def _repair_plot_slots(self, db) -> None:
+        """Give old saves stable, non-overlapping bed positions."""
+        occupied: set[int] = set()
+        displaced: list[int] = []
+        for plant_id, slot in db.execute("SELECT id,plot_slot FROM garden_plants ORDER BY id"):
+            if slot is not None and 0 <= slot < PLOT_SLOT_COUNT and slot not in occupied:
+                occupied.add(slot)
+            else:
+                displaced.append(plant_id)
+        available = iter(slot for slot in range(PLOT_SLOT_COUNT) if slot not in occupied)
+        for plant_id in displaced:
+            slot = next(available, None)
+            db.execute("UPDATE garden_plants SET plot_slot=? WHERE id=?", (slot, plant_id))
+
     def state(self) -> dict:
         with self._connect() as db:
             today = self._day(db)
-            rows = db.execute("SELECT id,species,nickname,growth,planted_day,last_cared_day,care_count FROM garden_plants ORDER BY id").fetchall()
+            rows = db.execute("SELECT id,species,nickname,growth,planted_day,last_cared_day,care_count,plot_slot FROM garden_plants ORDER BY id").fetchall()
             logs = db.execute("""SELECT l.id,l.plant_id,p.nickname,l.garden_day,l.activity,l.duration_seconds,l.score,l.note
                 FROM garden_care_log l JOIN garden_plants p ON p.id=l.plant_id ORDER BY l.id DESC LIMIT 30""").fetchall()
         plants = []
-        for plant_id, species, nickname, growth, planted, last_cared, count in rows:
+        for plant_id, species, nickname, growth, planted, last_cared, count, plot_slot in rows:
             plants.append({"id": plant_id, "species": species, "nickname": nickname,
                            "growth": growth, "planted_day": planted, "last_cared_day": last_cared,
                            "care_count": count, "needs_care": last_cared != today,
-                           "stage_name": STAGE_NAMES[growth], **CATALOG[species]})
+                           "stage_name": STAGE_NAMES[growth], "plot_slot": plot_slot,
+                           **CATALOG[species]})
         history = [{"id": row[0], "plant_id": row[1], "nickname": row[2], "day": row[3],
                     "activity": row[4], "duration_seconds": row[5], "score": row[6], "note": row[7]} for row in logs]
         return {"today": today, "catalog": [{"species": key, **value} for key, value in CATALOG.items()], "plants": plants, "history": history}
 
-    def add(self, species: str, nickname: str) -> dict:
+    def add(self, species: str, nickname: str, plot_slot: int | None = None) -> dict:
         if species not in CATALOG:
             raise ValueError("That plant is not in the seed shelf.")
         clean = " ".join(nickname.split())[:30] or CATALOG[species]["name"]
         with self._connect() as db:
-            cursor = db.execute("INSERT INTO garden_plants(species,nickname,planted_day) VALUES (?,?,?)", (species, clean, self._day(db)))
+            occupied = {row[0] for row in db.execute("SELECT plot_slot FROM garden_plants WHERE plot_slot IS NOT NULL")}
+            if plot_slot is None:
+                plot_slot = next((slot for slot in range(PLOT_SLOT_COUNT) if slot not in occupied), None)
+            if plot_slot is None:
+                raise ValueError("Every flower-bed position is already in use.")
+            if not 0 <= plot_slot < PLOT_SLOT_COUNT:
+                raise ValueError("That flower-bed position does not exist.")
+            if plot_slot in occupied:
+                raise ValueError("That flower-bed position is already in use.")
+            cursor = db.execute(
+                "INSERT INTO garden_plants(species,nickname,planted_day,plot_slot) VALUES (?,?,?,?)",
+                (species, clean, self._day(db), plot_slot),
+            )
             plant_id = cursor.lastrowid
+        return next(p for p in self.state()["plants"] if p["id"] == plant_id)
+
+    def move(self, plant_id: int, plot_slot: int) -> dict:
+        if not 0 <= plot_slot < PLOT_SLOT_COUNT:
+            raise ValueError("That flower-bed position does not exist.")
+        with self._connect() as db:
+            if not db.execute("SELECT 1 FROM garden_plants WHERE id=?", (plant_id,)).fetchone():
+                raise ValueError("That plant is not in the garden.")
+            occupied = db.execute(
+                "SELECT 1 FROM garden_plants WHERE plot_slot=? AND id<>?", (plot_slot, plant_id)
+            ).fetchone()
+            if occupied:
+                raise ValueError("That flower-bed position is already in use.")
+            db.execute("UPDATE garden_plants SET plot_slot=? WHERE id=?", (plot_slot, plant_id))
         return next(p for p in self.state()["plants"] if p["id"] == plant_id)
 
     def care(self, plant_id: int, activity: str, duration_seconds: int, score: float) -> tuple[dict, bool]:

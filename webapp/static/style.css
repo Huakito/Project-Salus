@@ -2727,3 +2727,192 @@ body:has(.garden-view:not([hidden])) .topbar-inner {
 @media (prefers-reduced-motion: reduce) {
   .garden-water::after { animation: none; }
 }
+
+/* Ordered garden: straight paths, fixed bed slots and readable paper menus. */
+.garden-water {
+  width: 12%;
+  min-width: 108px;
+  clip-path: none;
+  border-right: 5px solid #8bc46c;
+}
+
+.garden-water::after {
+  inset: 7% 12% 7% 10%;
+}
+
+.path-horizontal {
+  left: 12%;
+  right: 0;
+  top: 42%;
+  height: 16%;
+  transform: none;
+  clip-path: none;
+}
+
+.path-vertical {
+  top: 0;
+  bottom: 0;
+  left: 46%;
+  width: 9%;
+  transform: none;
+  clip-path: none;
+}
+
+.bed-one { left: 17%; top: 8%; }
+.bed-two { right: 8%; top: 8%; }
+.bed-three { left: 17%; top: 64%; }
+.bed-four { right: 8%; top: 64%; }
+
+.farm-bed {
+  width: 30%;
+  height: 28%;
+}
+
+.garden-slots {
+  position: absolute;
+  z-index: 7;
+  inset: 0;
+  pointer-events: none;
+}
+
+.garden-slot {
+  position: absolute;
+  width: 74px;
+  height: 70px;
+  translate: -50% -50%;
+  border: 3px dashed rgb(255 240 174 / .8);
+  border-radius: 4px;
+  background: rgb(255 244 197 / .13);
+  color: #fff4c5;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.garden-slot::after {
+  font: 700 1.2rem/1 var(--mono);
+  content: "+";
+}
+
+.garden-world.arranging .garden-slot:not(:disabled) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.garden-world.arranging .garden-slot:not(:disabled):hover,
+.garden-world.arranging .garden-slot:not(:disabled):focus-visible {
+  border-style: solid;
+  background: rgb(255 231 130 / .34);
+  outline: 3px solid #fff5bd;
+  outline-offset: 2px;
+}
+
+.garden-world.arranging .garden-plant {
+  opacity: .72;
+}
+
+.spring-bench {
+  top: auto;
+  right: auto;
+  bottom: 7%;
+  left: 12.6%;
+}
+
+.spring-daisies {
+  background-image: url("assets/tulipmere-lite/tiles/grass_daisies.png");
+}
+
+.tulips-one { left: 12.5%; top: 25%; }
+.tulips-two { right: 1.5%; top: 64%; }
+.daffodils-one { right: 1.5%; top: 25%; }
+.daffodils-two { left: 12.5%; top: 66%; }
+.daisies-one { left: 12.5%; top: 3%; }
+.daisies-two { left: 47.5%; top: 2%; }
+.daisies-three { right: 1.5%; top: 4%; }
+.daisies-four { right: 1.5%; bottom: 2%; }
+.spring-pot { right: 1.5%; bottom: 15%; }
+
+.plant-panel #plant-move,
+.plant-panel .placement-hint {
+  grid-column: 1 / -1;
+}
+
+.plant-panel .placement-hint {
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px dashed #8a6933;
+  background: #fff0bc;
+  color: #34291f;
+  font-size: .62rem;
+}
+
+.garden-tools,
+.garden-tools details,
+.garden-tools summary,
+.garden-tools form,
+.garden-tools label,
+.garden-tools strong,
+.garden-tools small,
+.garden-tools p,
+.garden-tools a,
+.garden-tools button {
+  color: #34291f;
+}
+
+.garden-tools details > summary::marker {
+  color: #34291f;
+}
+
+.garden-tools .seed-card {
+  border-color: #8ba493;
+  background: rgb(255 249 226 / .72);
+}
+
+.garden-tools .seed-card:has(input:checked) {
+  border-color: #6b5846;
+  background: #f0dba1;
+}
+
+.garden-tools .seed-card small {
+  color: #5d5146;
+}
+
+.garden-tools #seed-form > label {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0 0;
+  color: #34291f;
+}
+
+.garden-tools input[type="text"],
+.garden-tools select {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 8px;
+  border: 2px solid #6b5846;
+  border-radius: 3px;
+  background: #214f41;
+  color: #fff8df;
+  font: 600 .68rem/1.2 var(--mono);
+}
+
+.garden-tools input[type="text"]::placeholder {
+  color: #bfd2c9;
+  opacity: 1;
+}
+
+.garden-tools .button,
+.garden-tools .screen-preview-link {
+  border-color: #6b5846;
+  background: #fff4d2;
+  color: #34291f;
+}
+
+.garden-tools .button:disabled {
+  background: #d8d0bc;
+  color: #71695d;
+}
+
+@media (max-width: 900px) {
+  .garden-water { width: 14%; }
+  .garden-layout > .plant-panel { left: calc(14% + 10px); }
+}

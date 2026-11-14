@@ -160,10 +160,15 @@
             <div class="spring-prop spring-tulips tulips-two" aria-hidden="true"></div>
             <div class="spring-prop spring-daffodils daffodils-one" aria-hidden="true"></div>
             <div class="spring-prop spring-daffodils daffodils-two" aria-hidden="true"></div>
+            <div class="spring-prop spring-daisies daisies-one" aria-hidden="true"></div>
+            <div class="spring-prop spring-daisies daisies-two" aria-hidden="true"></div>
+            <div class="spring-prop spring-daisies daisies-three" aria-hidden="true"></div>
+            <div class="spring-prop spring-daisies daisies-four" aria-hidden="true"></div>
             <div class="spring-pond" aria-hidden="true">
               <span class="pond-nw"></span><span class="pond-ne"></span>
               <span class="pond-sw"></span><span class="pond-se"></span>
             </div>
+            <div class="garden-slots" id="garden-slots" aria-label="Flower-bed positions"></div>
             <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
             <div class="game-character" id="game-character" aria-hidden="true"></div>
             <div class="robot-follower" id="robot-follower" aria-label="Salus follows you"><img src="favicon.svg" alt=""></div>
@@ -182,6 +187,8 @@
               <p class="plant-state" id="plant-state"></p>
               <button class="button primary" id="plant-care" type="button"></button>
               <button class="button quiet" id="plant-tell" type="button">Tell me about it</button>
+              <button class="button quiet" id="plant-move" type="button">Move on bed</button>
+              <p class="placement-hint" id="placement-hint" hidden>Choose an empty square on a flower bed.</p>
               <p class="result" id="garden-result" role="status"></p>
               <p class="hardware-hint">Robot: turn the knob to choose a plant · press the main button or knob to care for it</p>
             </div>
@@ -207,7 +214,8 @@
           <form id="seed-form">
             <div class="seed-list" id="seed-list"></div>
             <label>Nickname <input id="plant-nickname" type="text" maxlength="30" placeholder="Optional"></label>
-            <button class="button" type="submit">Plant it</button>
+            <label>Flower-bed position <select id="plant-slot" name="plot_slot"></select></label>
+            <button class="button" id="plant-submit" type="submit">Plant it</button>
           </form>
         </details>
 

@@ -105,6 +105,12 @@ class AddPlantRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     species: str = Field(min_length=1, max_length=40)
     nickname: str = Field(default="", max_length=30)
+    plot_slot: int | None = Field(default=None, ge=0, lt=16)
+
+
+class MovePlantRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    plot_slot: int = Field(ge=0, lt=16)
 
 
 class GardenAdminRequest(BaseModel):
@@ -345,7 +351,14 @@ def create_app(
     @app.post("/api/garden/plants")
     def add_garden_plant(request: AddPlantRequest) -> dict:
         try:
-            return {"ok": True, "plant": garden.add(request.species, request.nickname)}
+            return {"ok": True, "plant": garden.add(request.species, request.nickname, request.plot_slot)}
+        except ValueError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=422)
+
+    @app.post("/api/garden/plants/{plant_id}/move")
+    def move_garden_plant(plant_id: int, request: MovePlantRequest) -> dict:
+        try:
+            return {"ok": True, "plant": garden.move(plant_id, request.plot_slot)}
         except ValueError as exc:
             return JSONResponse({"detail": str(exc)}, status_code=422)
 
