@@ -41,6 +41,10 @@ let waveSamples = [];
 let recognitionAttempts = 0;
 let recognitionHandled = false;
 let speechFaceTimer = null;
+let voiceController = null;
+let voiceAudio = null;
+let voiceObjectUrl = null;
+let voiceFinish = null;
 
 function delay(ms) { return new Promise((resolve) => window.setTimeout(resolve, ms)); }
 
@@ -101,13 +105,27 @@ function startSpeechFace() {
   speechFaceTimer = window.setInterval(draw, 520);
 }
 
-function speak(text, force = false, restFace = "(^_^)") {
+function cancelSpeechPlayback() {
+  voiceController?.abort();
+  voiceController = null;
+  voiceAudio?.pause();
+  voiceAudio = null;
+  if (voiceObjectUrl) URL.revokeObjectURL(voiceObjectUrl);
+  voiceObjectUrl = null;
+  if (voiceFinish) {
+    const finish = voiceFinish;
+    voiceFinish = null;
+    finish();
+  }
+  speechSynthesis?.cancel();
+}
+
+function browserSpeak(text, restFace) {
   return new Promise((resolve) => {
-    if ((!force && !el("game-voice").checked) || !("speechSynthesis" in window)) {
+    if (!("speechSynthesis" in window)) {
       resolve();
       return;
     }
-    speechSynthesis.cancel();
     const message = new SpeechSynthesisUtterance(text);
     message.rate = 0.9;
     message.pitch = 1;
@@ -118,7 +136,80 @@ function speak(text, force = false, restFace = "(^_^)") {
   });
 }
 
+async function elevenLabsSpeak(text, restFace) {
+  const controller = new AbortController();
+  voiceController = controller;
+  const response = await fetch("/api/voice", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({text}),
+    signal: controller.signal,
+  });
+  if (!response.ok) throw new Error("Cloud voice unavailable");
+  const blob = await response.blob();
+  if (controller.signal.aborted) return;
+  voiceObjectUrl = URL.createObjectURL(blob);
+  const audio = new Audio(voiceObjectUrl);
+  voiceAudio = audio;
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (failed = false) => {
+      if (settled) return;
+      settled = true;
+      if (voiceAudio === audio) voiceAudio = null;
+      if (voiceController === controller) voiceController = null;
+      if (voiceObjectUrl) URL.revokeObjectURL(voiceObjectUrl);
+      voiceObjectUrl = null;
+      voiceFinish = null;
+      stopSpeechFace(restFace);
+      if (failed) reject(new Error("Cloud voice playback failed"));
+      else resolve();
+    };
+    voiceFinish = () => finish(false);
+    audio.onended = () => finish(false);
+    audio.onerror = () => finish(true);
+    startSpeechFace();
+    el("game-voice-provider").textContent = "Playing ElevenLabs voice…";
+    audio.play().catch(() => finish(true));
+  });
+}
+
+async function speak(text, force = false, restFace = "(^_^)" ) {
+  if (!force && !el("game-voice").checked) return "off";
+  cancelSpeechPlayback();
+  try {
+    await elevenLabsSpeak(text, restFace);
+    el("game-voice-provider").textContent = "ElevenLabs voice played";
+    return "elevenlabs";
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    console.warn("ElevenLabs voice failed; using browser voice.", error);
+    await browserSpeak(text, restFace);
+    el("game-voice-provider").textContent = "Browser voice fallback";
+    return "browser";
+  }
+}
+
 function say(text) { void speak(text); }
+
+async function testVoice() {
+  const button = el("game-test-voice");
+  button.disabled = true;
+  el("game-voice-provider").textContent = "Loading ElevenLabs voice…";
+  await speak("Hello. This is the Salus movement voice.", true);
+  button.disabled = false;
+}
+
+async function loadVoiceStatus() {
+  try {
+    const status = await getJson("/api/voice/status");
+    el("game-voice-provider").textContent = status.configured
+      ? "ElevenLabs voice configured"
+      : "Browser voice fallback";
+  } catch {
+    el("game-voice-provider").textContent = "Voice status unavailable";
+  }
+}
 
 async function loadTracker() {
   if (landmarker) return;
@@ -464,7 +555,7 @@ function stopCamera() {
   stream?.getTracks().forEach((track) => track.stop());
   stream = null;
   stopRecognition();
-  speechSynthesis?.cancel();
+  cancelSpeechPlayback();
   stopSpeechFace("(^_^)");
   el("game-start").disabled = false;
   el("game-skip").disabled = true;
@@ -553,6 +644,7 @@ for (const [index, tab] of viewTabs.entries()) {
 }
 
 el("game-start").addEventListener("click", startGame);
+el("game-test-voice").addEventListener("click", testVoice);
 el("game-skip").addEventListener("click", skipPose);
 el("game-stop").addEventListener("click", finishGame);
 el("game-save").addEventListener("click", saveSession);
@@ -566,5 +658,6 @@ getJson("/api/settings").then((settings) => {
   el("game-voice").checked = settings.spoken_guidance;
   el("game-checkins").checked = settings.spoken_check_ins;
 }).catch(() => {});
+loadVoiceStatus();
 renderPoseLibrary();
 renderProgress();

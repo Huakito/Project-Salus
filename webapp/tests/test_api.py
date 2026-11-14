@@ -62,6 +62,85 @@ def test_settings_survive_between_requests(client):
     }
 
 
+def test_movement_voice_audio_is_generated_server_side(contract_file, data_dir):
+    class FakeVoice:
+        configured = True
+        voice_id = "test-voice"
+
+        def __init__(self):
+            self.spoken = []
+
+        def synthesize(self, text):
+            self.spoken.append(text)
+            return b"ID3-fake-mp3"
+
+    voice = FakeVoice()
+    app = create_app(
+        mode="fake", contract_path=contract_file, data_dir=data_dir,
+        feedback_service=FeedbackService(), voice_service=voice,
+    )
+    with TestClient(app, base_url="http://127.0.0.1:8000") as voice_client:
+        assert voice_client.get("/api/voice/status").json() == {
+            "provider": "elevenlabs", "configured": True, "voice_id": "test-voice"
+        }
+        response = voice_client.post("/api/voice", json={"text": "Move gently."})
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "audio/mpeg"
+    assert response.content == b"ID3-fake-mp3"
+    assert voice.spoken == ["Move gently."]
+
+
+def test_movement_voice_settings_reload_without_restart(contract_file, data_dir, monkeypatch):
+    from salus.voice import ElevenLabsVoice
+
+    class FakeVoice:
+        configured = True
+
+        def __init__(self, voice_id):
+            self.voice_id = voice_id
+            self.spoken = []
+
+        def synthesize(self, text):
+            self.spoken.append(text)
+            return b"ID3-reloaded-voice"
+
+    first = FakeVoice("first-voice")
+    second = FakeVoice("second-voice")
+    selected = {"voice": first}
+    monkeypatch.setattr(
+        ElevenLabsVoice,
+        "from_environment",
+        staticmethod(lambda: selected["voice"]),
+    )
+    app = create_app(
+        mode="fake", contract_path=contract_file, data_dir=data_dir,
+        feedback_service=FeedbackService(),
+    )
+    with TestClient(app, base_url="http://127.0.0.1:8000") as voice_client:
+        assert voice_client.get("/api/voice/status").json()["voice_id"] == "first-voice"
+        selected["voice"] = second
+        assert voice_client.get("/api/voice/status").json()["voice_id"] == "second-voice"
+        response = voice_client.post("/api/voice", json={"text": "Use the new voice."})
+
+    assert response.content == b"ID3-reloaded-voice"
+    assert first.spoken == []
+    assert second.spoken == ["Use the new voice."]
+
+
+def test_movement_voice_falls_back_when_elevenlabs_is_not_configured(contract_file, data_dir):
+    from salus.voice import ElevenLabsVoice
+
+    app = create_app(
+        mode="fake", contract_path=contract_file, data_dir=data_dir,
+        feedback_service=FeedbackService(), voice_service=ElevenLabsVoice(api_key=""),
+    )
+    with TestClient(app, base_url="http://127.0.0.1:8000") as voice_client:
+        assert voice_client.get("/api/voice/status").json()["provider"] == "browser"
+        response = voice_client.post("/api/voice", json={"text": "Move gently."})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "ElevenLabs voice is not configured."
+
+
 def test_commands_are_the_contents_of_commands_json(client, contract_file):
     served = client.get("/api/commands").json()
     on_disk = json.loads(contract_file.read_text())
@@ -234,6 +313,13 @@ def test_garden_persists_and_never_kills_a_missed_plant(contract_file, data_dir)
         assert len(initial["plants"]) == 24
         assert initial["plants"][0]["needs_care"] is True
         assert initial["plants"][0]["plot_slot"] == 0
+        generated_species = {"sunflower", "rose", "iris", "marigold"}
+        assert generated_species <= {plant["species"] for plant in initial["plants"]}
+        for plant in initial["plants"]:
+            if plant["species"] in generated_species:
+                assert plant["growth_asset"].endswith(f"{plant['species']}-growth.png")
+                assert plant["stage_count"] == 3
+                assert plant["visual_stage"] == min(2, plant["growth"])
         sunflower = next(plant for plant in initial["plants"] if plant["nickname"] == "Sunflower")
         original_growth = sunflower["growth"]
         moved = garden_client.post(f"/api/garden/plants/{sunflower['id']}/move", json={"plot_slot": 9})
@@ -255,6 +341,7 @@ def test_garden_persists_and_never_kills_a_missed_plant(contract_file, data_dir)
         }).json()
         assert cared["changed"] is True
         assert cared["plant"]["growth"] == min(5, original_growth + 1)
+        assert cared["plant"]["visual_stage"] == min(2, original_growth + 1)
         garden_client.post("/api/garden/admin", json={"action": "advance_day", "days": 10})
         later = garden_client.get("/api/garden").json()
         sunflower_later = next(plant for plant in later["plants"] if plant["nickname"] == "Sunflower")
@@ -435,7 +522,8 @@ def test_responses_forbid_loading_anything_from_elsewhere(client):
     for path in ("/", "/api/status"):
         headers = client.get(path).headers
         assert headers["content-security-policy"] == (
-            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; frame-ancestors 'none'"
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; "
+            "media-src 'self' blob:; frame-ancestors 'none'"
         )
         assert headers["permissions-policy"] == "camera=(self), microphone=(self)"
         assert headers["cache-control"] == "no-cache"

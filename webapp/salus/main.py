@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -34,6 +34,7 @@ from .face import FaceError, check_face, rgb565
 from .feedback import FeedbackService
 from .memory import HistoryStore
 from .garden import GardenStore, PLOT_SLOT_COUNT
+from .voice import ElevenLabsVoice, MAX_SPEECH_CHARS, VoiceError
 
 log = logging.getLogger("salus")
 
@@ -92,6 +93,12 @@ class CheckInRequest(BaseModel):
     question: str = Field(min_length=1, max_length=300)
     answer: str = Field(min_length=1, max_length=1000)
     question_id: str | None = Field(default=None, max_length=80)
+
+
+class VoiceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1, max_length=MAX_SPEECH_CHARS)
 
 
 class SettingsRequest(BaseModel):
@@ -154,6 +161,7 @@ def create_app(
     contract_path: Path = DEFAULT_PATH,
     data_dir: Path | None = None,
     feedback_service: FeedbackService | None = None,
+    voice_service: ElevenLabsVoice | None = None,
 ) -> FastAPI:
     """Build the app. ``mode`` is "real" (the robot on USB) or "fake" (no hardware needed)."""
     if mode not in ("real", "fake"):
@@ -171,6 +179,14 @@ def create_app(
     session_path = session_dir / "movement-sessions.jsonl"
     session_lock = threading.Lock()
     feedback_service = feedback_service or FeedbackService.from_environment()
+    reload_voice_environment = voice_service is None
+    voice_service = voice_service or ElevenLabsVoice.from_environment()
+
+    def current_voice_service():
+        """Reload editable .env voice settings without requiring a restart."""
+        if reload_voice_environment:
+            return ElevenLabsVoice.from_environment()
+        return voice_service
     history = HistoryStore(session_dir, Path(__file__).with_name("conversation_library.json"))
     garden = GardenStore(session_dir)
     screen_lock = threading.Lock()
@@ -216,7 +232,8 @@ def create_app(
         # The page loads nothing from anywhere else, so say so; and always check
         # for a newer copy of the page's files instead of using a stale one.
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; frame-ancestors 'none'"
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; "
+            "media-src 'self' blob:; frame-ancestors 'none'"
         )
         response.headers["Permissions-Policy"] = "camera=(self), microphone=(self)"
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -335,6 +352,23 @@ def create_app(
     @app.get("/api/check-in/question")
     def next_check_in_question() -> dict:
         return history.next_question()
+
+    @app.get("/api/voice/status")
+    def voice_status() -> dict:
+        active_voice = current_voice_service()
+        return {
+            "provider": "elevenlabs" if active_voice.configured else "browser",
+            "configured": active_voice.configured,
+            "voice_id": active_voice.voice_id if active_voice.configured else None,
+        }
+
+    @app.post("/api/voice")
+    def generate_voice(request: VoiceRequest):
+        try:
+            audio = current_voice_service().synthesize(request.text)
+        except VoiceError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=503)
+        return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
 
     @app.get("/api/settings")
     def get_settings() -> dict:

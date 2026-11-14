@@ -5,6 +5,8 @@ let seenEvents = 0;
 let careStarted = 0;
 let careCleanup = () => {};
 const EARLY_STAGE_SPRITES = [0, 8, 13];
+const GROWTH_SHEET_POSITIONS = ["0%", "50%", "100%"];
+const POTTED_PLANT_COUNT = 31;
 const PLANT_SPOTS = [
   [22.5,15.5], [32,15.5], [41.5,15.5], [22.5,28.5], [32,28.5], [41.5,28.5],
   [67.5,15.5], [77,15.5], [86.5,15.5], [67.5,28.5], [77,28.5], [86.5,28.5],
@@ -30,8 +32,39 @@ async function request(path, body) {
 }
 
 function sprite(node, index) {
+  node.classList.remove("potted-plant-sprite");
+  node.classList.remove("growth-sheet-sprite");
+  node.style.removeProperty("background-image");
+  node.style.removeProperty("background-size");
+  node.style.removeProperty("background-position");
   node.classList.add("plant-sprite");
   node.style.setProperty("--sprite", index);
+}
+
+function growthSheetSprite(node, plant) {
+  node.classList.remove("potted-plant-sprite");
+  node.classList.remove("plant-sprite");
+  node.style.removeProperty("--sprite");
+  node.classList.add("growth-sheet-sprite");
+  node.style.backgroundImage = `url("${plant.growth_asset}")`;
+  node.style.backgroundSize = "300% 100%";
+  node.style.backgroundPosition = `${GROWTH_SHEET_POSITIONS[plant.visual_stage] ?? "100%"} center`;
+}
+
+function pottedPlantSprite(node, plant) {
+  const fallback = Number.isInteger(plant.plot_slot) ? plant.plot_slot + 1 : 1;
+  const identity = Number(plant.id) > 0 ? Number(plant.id) : fallback;
+  const assetNumber = ((identity - 1) % POTTED_PLANT_COUNT) + 1;
+  node.classList.remove("plant-sprite", "growth-sheet-sprite");
+  node.style.removeProperty("--sprite");
+  node.classList.add("potted-plant-sprite");
+  node.style.backgroundImage = `url("assets/potted-plants/plant_${String(assetNumber).padStart(2, "0")}.png")`;
+  node.style.backgroundSize = "contain";
+  node.style.backgroundPosition = "center bottom";
+}
+
+function plantSprite(node, plant) {
+  pottedPlantSprite(node, plant);
 }
 
 function stageSprite(plant) {
@@ -97,9 +130,7 @@ function render() {
     button.title = plant.needs_care ? `${plant.nickname} is ready for care` : `${plant.nickname} is settled for today`;
     const picture = document.createElement("span");
     picture.className = "world-crop";
-    const crop = ["carrot", "tomato", "wheat"][index % 3];
-    const cropStage = Math.min(4, Math.max(1, Math.ceil((plant.growth + 1) / 1.5)));
-    picture.style.backgroundImage = `url("assets/cozy-farm/crops/4x/${crop}/${crop}-${cropStage}-${["seeds","sprout","growing","ready"][cropStage - 1]}.png")`;
+    pottedPlantSprite(picture, plant);
     picture.classList.toggle("resting", plant.needs_care && plant.care_count > 0);
     const label = document.createElement("strong");
     label.textContent = plant.nickname;
@@ -122,12 +153,12 @@ function render() {
     el("garden-world").classList.remove("arranging");
     return;
   }
-  sprite(el("plant-large"), stageSprite(plant));
+  plantSprite(el("plant-large"), plant);
   el("plant-name").textContent = `${plant.nickname} · ${plant.name}`;
   el("plant-about").textContent = plant.about;
   el("plant-state").textContent = plant.needs_care
     ? `${plant.care_label} when you have a moment. Missing it only pauses growth.`
-    : `Settled for today · ${plant.stage_name} · stage ${plant.growth + 1} / 6`;
+    : `Settled for today · ${plant.stage_name} · stage ${plant.visual_stage + 1} / ${plant.stage_count}`;
   el("plant-care").textContent = plant.needs_care ? plant.care_label : "Already cared for today";
   el("plant-care").disabled = !plant.needs_care;
   el("plant-move").textContent = movingPlant ? "Cancel moving" : "Move on bed";
@@ -284,7 +315,8 @@ function renderSeeds() {
     const input = document.createElement("input");
     input.type = "radio"; input.name = "seed"; input.value = plant.species; input.checked = index === 0;
     const picture = document.createElement("span");
-    sprite(picture, plant.sprite);
+    if (plant.growth_asset) growthSheetSprite(picture, {...plant, visual_stage: 2});
+    else sprite(picture, plant.sprite);
     const name = document.createElement("strong"); name.textContent = plant.name;
     const care = document.createElement("small"); care.textContent = plant.care_label;
     label.append(input, picture, name, care);

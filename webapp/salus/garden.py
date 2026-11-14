@@ -8,7 +8,10 @@ from pathlib import Path
 
 CATALOG = {
     "daisy": {"name": "Daisy", "sprite": 31, "care": "water", "care_label": "Water lightly", "about": "Daisies like bright light and soil that can drain. Water when the top soil begins to dry."},
-    "sunflower": {"name": "Sunflower", "sprite": 45, "care": "water", "care_label": "Give it a drink", "about": "Sunflowers turn toward strong light and usually need regular water while growing."},
+    "sunflower": {"name": "Sunflower", "sprite": 45, "growth_asset": "assets/generated-plants/sunflower-growth.png", "care": "water", "care_label": "Give it a drink", "about": "Sunflowers turn toward strong light and usually need regular water while growing."},
+    "rose": {"name": "Rose", "sprite": 48, "growth_asset": "assets/generated-plants/rose-growth.png", "care": "water", "care_label": "Water at the roots", "about": "Roses prefer bright light, freely draining soil and water aimed near their roots rather than across the leaves."},
+    "iris": {"name": "Iris", "sprite": 54, "growth_asset": "assets/generated-plants/iris-growth.png", "care": "check", "care_label": "Check the soil", "about": "Irises enjoy bright conditions and soil that drains well. Their rhizomes should not sit in waterlogged ground."},
+    "marigold": {"name": "Marigold", "sprite": 42, "growth_asset": "assets/generated-plants/marigold-growth.png", "care": "sun", "care_label": "Find some sun", "about": "Marigolds flower best in a sunny position. Letting the soil drain between watering helps them stay healthy."},
     "lavender": {"name": "Lavender", "sprite": 54, "care": "sun", "care_label": "Find some sun", "about": "Lavender prefers plenty of sun and does better when its soil is not kept constantly wet."},
     "tulip": {"name": "Tulip", "sprite": 42, "care": "check", "care_label": "Check the soil", "about": "Tulips grow from bulbs. They enjoy bright conditions and modest watering rather than soaked soil."},
     "cattail": {"name": "Cattail", "sprite": 17, "care": "water", "care_label": "Top up the water", "about": "Cattails naturally grow at wetland edges, so they are much happier with consistently damp soil."},
@@ -18,20 +21,22 @@ CATALOG = {
 }
 
 STAGE_NAMES = ("freshly planted", "sprout", "young plant", "growing", "established", "flowering")
+FLOWER_STAGE_NAMES = ("seedling", "budding", "flowering")
 PLOT_SLOT_COUNT = 24
 
 DEMO_PLANTS = (
-    ("daisy", "Daisy"), ("sunflower", "Sunflower"), ("lavender", "English Lavender"),
-    ("tulip", "Red Tulip"), ("cattail", "Common Cattail"), ("vine", "Climbing Vine"),
-    ("mushroom", "Oyster Mushroom"), ("wildflower", "Wildflower Meadow"),
-    ("daisy", "Oxeye Daisy"), ("sunflower", "Lemon Queen"),
+    ("rose", "Scarlet Rose"), ("sunflower", "Sunflower"),
+    ("iris", "Purple Iris"), ("marigold", "Golden Marigold"),
+    ("daisy", "Oxeye Daisy"), ("lavender", "English Lavender"),
+    ("tulip", "Red Tulip"), ("cattail", "Common Cattail"),
+    ("vine", "Climbing Vine"), ("sunflower", "Lemon Queen"),
+    ("rose", "English Rose"), ("iris", "Blue Iris"),
+    ("marigold", "Orange Gem"), ("mushroom", "Oyster Mushroom"),
+    ("wildflower", "Wildflower Meadow"), ("daisy", "Shasta Daisy"),
+    ("sunflower", "Velvet Queen"), ("rose", "Garden Rose"),
+    ("iris", "Royal Iris"), ("marigold", "Honeycomb"),
     ("lavender", "Hidcote Lavender"), ("tulip", "Queen of Night"),
-    ("cattail", "Dwarf Cattail"), ("vine", "Sweet Pea"),
-    ("mushroom", "Chanterelle"), ("wildflower", "Cornflower"),
-    ("daisy", "Shasta Daisy"), ("sunflower", "Velvet Queen"),
-    ("lavender", "French Lavender"), ("tulip", "Apricot Beauty"),
-    ("cattail", "Broadleaf Cattail"), ("vine", "Star Jasmine"),
-    ("mushroom", "Morel"), ("wildflower", "Field Poppy"),
+    ("mushroom", "Chanterelle"), ("wildflower", "Field Poppy"),
 )
 
 
@@ -85,18 +90,22 @@ class GardenStore:
 
     def _seed_demo_garden(self, db) -> None:
         """Replace the prototype names once with a full presentation garden."""
-        if db.execute("SELECT 1 FROM garden_meta WHERE key='demo_garden_version'").fetchone():
+        version = db.execute("SELECT value FROM garden_meta WHERE key='demo_garden_version'").fetchone()
+        if version and version[0] == "2":
             return
         db.execute("DELETE FROM garden_care_log")
         db.execute("DELETE FROM garden_plants")
         today = self._day(db)
         for plot_slot, (species, nickname) in enumerate(DEMO_PLANTS):
-            growth = 2 + plot_slot % 4
+            growth = plot_slot % 3 if CATALOG[species].get("growth_asset") else 2 + plot_slot % 4
             db.execute(
                 "INSERT INTO garden_plants(species,nickname,growth,planted_day,plot_slot) VALUES (?,?,?,?,?)",
                 (species, nickname, growth, today, plot_slot),
             )
-        db.execute("INSERT INTO garden_meta(key,value) VALUES ('demo_garden_version','1')")
+        db.execute(
+            "INSERT INTO garden_meta(key,value) VALUES ('demo_garden_version','2') "
+            "ON CONFLICT(key) DO UPDATE SET value='2'"
+        )
 
     def _repair_plot_slots(self, db) -> None:
         """Give old saves stable, non-overlapping bed positions."""
@@ -120,11 +129,21 @@ class GardenStore:
                 FROM garden_care_log l JOIN garden_plants p ON p.id=l.plant_id ORDER BY l.id DESC LIMIT 30""").fetchall()
         plants = []
         for plant_id, species, nickname, growth, planted, last_cared, count, plot_slot in rows:
+            details = CATALOG[species]
+            if details.get("growth_asset"):
+                visual_stage = min(growth, len(FLOWER_STAGE_NAMES) - 1)
+                stage_name = FLOWER_STAGE_NAMES[visual_stage]
+                stage_count = len(FLOWER_STAGE_NAMES)
+            else:
+                visual_stage = growth
+                stage_name = STAGE_NAMES[growth]
+                stage_count = len(STAGE_NAMES)
             plants.append({"id": plant_id, "species": species, "nickname": nickname,
                            "growth": growth, "planted_day": planted, "last_cared_day": last_cared,
                            "care_count": count, "needs_care": last_cared != today,
-                           "stage_name": STAGE_NAMES[growth], "plot_slot": plot_slot,
-                           **CATALOG[species]})
+                           "visual_stage": visual_stage, "stage_name": stage_name,
+                           "stage_count": stage_count, "plot_slot": plot_slot,
+                           **details})
         history = [{"id": row[0], "plant_id": row[1], "nickname": row[2], "day": row[3],
                     "activity": row[4], "duration_seconds": row[5], "score": row[6], "note": row[7]} for row in logs]
         return {"today": today, "catalog": [{"species": key, **value} for key, value in CATALOG.items()], "plants": plants, "history": history}

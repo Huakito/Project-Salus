@@ -1885,6 +1885,25 @@ input[type="number"] {
   font-size: 0.86rem;
 }
 
+.voice-test-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.voice-test {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+}
+
+#game-voice-provider {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
 .camera-shell {
   border-color: #30363c;
   border-radius: 16px;
@@ -2970,4 +2989,51 @@ body:has(.garden-view:not([hidden])) .topbar-inner {
   .garden-layout > .plant-panel {
     left: 10px;
   }
+}
+
+/* Generated flowers use three equal square frames: seedling, bud and bloom. */
+.growth-sheet-sprite {
+  display: block;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+
+.world-crop.growth-sheet-sprite {
+  width: 64px;
+  height: 64px;
+}
+
+.plant-large.growth-sheet-sprite {
+  width: 96px;
+  height: 96px;
+  margin-inline: auto;
+}
+
+.seed-card .growth-sheet-sprite {
+  width: 64px;
+  height: 64px;
+}
+
+.plant-panel .seed-card .growth-sheet-sprite {
+  display: none;
+}
+
+/* User-provided potted plants replace the bed crops without changing garden state. */
+.potted-plant-sprite {
+  display: block;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: contain;
+  image-rendering: pixelated;
+}
+
+.world-crop.potted-plant-sprite {
+  width: 68px;
+  height: 68px;
+}
+
+.plant-large.potted-plant-sprite {
+  width: 104px;
+  height: 104px;
+  margin-inline: auto;
 }

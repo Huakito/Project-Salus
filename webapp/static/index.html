@@ -18,7 +18,7 @@
         </div>
         <nav class="main-nav" aria-label="Main sections" role="tablist">
           <button class="nav-tab active" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="true">Movement</button>
-          <button class="nav-tab" id="garden-tab" type="button" role="tab" data-view="garden" aria-controls="garden-view" aria-selected="false" tabindex="-1">Garden</button>
+          <!-- Garden prototype temporarily disabled; its markup and assets are preserved below. -->
           <button class="nav-tab" id="workshop-tab" type="button" role="tab" data-view="workshop" aria-controls="stage" aria-selected="false" tabindex="-1">Workshop</button>
         </nav>
         <div class="link">
@@ -54,6 +54,10 @@
             <div class="game-toggles">
               <label class="voice-toggle"><input id="game-voice" type="checkbox" checked> Spoken guidance</label>
               <label class="voice-toggle"><input id="game-checkins" type="checkbox" checked> One spoken check-in</label>
+              <div class="voice-test-row">
+                <button class="button voice-test" id="game-test-voice" type="button">Test voice</button>
+                <span id="game-voice-provider" role="status">Checking voice…</span>
+              </div>
             </div>
           </div>
           <p class="privacy-note">Video stays on this computer and is never saved. Your browser handles speech recognition; only the resulting transcript is used for the reply and stored with the run.</p>

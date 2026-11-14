@@ -3,7 +3,7 @@
 
 import { checkFace, drawFace, drawVolume, rgb565, rgb565ToCss } from "./face.js";
 import "./movement-game.js";
-import "./garden.js";
+// Garden prototype is temporarily disabled. Restore this import with its tab to re-enable it.
 import "./floating-screen.js";
 
 const POLL_MS = 1500; // how often to ask whether the board is still connected

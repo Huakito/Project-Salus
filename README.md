@@ -105,6 +105,14 @@ For optional generated feedback, copy `.env.example` to `.env` and put an
 OpenAI API key in `OPENAI_API_KEY`. Keep `.env` private. Without a key, every
 feature still works and the app uses a local response.
 
+For the movement game's spoken guide, add `ELEVENLABS_API_KEY` to the same
+`.env` file. `ELEVENLABS_VOICE_ID` selects the voice (George is the default)
+and `ELEVENLABS_MODEL` defaults to the low-latency `eleven_flash_v2_5` model.
+Changes to either setting in `.env` are picked up on the next spoken line; the
+server does not need to be restarted.
+If ElevenLabs is not configured or cannot be reached, the page automatically
+uses the browser's built-in voice instead. The API key is never sent to the page.
+
 | Command                                   | What it does                                        |
 |-------------------------------------------|-----------------------------------------------------|
 | `python -m salus --fake`                  | Uses a pretend board. The page says so in a banner. |
