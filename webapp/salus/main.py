@@ -31,6 +31,7 @@ from .board import (
 )
 from .contract import DEFAULT_PATH, Contract, ContractError, load_contract
 from .face import FaceError, check_face, rgb565
+from .feedback import FeedbackService
 
 log = logging.getLogger("salus")
 
@@ -97,6 +98,7 @@ def create_app(
     board_port: str | None = None,
     contract_path: Path = DEFAULT_PATH,
     data_dir: Path | None = None,
+    feedback_service: FeedbackService | None = None,
 ) -> FastAPI:
     """Build the app. ``mode`` is "real" (the robot on USB) or "fake" (no hardware needed)."""
     if mode not in ("real", "fake"):
@@ -113,6 +115,7 @@ def create_app(
     session_dir = data_dir or STATIC_DIR.parent / "data"
     session_path = session_dir / "movement-sessions.jsonl"
     session_lock = threading.Lock()
+    feedback_service = feedback_service or FeedbackService.from_environment()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -143,7 +146,9 @@ def create_app(
         response = await call_next(request)
         # The page loads nothing from anywhere else, so say so; and always check
         # for a newer copy of the page's files instead of using a stale one.
-        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; frame-ancestors 'none'"
+        )
         response.headers["Permissions-Policy"] = "camera=(self), microphone=(self)"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Cache-Control"] = "no-cache"
@@ -216,25 +221,24 @@ def create_app(
     @app.post("/api/movement-sessions")
     def save_movement_session(session: MovementSession) -> dict:
         """Save derived game results locally. The endpoint has no video field by design."""
+        session_data = session.model_dump()
+        feedback = feedback_service.movement_feedback(session_data)
         record = {
             "recorded_at": datetime.now(timezone.utc).isoformat(),
-            **session.model_dump(),
+            **session_data,
+            "feedback": feedback.message,
+            "feedback_source": feedback.source,
         }
         session_dir.mkdir(parents=True, exist_ok=True)
         with session_lock, session_path.open("a", encoding="utf-8") as file:
             file.write(json.dumps(record, separators=(",", ":")) + "\n")
 
-        found = len(session.movements_completed)
-        offered = len(session.movements_offered)
-        if session.feeling == "not_for_me":
-            feedback = "Saved. We can try a different kind of game next time."
-        elif found == offered:
-            feedback = f"Saved. You found all {found} shapes."
-        elif found:
-            feedback = f"Saved. You found {found} of {offered} shapes."
-        else:
-            feedback = "Saved. The camera game is ready whenever you want another go."
-        return {"ok": True, "feedback": feedback, "recorded_at": record["recorded_at"]}
+        return {
+            "ok": True,
+            "feedback": feedback.message,
+            "feedback_source": feedback.source,
+            "recorded_at": record["recorded_at"],
+        }
 
     # Everything else is the page. Mounted last so it cannot shadow the API.
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="page")

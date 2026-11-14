@@ -4,7 +4,9 @@ A small companion robot meant to help people living with depression. It has a
 face on a screen, a speaker, a microphone and buttons. It checks in with its
 person through questions, quizzes and games, and a web app on the same computer
 shows how they are doing, with the option to share a summary with their GP.
-Everything runs locally: nothing is sent to the cloud.
+Camera tracking and session storage run locally. If the optional OpenAI key is
+configured, only the derived game summary is sent to OpenAI to produce a short
+response; camera frames, video and audio are never sent.
 
 This repository holds both halves of the project: the robot's firmware and the
 web app.
@@ -47,12 +49,14 @@ Built and tested:
 - A local camera movement game, **Salus Says**, with standing and seated modes,
   five pose challenges, spoken cues, robot-face reactions and local result
   logging. Pose tracking runs in the browser; camera frames are not saved.
+- Optional, structured OpenAI feedback after a saved run, with an automatic
+  local fallback if no key is configured or the request fails.
 
 Not built yet:
 
 - Live button presses on the page (the server already collects them at `/api/events`).
 - Storage, the mood and questionnaire pages, and the summary for a GP.
-- Speech in and out, and the local language model.
+- Speech recognition and a full conversational model.
 - The firmware itself: `firmware/` is empty in this repository so far.
 
 The app has so far only run against the fake board and a simulated serial port.
@@ -72,6 +76,10 @@ python -m salus --fake                 # no robot needed
 ```
 
 Open http://127.0.0.1:8000.
+
+For optional generated feedback, copy `.env.example` to `.env` and put an
+OpenAI API key in `OPENAI_API_KEY`. Keep `.env` private. Without a key, every
+feature still works and the app uses a local response.
 
 | Command                                   | What it does                                        |
 |-------------------------------------------|-----------------------------------------------------|

@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from salus.contract import DEFAULT_PATH
 from salus.main import create_app
+from salus.feedback import Feedback, FeedbackService, local_feedback
 
 
 @pytest.fixture
@@ -168,7 +169,12 @@ def test_events_start_out_empty(client):
 
 
 def test_movement_session_is_saved_without_camera_data(contract_file, data_dir):
-    app = create_app(mode="fake", contract_path=contract_file, data_dir=data_dir)
+    app = create_app(
+        mode="fake",
+        contract_path=contract_file,
+        data_dir=data_dir,
+        feedback_service=FeedbackService(),
+    )
     with TestClient(app, base_url="http://127.0.0.1:8000") as client:
         session = {
             "game": "salus_says",
@@ -183,11 +189,78 @@ def test_movement_session_is_saved_without_camera_data(contract_file, data_dir):
         response = client.post("/api/movement-sessions", json=session)
         assert response.status_code == 200
         assert response.json()["feedback"] == "Saved. You found 1 of 2 shapes."
+        assert response.json()["feedback_source"] == "local"
 
     saved = json.loads((data_dir / "movement-sessions.jsonl").read_text())
     assert saved["game"] == "salus_says"
     assert saved["mode"] == "seated"
     assert "video" not in saved
+    assert saved["feedback_source"] == "local"
+
+
+def test_openai_feedback_receives_only_derived_session_data():
+    class Parsed:
+        output_parsed = type("Output", (), {"message": "Nice work — three steady shapes found."})()
+
+    class Responses:
+        def __init__(self):
+            self.request = None
+
+        def parse(self, **kwargs):
+            self.request = kwargs
+            return Parsed()
+
+    client = type("Client", (), {"responses": Responses()})()
+    service = FeedbackService(client=client, model="test-model")
+    result = service.movement_feedback(
+        {
+            "game": "salus_says",
+            "mode": "standing",
+            "duration_seconds": 50,
+            "movements_offered": ["wings", "reach", "balance"],
+            "movements_completed": ["wings", "reach", "balance"],
+            "movements_skipped": [],
+            "tracking_quality": 0.876,
+            "feeling": "good",
+        }
+    )
+    sent = client.responses.request
+    assert result == Feedback(message="Nice work — three steady shapes found.", source="openai")
+    assert sent["model"] == "test-model"
+    assert sent["store"] is False
+    assert sent["max_output_tokens"] == 100
+    assert sent["text_format"].__name__ == "ModelFeedback"
+    payload = json.loads(sent["input"][1]["content"])
+    assert payload["tracking_quality"] == 0.88
+    assert set(payload) == {
+        "game",
+        "mode",
+        "duration_seconds",
+        "movements_offered",
+        "movements_completed",
+        "movements_skipped",
+        "tracking_quality",
+        "feeling",
+    }
+
+
+def test_openai_failure_falls_back_without_losing_the_session():
+    class Responses:
+        def parse(self, **kwargs):
+            raise TimeoutError
+
+    client = type("Client", (), {"responses": Responses()})()
+    session = {
+        "game": "salus_says",
+        "mode": "seated",
+        "duration_seconds": 20,
+        "movements_offered": ["wings"],
+        "movements_completed": ["wings"],
+        "movements_skipped": [],
+        "tracking_quality": 0.7,
+        "feeling": None,
+    }
+    assert FeedbackService(client=client).movement_feedback(session) == local_feedback(session)
 
 
 def test_movement_session_rejects_unexpected_camera_data(client):
@@ -232,7 +305,9 @@ def test_our_own_page_can(client):
 def test_responses_forbid_loading_anything_from_elsewhere(client):
     for path in ("/", "/api/status"):
         headers = client.get(path).headers
-        assert headers["content-security-policy"] == "default-src 'self'; frame-ancestors 'none'"
+        assert headers["content-security-policy"] == (
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; frame-ancestors 'none'"
+        )
         assert headers["permissions-policy"] == "camera=(self), microphone=(self)"
         assert headers["cache-control"] == "no-cache"
 

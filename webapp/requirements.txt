@@ -2,3 +2,5 @@
 atech==1.0.0a12          # alpha software: pinned, because its API can change between releases
 fastapi==0.162.7
 uvicorn[standard]==0.54.0
+openai==2.21.0
+python-dotenv==1.2.2
