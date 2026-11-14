@@ -1,6 +1,6 @@
 # Project Salus
 
-Local-first companion robot for people living with depression: an ESP32-S3 board (`firmware/`) connected over USB & WiFi to a Python FastAPI control/audio companion on the computer (`webapp/`, `firmware/server.py`). Nothing runs in or leaves to the cloud.
+Local-first companion robot for people living with depression: an ESP32-S3 board (`firmware/`) connected over USB & WiFi to a Python FastAPI control/audio companion on the computer (`webapp/`, `firmware/server.py`). Audio, speech recognition and the voice run on this computer; the voice chat sends the transcribed text (never audio) to Gemini to write replies.
 
 ## Repository Map
 
@@ -10,10 +10,15 @@ Local-first companion robot for people living with depression: an ESP32-S3 board
 - `webapp/salus/contract.py` — Reloads `commands.json` dynamically and validates commands/bounds.
 - `webapp/salus/face.py` — Server-side face text/colour validation & pixel layout rules. Keep in sync with `webapp/static/face.js`.
 - `webapp/salus/fake_board.py` — Simulated board for testing without hardware (`--fake`).
-- `webapp/static/` — Vanilla HTML/CSS/JS control panel (`app.js`, `face.js`, `font5x7.js`, `index.html`, `style.css`).
-- `webapp/tests/` — Pytest suite (`test_api.py`, `test_board.py`, `test_contract.py`, `test_face.py`, `test_serial.py`).
-- `firmware/project.yaml` — Atech / PlatformIO ESP32-S3 firmware definition (`st7789_tft` screen on `ports: [1, 2]`, `spk`, `yes_btn`, `no_btn`).
-- `firmware/server.py` — TCP audio server on port `9000` (16 kHz 16-bit mono PCM, 30 ms chunks) + FastAPI utterances UI on `127.0.0.1:8001`.
+- `webapp/static/` — Vanilla HTML/CSS/JS control panel (`app.js`, `face.js`, `font5x7.js`, `index.html`, `style.css`, `fonts/` holding JetBrains Mono so the page works offline). The page is a console (face editor) wired to modules: melody, volume slider, lights, and the Turnstile knob game.
+- `webapp/tests/` — Pytest suite (`test_api.py`, `test_board.py`, `test_contract.py`, `test_face.py`, `test_serial.py`, plus `test_chat.py`, `test_chat_server.py` and `test_crisis.py` for `firmware/*.py`; the chat ones skip without numpy).
+- `firmware/project.yaml` — Atech / PlatformIO ESP32-S3 firmware definition for the 14-port board. Modules: `screen` (`st7735_tft`, 160x80, `ports: [10, 11]`; a face is at most 26 characters by 10 lines), `spk` (speaker, `[5, 6]`), `mic` (`[3, 4]`), `knob` (rotary encoder, `[1, 2]`: turn = volume, push = mute the mic), `led` (3x3 NeoPixel grid, port 7: sound level meter unless the web app sets a colour), `btn` (port 13: meter on/off).
+  - Hand-written actions in `code: loop:` (not shown by `atech describe`): `face`, `led_colour`, `led_animation`, `led_meter`. Built-in ones the page uses: `spk_play_rtttl`, `spk_set_volume`, `spk_stop`.
+  - Events: `knob`, `knob_btn`, `btn`, `mic_level` (built in) and `mic_muted`, `volume` (printed by the loop on change and every 2 s; `salus/board.py` puts them in `/api/status`).
+  - The WiFi name, password and laptop address at the top of `code: globals:` are per-person and get committed with the file: check before pushing.
+- `firmware/server.py` — TCP audio server on port `9000` (16 kHz 16-bit mono PCM, 30 ms chunks) + FastAPI utterances UI on `127.0.0.1:8001`. Each utterance: Whisper -> crisis screening -> Gemini -> Piper.
+- `firmware/chat.py` — The voice pipeline's parts (Whisper transcriber, Gemini chatter and its system prompt, Piper speaker). Settings come from `firmware/.env` (see `.env.example`).
+- `firmware/crisis.py` — Deterministic crisis screening: a phrase list and the scripted message. `server.py` calls it on every transcript before Gemini; a match is answered with the scripted message, Gemini is not called, and the turn is kept out of the chat history. Not yet reviewed by a clinician.
 
 ## Commands
 
@@ -29,11 +34,11 @@ Run from repo root (`.venv` holds all Python + `atech` + `pytest` dependencies):
 
 ## Critical Invariants & Safety Rules
 
-1. **Patient privacy & git hygiene:** Never read, log, commit, or expose `*.db*`, `recordings/`, `*.wav/*.mp3/*.pcm`, `webapp/data/`, `exports/`, or `.env*`. Keep all processing 100% local (`127.0.0.1`).
-2. **Clinical safety:** Never use an LLM to score mood or improvise self-harm responses. Mood questionnaires must use deterministic validated scoring (PHQ-9 / PHQ-A / WHO-5); any self-harm/crisis signal must trigger scripted escalation to a person or crisis line.
+1. **Patient privacy & git hygiene:** Never read, log, commit, or expose `*.db*`, `recordings/`, `*.wav/*.mp3/*.pcm`, `webapp/data/`, `exports/`, or `.env*`. Keep processing local (`127.0.0.1`); the one exception is the transcribed chat text sent to Gemini by `firmware/chat.py`, and nothing else may leave this computer.
+2. **Clinical safety:** Never use an LLM to score mood or improvise self-harm responses. Mood questionnaires must use deterministic validated scoring (PHQ-9 / PHQ-A / WHO-5); any self-harm/crisis signal must trigger scripted escalation to a person or crisis line. `firmware/crisis.py` does this for the voice chat: never call the language model on a transcript that has not been through `crisis.is_crisis()` first, and never weaken its phrase list without adding tests.
 3. **USB serial ownership:** Never bypass `salus/board.py`'s single-worker lock or spawn competing serial readers.
 4. **Audio/UI lag-free hot paths:** In `firmware/server.py`, never block the asyncio loop or port-9000 frame reader with synchronous disk/model calls—offload heavy inference/TTS/file I/O cleanly. Keep `webapp/static/` vanilla JS with zero unnecessary polling/DOM thrash.
-5. **Contract parity:** Any change to `commands.json` or face rendering rules must update both `webapp/salus/face.py` and `webapp/static/face.js` plus `webapp/tests/`.
+5. **Contract parity:** Any change to `commands.json` or face rendering rules must update both `webapp/salus/face.py` and `webapp/static/face.js` plus `webapp/tests/`. `screen` in `commands.json` must match the firmware's screen (160x80). The volume screen and the light animation are drawn twice, in `firmware/project.yaml` and in `webapp/static/` (`face.js` `drawVolume`, `app.js` `playGridAnimation`): change both.
 
 ## Working Rules
 

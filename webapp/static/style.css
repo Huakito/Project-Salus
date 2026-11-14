@@ -24,6 +24,17 @@
   font-display: swap;
 }
 
+/* Google Sans Flex, used only for the "SALUS" title in the header
+   (licence: fonts/OFL-GoogleSansFlex.txt). Cut down to the letters A-Z/a-z
+   with only the weight axis kept, so it is 16 KB instead of 3.9 MB. */
+@font-face {
+  font-family: "Google Sans Flex";
+  src: url("fonts/GoogleSansFlex.woff2") format("woff2");
+  font-weight: 1 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* Calm greens with off-white on top. Both themes are light text on a green
      surface, so the browser's own controls are asked for their dark versions. */
@@ -54,6 +65,7 @@
   --alarm-edge: #7a1510;
   --on-alarm: #fff6f2;
   --font: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --mono: var(--font); /* the Movement and Garden tabs ask for this by name */
 }
 
 /* The same palette, deeper, for a computer set to its dark appearance. */
@@ -183,8 +195,11 @@ p {
 }
 
 .brand h1 {
+  font-family: "Google Sans Flex", var(--font);
+  font-weight: 700;
   font-size: 1.4rem;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 /* The logo runs the full height of the header, from its top edge to its line. */
@@ -1224,16 +1239,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* Keep the camera game in the original green console language. */
-:root {
-  color-scheme: dark;
-  --page: #306e59; --panel: #285d4c; --field: #204e3f; --line: #3f7a66;
-  --edge: #98c3b1; --ink: #f6f3ea; --muted: #dbe6dd; --accent: #f6f3ea;
-  --on-accent: #1f4d3f; --hover: rgb(246 243 234 / .1); --calm-wash: #285d4c;
-  --font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-}
 
-.topbar { border-bottom: 1px solid var(--line); background: var(--panel); }
-.game-intro, .game-board, .game-summary, .command, .console {
+.game-intro, .game-board, .game-summary, .command {
   border-radius: 0; box-shadow: none; background: var(--panel);
 }
 .button, button, textarea, input[type="text"], input[type="number"],
@@ -1251,9 +1258,9 @@ input[type="range"]::-moz-range-thumb {
 .checkin-reply { border-top-color: var(--line); }
 
 /* Final garden layout authority: keep the game and its side menu predictable. */
-body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1500px; }
+body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1320px; }
 .page:has(.garden-view:not([hidden])) > .notice { display: none; }
-.garden-view:not([hidden]) { width: 100%; max-width: 1500px; margin-inline: auto; }
+.garden-view:not([hidden]) { width: 100%; max-width: 1320px; margin-inline: auto; }
 .garden-layout { grid-template-columns: minmax(720px, 1fr) 320px; gap: 16px; }
 .garden-world { border-width: 6px; box-shadow: 0 16px 34px rgb(21 43 32 / .32), inset 0 0 0 2px rgb(255 246 211 / .2); }
 .farm-path { background-size: 64px 64px; }
@@ -1289,14 +1296,14 @@ body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1500px; }
 
 @media (max-width: 820px) {
   body:has(.garden-view:not([hidden])) { overflow: auto; }
-  .page:has(.garden-view:not([hidden])) { height: auto; min-height: calc(100dvh - 79px); overflow: visible; }
+  .page:has(.garden-view:not([hidden])) { height: auto; min-height: calc(100dvh - 66px); overflow: visible; }
   .garden-view:not([hidden]) { overflow: visible; }
   .garden-layout { grid-template-columns: 1fr; grid-template-rows: minmax(520px, 68vh) auto; }
 }
 
-/* Movement page uses the same centre-console and side-module language as Workshop. */
+/* Movement page uses the same centre-console and side-module language as the Home tab. */
 body:has(.play-view:not([hidden])) .topbar-inner,
-.page:has(.play-view:not([hidden])) { max-width: 1380px; }
+.page:has(.play-view:not([hidden])) { max-width: 1320px; }
 .play-view {
   position: relative;
   grid-template-columns: minmax(220px, .72fr) minmax(560px, 1.75fr) minmax(220px, .72fr);
@@ -1346,25 +1353,6 @@ body:has(.play-view:not([hidden])) .topbar-inner,
 .farm-decoration.chicken { left: 6%; top: 57%; width: 48px; height: 64px; background-image: url("assets/cozy-farm/animals/4x/chicken-white.png"); background-size: 192px 320px; animation: chicken-bob 1.2s steps(2, end) infinite; }
 @keyframes chicken-bob { 50% { transform: translateY(-3px); } }
 
-/* Movable miniature screen, visible across every page. */
-.floating-screen {
-  position: fixed;
-  z-index: 100;
-  width: 280px;
-  border: 2px solid var(--edge);
-  background: var(--panel);
-  color: var(--ink);
-  box-shadow: 10px 12px 0 rgb(19 42 33 / .35);
-}
-.floating-screen.dragging { opacity: .9; box-shadow: 14px 16px 0 rgb(19 42 33 / .28); }
-.floating-screen-handle { display: flex; align-items: center; justify-content: space-between; min-height: 38px; padding-left: 10px; border-bottom: 1px solid var(--line); background: var(--field); cursor: move; touch-action: none; user-select: none; }
-.floating-screen-handle strong { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
-.floating-screen-handle button { align-self: stretch; width: 42px; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 1.1rem; }
-.floating-screen-body { padding: 10px; }
-.floating-screen-body canvas { display: block; width: 100%; aspect-ratio: 2 / 1; border: 8px solid #0e1915; background: #000; image-rendering: pixelated; }
-.floating-screen-body span { display: block; margin-top: 6px; color: var(--muted); font-size: .65rem; text-align: right; }
-.floating-screen-handle:focus-visible { outline: 3px solid var(--note); outline-offset: 3px; }
-
 @media (max-width: 1100px) {
   .play-view { grid-template-columns: minmax(220px, .72fr) minmax(0, 1.6fr); }
   .play-hardware { grid-column: 1; }
@@ -1374,7 +1362,6 @@ body:has(.play-view:not([hidden])) .topbar-inner,
 @media (max-width: 760px) {
   .play-view { grid-template-columns: 1fr; }
   .game-intro::after { display: none; }
-  .floating-screen { width: 230px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1382,9 +1369,9 @@ body:has(.play-view:not([hidden])) .topbar-inner,
 }
 
 /* Garden game: authoritative layout and accessibility pass. */
-body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1500px; }
+body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1320px; }
 .page:has(.garden-view:not([hidden])) > .notice { display: none; }
-.garden-view:not([hidden]) { width: 100%; max-width: 1500px; margin-inline: auto; }
+.garden-view:not([hidden]) { width: 100%; max-width: 1320px; margin-inline: auto; }
 .garden-heading { min-height: 64px; padding-inline: 2px; }
 .garden-layout { grid-template-columns: minmax(720px, 1fr) 320px; gap: 16px; }
 .garden-world {
@@ -1465,7 +1452,7 @@ body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1500px; }
 
 @media (max-width: 820px) {
   body:has(.garden-view:not([hidden])) { overflow: auto; }
-  .page:has(.garden-view:not([hidden])) { height: auto; min-height: calc(100dvh - 79px); overflow: visible; }
+  .page:has(.garden-view:not([hidden])) { height: auto; min-height: calc(100dvh - 66px); overflow: visible; }
   .garden-view:not([hidden]) { overflow: visible; }
   .garden-layout { grid-template-columns: 1fr; grid-template-rows: minmax(520px, 68vh) auto; }
   .garden-layout > .plant-panel { max-height: none; }
@@ -1575,7 +1562,7 @@ body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1500px; }
 
 /* ---- fixed-screen top-down garden game ---- */
 body:has(.garden-view:not([hidden])) { overflow: hidden; }
-.page:has(.garden-view:not([hidden])) { width: min(1500px, 100%); max-width: none; height: calc(100dvh - 79px); padding: 0 16px 12px; overflow: hidden; }
+.page:has(.garden-view:not([hidden])) { width: min(1320px, 100%); max-width: none; height: calc(100dvh - 66px); padding: 0 20px 12px; overflow: hidden; }
 .page:has(.garden-view:not([hidden])) > .notice { position: absolute; z-index: 30; right: 14px; bottom: 10px; width: auto; margin: 0; padding: 6px 10px; opacity: .82; font-size: .68rem; }
 .garden-view:not([hidden]) { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 10px; overflow: hidden; }
 .garden-heading { min-height: 70px; align-items: center; }
@@ -1626,93 +1613,13 @@ body:has(.garden-view:not([hidden])) { overflow: hidden; }
   .garden-day { display: none; }
 }
 
-/* Keep plants inside the soil beds and make removal deliberate. */
-.world-plant {
-  width: 74px;
-  min-height: 82px;
-}
-
-.world-crop {
-  width: 56px;
-  height: 56px;
-}
-
-.plant-panel #plant-delete {
-  grid-column: 1 / -1;
-  border-color: #9b5147;
-  background: #fff0e8;
-  color: #713229;
-}
-
-.plant-panel #plant-delete.confirming {
-  border-color: #713229;
-  background: #b84c3f;
-  color: #fff8ef;
-}
-
 /* ---- visual refinement: return to the quiet, card-based original ---- */
 
-:root {
-  color-scheme: light dark;
-  --page: #f4f1eb;
-  --panel: #fffdfa;
-  --field: #ffffff;
-  --line: #e1dbcf;
-  --edge: #b9b1a3;
-  --ink: #1f2428;
-  --muted: #626970;
-  --accent: #1a6964;
-  --on-accent: #ffffff;
-  --hover: rgb(26 105 100 / 0.07);
-  --good: #1f7a44;
-  --bad: #b23328;
-  --bad-wash: #fbe9e6;
-  --on-bad-wash: #8c2921;
-  --note: #75520b;
-  --note-wash: #fbf1d6;
-  --calm-wash: #e8edef;
-  --dot-on: #2fa85a;
-  --dot-off: #d9483b;
-  --bezel: #171a1d;
-  --bezel-edge: #2c3136;
-  --wire: #9da8a4;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --page: #131619;
-    --panel: #1b1f23;
-    --field: #14171a;
-    --line: #30363c;
-    --edge: #4b535a;
-    --ink: #e8e5df;
-    --muted: #a0a7ae;
-    --accent: #62c8c0;
-    --on-accent: #0c1a19;
-    --hover: rgb(98 200 192 / 0.09);
-    --good: #74d394;
-    --bad: #f19288;
-    --bad-wash: #3b1f1c;
-    --on-bad-wash: #f5aca4;
-    --note: #ecc96f;
-    --note-wash: #372e16;
-    --calm-wash: #242a2f;
-    --dot-on: #74d394;
-    --dot-off: #f19288;
-    --wire: #65716c;
-  }
-}
 
 body {
   font-size: 1rem;
   line-height: 1.5;
-}
-
-.topbar {
-  border: 0;
-  background: transparent;
 }
 
 .topbar-inner,
@@ -1720,27 +1627,8 @@ body {
   max-width: 1060px;
 }
 
-.topbar-inner {
-  min-height: 78px;
-  padding: 14px 20px;
-}
-
 .page {
   padding: 0 20px 56px;
-}
-
-.brand {
-  gap: 10px;
-}
-
-.brand-logo {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-}
-
-.brand-sub {
-  font-size: 0.92rem;
 }
 
 .main-nav {
@@ -1759,12 +1647,6 @@ body {
   background: var(--panel);
   color: var(--ink);
   box-shadow: 0 1px 3px rgb(20 25 23 / 0.12);
-}
-
-.status {
-  border-radius: 999px;
-  background: var(--panel);
-  box-shadow: 0 1px 2px rgb(20 25 23 / 0.05);
 }
 
 .notice {
@@ -1804,8 +1686,7 @@ input[type="number"] {
 .game-intro,
 .game-board,
 .game-summary,
-.command,
-.console {
+.command {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--panel);
@@ -2017,17 +1898,6 @@ input[type="number"] {
   background: var(--field);
 }
 
-.console {
-  --shell: var(--panel);
-  --shell-edge: var(--line);
-  --ink: var(--ink);
-  --muted: var(--muted);
-  --field: var(--field);
-  --edge: var(--edge);
-  --accent: var(--accent);
-  --on-accent: var(--on-accent);
-}
-
 .brand-face,
 .command-key,
 textarea,
@@ -2055,15 +1925,7 @@ textarea,
 }
 
 /* Final theme authority: match the original green, squared-off interface. */
-:root {
-  color-scheme: dark;
-  --page: #306e59; --panel: #285d4c; --field: #204e3f; --line: #3f7a66;
-  --edge: #98c3b1; --ink: #f6f3ea; --muted: #dbe6dd; --accent: #f6f3ea;
-  --on-accent: #1f4d3f; --hover: rgb(246 243 234 / .1); --calm-wash: #285d4c;
-  --font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-}
-.topbar { border-bottom: 1px solid var(--line); background: var(--panel); }
-.game-intro, .game-board, .game-summary, .command, .console { border-radius: 0; box-shadow: none; background: var(--panel); }
+.game-intro, .game-board, .game-summary, .command { border-radius: 0; box-shadow: none; background: var(--panel); }
 .button, button, textarea, input[type="text"], input[type="number"], .main-nav, .nav-tab,
 .status, .notice, #pose-library-list span, .camera-shell, .camera-status, .pose-card,
 .hold-track, .hold-track span, .progress-dot, .feeling-options label { border-radius: 0; }
@@ -2080,7 +1942,7 @@ textarea,
 /* Absolute page-layout authority — this must remain after the final theme. */
 body:has(.play-view:not([hidden])) .topbar-inner,
 .page:has(.play-view:not([hidden])) {
-  max-width: 1380px;
+  max-width: 1320px;
 }
 
 .play-view {
@@ -2232,10 +2094,6 @@ body:has(.play-view:not([hidden])) .topbar-inner,
   width: 100%;
 }
 
-.floating-screen {
-  width: 220px;
-}
-
 .session-facts {
   display: grid;
   gap: 8px;
@@ -2273,7 +2131,7 @@ body:has(.play-view:not([hidden])) .topbar-inner,
 
   .page:has(.garden-view:not([hidden])) {
     height: auto;
-    min-height: calc(100dvh - 79px);
+    min-height: calc(100dvh - 66px);
     overflow: visible;
   }
 
@@ -2499,541 +2357,111 @@ body:has(.play-view:not([hidden])) .topbar-inner,
   }
 }
 
-/* Full-map garden pass: controls sit over the world and scenery gets room. */
-body:has(.garden-view:not([hidden])) .topbar-inner {
-  max-width: 1720px;
+/* ---- the header and the Home tab keep their own look ---- */
+/* The Movement and Garden rules above set a base size and width for the whole
+   page. These put the header, the notices and the Home tab back as they were
+   designed, and must stay last. */
+.topbar,
+.page > .notice,
+#stage {
+  font-size: 0.9375rem;
+  line-height: 1.55;
 }
 
+#commands-note {
+  line-height: 1.55;
+}
+
+/* One width for every tab: the header's contents and the page under it share
+   the same left and right edges (1320px wide at most, 20px in from the sides). */
+.topbar-inner,
+.page:has(#stage:not([hidden])) {
+  max-width: 1320px;
+}
+
+/* On the Home and Movement tabs the notices sit clear of the header. The
+   Garden fills the window instead, and shows no notices. */
+.page:has(#stage:not([hidden])),
+.page:has(.play-view:not([hidden])) {
+  padding: 24px 20px 56px;
+}
+
+/* The Garden: room to breathe between its title row, the guide, the game
+   screen and the drop-down menus. It still fills the window exactly and is as
+   wide as the header; only the spaces inside it changed. Must stay last. */
 .page:has(.garden-view:not([hidden])) {
-  width: min(1720px, 100%);
-  padding: 0 12px 10px;
+  padding-top: 18px;
+  padding-bottom: 18px;
 }
 
 .garden-view:not([hidden]) {
-  max-width: 1696px;
-  grid-template-rows: 40px minmax(0, 1fr);
-  gap: 6px;
+  grid-template-rows: auto minmax(0, 1fr); /* the title row is as tall as the day box needs */
+  gap: 20px;
 }
 
 .garden-heading {
-  min-height: 40px;
-  height: 40px;
-}
-
-.garden-heading h2 {
-  font-size: clamp(1.25rem, 1.6vw, 1.65rem);
-}
-
-.garden-heading > div:first-child p:last-child,
-.garden-heading .eyebrow {
-  display: none;
-}
-
-.garden-day {
-  min-width: 120px;
-  padding: 5px 9px;
+  height: auto;
+  min-height: 48px;
 }
 
 .garden-layout {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: calc(100dvh - 142px);
-  min-height: 620px;
-  max-height: none;
+  gap: 24px;
 }
 
-.garden-world {
-  width: 100%;
-  height: 100%;
-  min-height: 620px;
+/* ---- Home: a short "About Salus" card above the test modules ---- */
+/* Styled like a module card and as wide as the header's contents. On a wide screen it
+   sits on its own row above the console and the modules on either side; on a
+   narrow one it is simply first in the column. The page scrolls as usual. */
+.home-intro {
+  width: 100%; /* as wide as the header's contents */
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel);
 }
 
-.garden-water {
-  position: absolute;
-  z-index: 0;
-  inset: 0 auto 0 0;
-  width: 14%;
-  min-width: 120px;
-  background: #4b98c4 url("assets/tulipmere-lite/tiles/water_c.png") repeat;
-  background-size: 64px 64px;
-  clip-path: polygon(0 0, 76% 0, 89% 7%, 72% 15%, 94% 24%, 79% 33%, 96% 43%, 73% 53%, 91% 63%, 76% 72%, 96% 82%, 78% 91%, 86% 100%, 0 100%);
-  image-rendering: pixelated;
-  pointer-events: none;
+.home-intro h2 {
+  font-size: 1rem;
 }
 
-.garden-water::after {
-  position: absolute;
-  inset: 7% 18% 7% 12%;
-  background: linear-gradient(90deg, transparent 0 12%, rgb(212 245 255 / .72) 12% 17%, transparent 17% 48%, rgb(212 245 255 / .55) 48% 54%, transparent 54%) 0 0 / 90px 64px repeat;
-  opacity: .7;
-  content: "";
-  animation: water-glint 2.8s steps(3, end) infinite;
+/* Text runs the full width of the card, with tight spacing between parts. */
+#stage .home-intro {
+  line-height: 1.45;
 }
 
-.farm-path {
-  border-radius: 0;
-  box-shadow: none;
+.home-intro .command-heading {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
 }
 
-.path-horizontal {
-  left: 10%;
-  right: -2%;
-  top: 39%;
-  height: 19%;
-  transform: rotate(-1.1deg);
-  clip-path: polygon(0 27%, 8% 18%, 17% 25%, 27% 12%, 38% 22%, 49% 10%, 61% 20%, 72% 13%, 84% 24%, 100% 16%, 100% 82%, 89% 72%, 78% 84%, 66% 73%, 54% 88%, 42% 74%, 30% 86%, 19% 72%, 9% 83%, 0 74%);
+.home-intro p + p {
+  margin-top: 8px;
 }
 
-.path-vertical {
-  top: -3%;
-  bottom: -3%;
-  left: 43%;
-  width: 16%;
-  transform: rotate(.8deg);
-  clip-path: polygon(24% 0, 76% 0, 68% 9%, 82% 18%, 65% 28%, 79% 39%, 62% 49%, 76% 59%, 61% 70%, 81% 81%, 68% 91%, 77% 100%, 25% 100%, 35% 91%, 18% 82%, 36% 71%, 20% 60%, 37% 49%, 21% 39%, 37% 29%, 18% 18%, 34% 9%);
-}
-
-.bed-one { left: 18%; top: 13%; }
-.bed-two { right: 10%; top: 13%; }
-.bed-three { left: 18%; top: 61%; }
-.bed-four { right: 10%; top: 61%; }
-
-.spring-pond {
-  display: none;
-}
-
-.oak-left { left: 14%; top: 1%; }
-.oak-right { right: 1.2%; top: 1%; }
-.spring-bench { left: 15%; top: 45%; }
-.tulips-one { left: 15%; top: 25%; }
-.daffodils-two { left: 15%; top: 58%; }
-
-.garden-layout > .plant-panel {
-  position: absolute;
-  z-index: 24;
-  top: 16px;
-  left: calc(14% + 16px);
-  display: block;
-  width: 268px;
-  height: auto;
-  max-height: calc(100% - 32px);
-  padding: 12px;
-  border: 3px solid #4c3428;
-  border-radius: 4px;
-  background: rgb(255 247 218 / .94);
-  color: #34291f;
-  box-shadow: 5px 6px 0 rgb(50 37 28 / .32);
-  overflow: visible;
-}
-
-.plant-panel > .eyebrow,
-.plant-panel #plant-about,
-.plant-panel .hardware-hint,
-.plant-panel .plant-large {
-  display: none;
-}
-
-.plant-panel #plant-details:not([hidden]) {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 7px;
-}
-
-.plant-panel #plant-name,
-.plant-panel .plant-state,
-.plant-panel .result {
-  grid-column: 1 / -1;
-}
-
-.plant-panel #plant-name {
-  margin: 0;
-  color: #244f40;
-  font-size: .88rem;
-}
-
-.plant-panel .plant-state {
-  margin: 0;
-  padding: 6px 8px;
-  border-left: 3px solid #d6a94d;
-  background: rgb(221 192 125 / .2);
-  color: #4e4134;
-  font-size: .64rem;
-  line-height: 1.35;
-}
-
-.plant-panel .button {
-  width: auto;
-  min-height: 36px;
-  margin: 0;
-  padding: 7px 8px;
-  border-radius: 3px;
-  font-size: .66rem;
-}
-
-.plant-panel .button.primary {
-  border-color: #8a6933;
-  background: #e8c36b;
-  color: #34291f;
-}
-
-.plant-panel .button.quiet {
-  border-color: #6b5846;
-  background: transparent;
-  color: #34291f;
-}
-
-.plant-panel .robot-dialogue {
-  position: absolute;
-  top: calc(100% + 10px);
-  left: 0;
-  width: 310px;
-  margin: 0;
-  padding: 11px 44px 11px 12px;
-  border-width: 3px;
-  font-size: .72rem;
-}
-
-.garden-tools {
-  position: absolute;
-  z-index: 25;
-  top: 14px;
-  right: 14px;
-  display: grid;
-  gap: 6px;
-  width: 210px;
-  height: auto;
-  max-height: calc(100% - 28px);
-  overflow: visible;
-}
-
-.garden-tools .seed-shelf,
-.garden-tools .admin-tools,
-.garden-tools .garden-journal {
-  margin: 0;
-  padding: 0;
-  border: 2px solid #4c3428;
-  border-radius: 3px;
-  background: rgb(255 247 218 / .92);
-  color: #34291f;
-  box-shadow: 3px 4px 0 rgb(50 37 28 / .22);
-}
-
-.garden-tools details > summary,
-.garden-tools .seed-shelf > summary {
-  min-height: 36px;
-  padding: 8px 10px;
-  font-size: .65rem;
-}
-
-.garden-tools details[open],
-.garden-tools .seed-shelf[open] {
-  max-height: min(520px, calc(100dvh - 230px));
-  padding: 0 9px 9px;
-  overflow-y: auto;
-}
-
-.garden-tools details[open] > summary,
-.garden-tools .seed-shelf[open] > summary {
-  margin-inline: -9px;
-}
-
-.game-help {
-  left: 16%;
-  bottom: 10px;
-  padding: 4px 7px;
-  opacity: .82;
-  transition: opacity .3s ease, translate .3s ease;
-}
-
-.game-help.dismissed {
-  opacity: 0;
-  translate: 0 5px;
-  pointer-events: none;
-}
-
-@keyframes water-glint {
-  50% { transform: translateY(7px); opacity: .45; }
-}
-
-@media (max-width: 900px) {
-  .garden-layout {
-    height: 720px;
-    min-height: 720px;
+@media (min-width: 1120px) {
+  .home-intro {
+    grid-area: 1 / 1 / 2 / -1; /* across all three columns */
+    width: auto;
+    margin-bottom: 24px;
   }
 
-  .garden-water { width: 18%; }
-  .garden-layout > .plant-panel { left: calc(18% + 10px); width: 230px; }
-  .garden-tools { width: 180px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .garden-water::after { animation: none; }
-}
-
-/* Ordered garden: straight paths, fixed bed slots and readable paper menus. */
-.garden-water {
-  width: 12%;
-  min-width: 108px;
-  clip-path: none;
-  border-right: 5px solid #8bc46c;
-}
-
-.garden-water::after {
-  inset: 7% 12% 7% 10%;
-}
-
-.path-horizontal {
-  left: 12%;
-  right: 0;
-  top: 42%;
-  height: 16%;
-  transform: none;
-  clip-path: none;
-}
-
-.path-vertical {
-  top: 0;
-  bottom: 0;
-  left: 46%;
-  width: 9%;
-  transform: none;
-  clip-path: none;
-}
-
-.bed-one { left: 17%; top: 8%; }
-.bed-two { right: 8%; top: 8%; }
-.bed-three { left: 17%; top: 64%; }
-.bed-four { right: 8%; top: 64%; }
-
-.farm-bed {
-  width: 30%;
-  height: 28%;
-}
-
-.garden-slots {
-  position: absolute;
-  z-index: 7;
-  inset: 0;
-  pointer-events: none;
-}
-
-.garden-slot {
-  position: absolute;
-  width: 68px;
-  height: 62px;
-  translate: -50% -50%;
-  border: 3px dashed rgb(255 240 174 / .8);
-  border-radius: 4px;
-  background: rgb(255 244 197 / .13);
-  color: #fff4c5;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.garden-slot::after {
-  font: 700 1.2rem/1 var(--mono);
-  content: "+";
-}
-
-.garden-world.arranging .garden-slot:not(:disabled) {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.garden-world.arranging .garden-slot:not(:disabled):hover,
-.garden-world.arranging .garden-slot:not(:disabled):focus-visible {
-  border-style: solid;
-  background: rgb(255 231 130 / .34);
-  outline: 3px solid #fff5bd;
-  outline-offset: 2px;
-}
-
-.garden-world.arranging .garden-plant {
-  opacity: .72;
-}
-
-.spring-bench {
-  top: auto;
-  right: auto;
-  bottom: 7%;
-  left: 12.6%;
-}
-
-.spring-daisies {
-  background-image: url("assets/tulipmere-lite/tiles/grass_daisies.png");
-}
-
-.tulips-one { left: 12.5%; top: 25%; }
-.tulips-two { right: 1.5%; top: 64%; }
-.daffodils-one { right: 1.5%; top: 25%; }
-.daffodils-two { left: 12.5%; top: 66%; }
-.daisies-one { left: 12.5%; top: 3%; }
-.daisies-two { left: 47.5%; top: 2%; }
-.daisies-three { right: 1.5%; top: 4%; }
-.daisies-four { right: 1.5%; bottom: 2%; }
-.spring-pot { right: 1.5%; bottom: 15%; }
-
-.plant-panel #plant-move,
-.plant-panel .placement-hint {
-  grid-column: 1 / -1;
-}
-
-.plant-panel .placement-hint {
-  margin: 0;
-  padding: 6px 8px;
-  border: 1px dashed #8a6933;
-  background: #fff0bc;
-  color: #34291f;
-  font-size: .62rem;
-}
-
-.garden-tools,
-.garden-tools details,
-.garden-tools summary,
-.garden-tools form,
-.garden-tools label,
-.garden-tools strong,
-.garden-tools small,
-.garden-tools p,
-.garden-tools a,
-.garden-tools button {
-  color: #34291f;
-}
-
-.garden-tools details > summary::marker {
-  color: #34291f;
-}
-
-.garden-tools .seed-card {
-  border-color: #8ba493;
-  background: rgb(255 249 226 / .72);
-}
-
-.garden-tools .seed-card:has(input:checked) {
-  border-color: #6b5846;
-  background: #f0dba1;
-}
-
-.garden-tools .seed-card small {
-  color: #5d5146;
-}
-
-.garden-tools #seed-form > label {
-  display: grid;
-  gap: 5px;
-  margin: 10px 0 0;
-  color: #34291f;
-}
-
-.garden-tools input[type="text"],
-.garden-tools select {
-  width: 100%;
-  min-height: 36px;
-  padding: 7px 8px;
-  border: 2px solid #6b5846;
-  border-radius: 3px;
-  background: #214f41;
-  color: #fff8df;
-  font: 600 .68rem/1.2 var(--mono);
-}
-
-.garden-tools input[type="text"]::placeholder {
-  color: #bfd2c9;
-  opacity: 1;
-}
-
-.garden-tools .button,
-.garden-tools .screen-preview-link {
-  border-color: #6b5846;
-  background: #fff4d2;
-  color: #34291f;
-}
-
-.garden-tools .button:disabled {
-  background: #d8d0bc;
-  color: #71695d;
-}
-
-@media (max-width: 900px) {
-  .garden-water { width: 14%; }
-  .garden-layout > .plant-panel { left: calc(14% + 10px); }
-}
-
-/* Presentation framing: keep the map centred and the guide off the beds. */
-body:has(.garden-view:not([hidden])) .topbar-inner {
-  max-width: 1580px;
-}
-
-.page:has(.garden-view:not([hidden])) {
-  width: min(1580px, calc(100% - 64px));
-  margin-inline: auto;
-  padding-inline: 0;
-}
-
-.garden-view:not([hidden]) {
-  width: 100%;
-  max-width: none;
-}
-
-.garden-layout > .plant-panel {
-  top: 14px;
-  left: 14px;
-}
-
-@media (max-width: 900px) {
-  .page:has(.garden-view:not([hidden])) {
-    width: calc(100% - 24px);
+  .stage > .console {
+    grid-area: 2 / 2;
   }
 
-  .garden-layout > .plant-panel {
-    left: 10px;
+  .stage > .side-left {
+    grid-area: 2 / 1;
+  }
+
+  .stage > .side-right {
+    grid-area: 2 / 3;
   }
 }
 
-/* Generated flowers use three equal square frames: seedling, bud and bloom. */
-.growth-sheet-sprite {
-  display: block;
-  background-repeat: no-repeat;
-  image-rendering: pixelated;
-}
-
-.world-crop.growth-sheet-sprite {
-  width: 64px;
-  height: 64px;
-}
-
-.plant-large.growth-sheet-sprite {
-  width: 96px;
-  height: 96px;
-  margin-inline: auto;
-}
-
-.seed-card .growth-sheet-sprite {
-  width: 64px;
-  height: 64px;
-}
-
-.plant-panel .seed-card .growth-sheet-sprite {
-  display: none;
-}
-
-/* User-provided potted plants replace the bed crops without changing garden state. */
-.potted-plant-sprite {
-  display: block;
-  background-repeat: no-repeat;
-  background-position: center bottom;
-  background-size: contain;
-  image-rendering: pixelated;
-}
-
-.world-crop.potted-plant-sprite {
-  width: 68px;
-  height: 68px;
-}
-
-.plant-large.potted-plant-sprite {
-  width: 104px;
-  height: 104px;
-  margin-inline: auto;
+/* ---- Movement: "Hand Signals" underlined and kept to one line ---- */
+#game-title {
+  font-size: clamp(1.35rem, 2.2vw, 1.9rem);
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
 }

@@ -13,13 +13,13 @@
       <div class="topbar-inner">
         <div class="brand">
           <img class="brand-logo" src="favicon.svg" alt="" width="64" height="64">
-          <h1>Salus</h1>
+          <h1>SALUS</h1>
           <span class="brand-sub">Handheld helper</span>
         </div>
         <nav class="main-nav" aria-label="Main sections" role="tablist">
-          <button class="nav-tab active" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="true">Movement</button>
-          <!-- Garden prototype temporarily disabled; its markup and assets are preserved below. -->
-          <button class="nav-tab" id="workshop-tab" type="button" role="tab" data-view="workshop" aria-controls="stage" aria-selected="false" tabindex="-1">Workshop</button>
+          <button class="nav-tab active" id="home-tab" type="button" role="tab" data-view="home" aria-controls="stage" aria-selected="true">Home</button>
+          <button class="nav-tab" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="false" tabindex="-1">Movement</button>
+          <button class="nav-tab" id="garden-tab" type="button" role="tab" data-view="garden" aria-controls="garden-view" aria-selected="false" tabindex="-1">Garden</button>
         </nav>
         <div class="link">
           <p class="mic-note" id="mic-note" role="status" hidden></p>
@@ -40,7 +40,7 @@
       </p>
       <p class="notice trouble" id="notice" role="status" hidden></p>
 
-      <main class="play-view" id="play-view" role="tabpanel" aria-labelledby="play-tab">
+      <main class="play-view" id="play-view" role="tabpanel" aria-labelledby="play-tab" hidden>
         <section class="game-intro" aria-labelledby="game-title">
           <p class="eyebrow">Camera demo</p>
           <h2 id="game-title">Hand Signals</h2>
@@ -134,13 +134,13 @@
           <div>
             <p class="eyebrow">A quiet place to return to</p>
             <h2>Your garden</h2>
+            <p>Walk with WASD or the arrow keys. Click a plant when you are nearby.</p>
           </div>
           <div class="garden-day"><span>Garden day</span><strong id="garden-day">—</strong></div>
         </header>
 
         <section class="garden-layout">
           <div class="garden-world" id="garden-world" tabindex="0" aria-label="Walkable garden. Use arrow keys or WASD.">
-            <div class="garden-water" aria-hidden="true"></div>
             <div class="farm-path path-horizontal" aria-hidden="true"></div>
             <div class="farm-path path-vertical" aria-hidden="true"></div>
             <div class="farm-bed bed-one" aria-hidden="true"></div>
@@ -149,6 +149,7 @@
             <div class="farm-bed bed-four" aria-hidden="true"></div>
             <div class="farm-prop crate" aria-hidden="true"></div>
             <div class="farm-prop barrel" aria-hidden="true"></div>
+            <div class="farm-decoration oak oak-left" aria-hidden="true"></div>
             <div class="farm-decoration oak oak-right" aria-hidden="true"></div>
             <div class="farm-decoration bush bush-left" aria-hidden="true"></div>
             <div class="farm-decoration bush bush-right" aria-hidden="true"></div>
@@ -163,18 +164,14 @@
             <div class="spring-prop spring-tulips tulips-two" aria-hidden="true"></div>
             <div class="spring-prop spring-daffodils daffodils-one" aria-hidden="true"></div>
             <div class="spring-prop spring-daffodils daffodils-two" aria-hidden="true"></div>
-            <div class="spring-prop spring-daisies daisies-one" aria-hidden="true"></div>
-            <div class="spring-prop spring-daisies daisies-three" aria-hidden="true"></div>
-            <div class="spring-prop spring-daisies daisies-four" aria-hidden="true"></div>
             <div class="spring-pond" aria-hidden="true">
               <span class="pond-nw"></span><span class="pond-ne"></span>
               <span class="pond-sw"></span><span class="pond-se"></span>
             </div>
-            <div class="garden-slots" id="garden-slots" aria-label="Flower-bed positions"></div>
             <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
             <div class="game-character" id="game-character" aria-hidden="true"></div>
             <div class="robot-follower" id="robot-follower" aria-label="Salus follows you"><img src="favicon.svg" alt=""></div>
-            <div class="game-help" id="game-help">Move with WASD or arrows</div>
+            <div class="game-help">WASD / arrows to move · click nearby plants</div>
           </div>
           <aside class="plant-panel" id="plant-panel" aria-label="Garden information and controls">
             <div class="robot-dialogue" id="robot-dialogue" role="status" aria-live="polite" hidden>
@@ -189,9 +186,6 @@
               <p class="plant-state" id="plant-state"></p>
               <button class="button primary" id="plant-care" type="button"></button>
               <button class="button quiet" id="plant-tell" type="button">Tell me about it</button>
-              <button class="button quiet" id="plant-move" type="button">Move on bed</button>
-              <button class="button danger" id="plant-delete" type="button">Remove plant</button>
-              <p class="placement-hint" id="placement-hint" hidden>Choose an empty square on a flower bed.</p>
               <p class="result" id="garden-result" role="status"></p>
               <p class="hardware-hint">Robot: turn the knob to choose a plant · press the main button or knob to care for it</p>
             </div>
@@ -217,8 +211,7 @@
           <form id="seed-form">
             <div class="seed-list" id="seed-list"></div>
             <label>Nickname <input id="plant-nickname" type="text" maxlength="30" placeholder="Optional"></label>
-            <label>Flower-bed position <select id="plant-slot" name="plot_slot"></select></label>
-            <button class="button" id="plant-submit" type="submit">Plant it</button>
+            <button class="button" type="submit">Plant it</button>
           </form>
         </details>
 
@@ -240,7 +233,16 @@
         <p class="asset-credit">Garden art: Tulipmere Village Lite by Zmuda KI and Cozy Farm Lite by Spaceyyy. Additional plants: SpiderDave, CC0.</p>
       </main>
 
-      <main class="stage" id="stage" role="tabpanel" aria-labelledby="workshop-tab" hidden>
+      <main class="stage" id="stage" role="tabpanel" aria-labelledby="home-tab">
+        <section class="home-intro" aria-labelledby="home-intro-title">
+          <div class="command-heading">
+            <h2 id="home-intro-title">About SALUS</h2>
+            <span class="command-key">our aims</span>
+          </div>
+          <p>Depression often comes back, and it tends to creep in quietly: a skipped walk, a day spent in bed, plans that slip away one at a time. We built SALUS to help stop that slide before it starts. It's a small robot friend that sits beside you, with a face, a voice, a knob to turn and lights that glow, and it's there every day, not just on the hard ones.</p>
+          <p>Our main goal is to help prevent relapse by building a steady routine and the motivation to reach your daily tasks and bigger goals. Hand Signals is a short camera game of gentle movements, with one spoken check-in. The Garden grows as you come back to care for it each day. You can talk to SALUS out loud, and it replies in its own voice. Camera video stays on this computer and is never saved, and the voice chat sends only the written words of what you say, never the audio, to write its reply. If anything you say suggests you are in danger, SALUS points you to a real person or a crisis line.</p>
+          <p class="hint">SALUS is here to support you, alongside the people and care already in your life, never instead of them. The modules below test the robot's parts.</p>
+        </section>
         <section class="console" id="console" aria-labelledby="face-title" data-board="offline">
           <div class="console-top">
             <span class="console-led" aria-hidden="true"></span>
@@ -392,18 +394,8 @@
         <svg class="wires" id="wires" aria-hidden="true"></svg>
       </main>
 
-      <p class="hint stage-note" id="commands-note" hidden></p>
+      <p class="hint stage-note" id="commands-note"></p>
     </div>
 
-    <aside class="floating-screen" id="floating-screen" aria-label="Movable live robot screen">
-      <header class="floating-screen-handle" id="floating-screen-handle" tabindex="0" aria-label="Move robot face window with pointer or arrow keys">
-        <strong>Salus face</strong>
-        <button type="button" id="floating-screen-toggle" aria-label="Minimise robot face window">−</button>
-      </header>
-      <div class="floating-screen-body" id="floating-screen-body">
-        <canvas id="floating-screen-canvas" width="480" height="240" role="img" aria-label="Live robot face"></canvas>
-        <span id="floating-screen-status" role="status" aria-live="polite">Live</span>
-      </div>
-    </aside>
   </body>
 </html>

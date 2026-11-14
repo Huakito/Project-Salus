@@ -619,8 +619,8 @@ function activateView(tab, moveFocus = false) {
   const view = tab.dataset.view;
   el("play-view").hidden = view !== "play";
   el("garden-view").hidden = view !== "garden";
-  el("stage").hidden = view !== "workshop";
-  el("commands-note").hidden = view !== "workshop";
+  el("stage").hidden = view !== "home";
+  el("commands-note").hidden = view !== "home";
   for (const item of viewTabs) {
     const active = item === tab;
     item.classList.toggle("active", active);

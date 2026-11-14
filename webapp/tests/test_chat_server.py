@@ -17,6 +17,7 @@ import server  # noqa: E402
 
 TWO_SENTENCES = "That sounds like a long day. Do you want to tell me more?"
 FALLBACK_AUDIO = b"\x01\x00" * 3000
+CRISIS_AUDIO = b"\x02\x00" * 3000
 
 
 class FakeWriter:
@@ -89,6 +90,7 @@ def fakes(monkeypatch, tmp_path):
     monkeypatch.setattr(server, "RECORDINGS", tmp_path)
     monkeypatch.setattr(server, "utterances", [])
     monkeypatch.setattr(server, "fallback_audio", FALLBACK_AUDIO)
+    monkeypatch.setattr(server, "crisis_audio", CRISIS_AUDIO)
     return fake
 
 
@@ -183,6 +185,58 @@ def test_reply_sends_only_whole_samples(fakes):
     fakes.speak = lambda text: b"\x01\x02\x03" * 1001   # 3003 bytes: odd
     frames = run_reply(new_robot())
     assert len(audio_of(frames)) % 2 == 0 and len(audio_of(frames)) > 0
+
+
+# ---------------------------------------------------------------- crisis screening
+
+
+def test_a_crisis_signal_gets_the_scripted_message_and_the_model_is_never_asked(fakes):
+    fakes.heard = "I want to kill myself"
+    robot = new_robot()
+    frames = run_reply(robot)
+
+    assert fakes.respond_calls == 0
+    kinds = [kind for kind, _ in frames]
+    assert kinds[0] == b"T" and kinds[-1] == b"E" and kinds.count(b"E") == 1
+    assert audio_of(frames) == CRISIS_AUDIO
+    (entry,) = server.utterances
+    assert entry["crisis"] is True
+    assert entry["said"] == server.crisis_message
+
+
+def test_a_crisis_turn_is_kept_out_of_the_history_sent_to_the_model(fakes):
+    robot = new_robot()
+    fakes.heard = "I don't want to live anymore"
+    run_reply(robot)
+    assert robot.history == []
+
+    fakes.heard = "what is the weather like"
+    run_reply(robot)
+    assert fakes.histories == [[]]   # the next turn reaches the model with nothing of the crisis turn
+
+
+def test_a_crisis_turn_is_spoken_live_when_warm_up_could_not_prepare_it(fakes, monkeypatch):
+    monkeypatch.setattr(server, "crisis_audio", None)
+    fakes.heard = "I feel suicidal"
+    frames = run_reply(new_robot())
+
+    assert fakes.respond_calls == 0
+    said = chat.split_sentences(chat.clean_for_speech(server.crisis_message))
+    assert fakes.spoken == said
+    assert audio_of(frames) == sentences_audio(*said)
+
+
+def test_a_crisis_turn_does_not_print_what_was_said(fakes, capsys):
+    fakes.heard = "I want to end my life"
+    run_reply(new_robot())
+    out = capsys.readouterr().out
+    assert "[crisis]" in out and "end my life" not in out
+
+
+def test_warm_up_prepares_the_crisis_message_as_audio(fakes, monkeypatch):
+    monkeypatch.setattr(server, "crisis_audio", None)
+    asyncio.run(server.warm_up(fakes))
+    assert server.crisis_audio == audio_for(chat.clean_for_speech(server.crisis_message))
 
 
 def test_empty_transcript_sends_only_thinking_and_end(fakes):
@@ -415,7 +469,8 @@ def test_cancelling_while_sending_audio_leaves_no_task_behind(fakes):
 def test_warm_up_caches_the_fallback_audio(fakes, monkeypatch):
     monkeypatch.setattr(server, "fallback_audio", None)
     asyncio.run(server.warm_up(fakes))
-    assert fakes.spoken == [chat.FALLBACK_LINE]
+    # The apology, then the crisis message: both are kept as audio.
+    assert fakes.spoken == [chat.FALLBACK_LINE, chat.clean_for_speech(server.crisis_message)]
     assert server.fallback_audio == audio_for(chat.FALLBACK_LINE)
 
 

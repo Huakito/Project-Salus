@@ -3,8 +3,7 @@
 
 import { checkFace, drawFace, drawVolume, rgb565, rgb565ToCss } from "./face.js";
 import "./movement-game.js";
-// Garden prototype is temporarily disabled. Restore this import with its tab to re-enable it.
-import "./floating-screen.js";
+import "./garden.js";
 
 const POLL_MS = 1500; // how often to ask whether the board is still connected
 const PREVIEW_WIDTH = 960; // about how many pixels wide to draw the preview, so small text stays sharp
