@@ -456,6 +456,8 @@ p {
   display: block;
   width: 100%;
   height: auto;
+  /* A quiet green line, so the black screen can be told from its dark surround. */
+  border: 1px solid var(--line);
   background: #000;
 }
 
@@ -732,6 +734,140 @@ input[type="range"]::-moz-range-thumb {
   background: var(--ink);
 }
 
+.button.small {
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+/* The melody module borrows the console's keys; its row is a little tighter. */
+.command .pad {
+  align-items: flex-end; /* the two labels share a line */
+  margin-top: 12px;
+}
+
+.command .pad-group {
+  min-height: 0;
+}
+
+.command .send-key {
+  width: 64px;
+  height: 64px;
+}
+
+/* Nine keys in a row: the notes of a scale, and a pause. */
+.note-keys {
+  display: flex;
+  gap: 4px;
+  margin-top: 14px;
+}
+
+.note-key {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 0;
+  border: 1px solid var(--edge);
+  background: var(--ink);
+  color: var(--panel);
+  font: 600 0.8rem var(--font);
+  cursor: pointer;
+}
+
+.note-key:hover {
+  filter: brightness(0.92);
+}
+
+.note-key:active {
+  transform: translateY(2px);
+}
+
+/* The knob exercise: a picture of the knob beside the steps. */
+.knob-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.dial {
+  flex: none;
+  width: 92px;
+  height: 92px;
+}
+
+.dial-knob {
+  fill: var(--field);
+  stroke: var(--edge);
+}
+
+.dial rect {
+  fill: var(--field);
+  stroke: var(--line);
+}
+
+.dial rect.lit {
+  fill: #00a0ff;
+  stroke: #00a0ff;
+}
+
+.dial.muted rect.lit {
+  fill: var(--alarm);
+  stroke: var(--alarm);
+}
+
+.dial-text {
+  fill: var(--ink);
+  font: 600 14px var(--font);
+}
+
+/* The gate to line up with: outlined, and green once your light is on it. */
+.dial rect.gate {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.dial.lined-up rect.gate {
+  fill: #2fd66b;
+  stroke: #2fd66b;
+}
+
+.turnstile {
+  flex: 1;
+  min-width: 0;
+}
+
+.turnstile-goal {
+  min-height: 3em; /* two lines, so the module does not jump between gates */
+  font-weight: 600;
+}
+
+/* One square for each gate: filled once passed, outlined bright for the one in play. */
+.gates {
+  display: flex;
+  gap: 5px;
+  margin: 8px 0;
+}
+
+.gates span {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--edge);
+}
+
+.gates span.open {
+  border: 2px solid var(--ink);
+}
+
+.gates span.passed {
+  border-color: var(--good);
+  background: var(--good);
+}
+
+/* A module is only as tall as what is in it: the line kept for the robot's
+   answer takes no room until there is an answer to show. */
+.command .result:empty {
+  display: none;
+}
+
 /* The page's copy of the robot's nine lights, beside the colour picker. */
 .led-pick {
   display: flex;
@@ -776,6 +912,10 @@ input[type="range"]::-moz-range-thumb {
   align-items: baseline;
   justify-content: space-between;
   gap: 4px 12px;
+  /* A line under the title, in the same quiet green as the module's outline. */
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
 }
 
 .command h2 {

@@ -15,7 +15,8 @@
       "label": "Play melody",
       "description": "Play a ringtone-style (RTTTL) melody through the speaker.",
       "value": "text",
-      "example": "hello:d=8,o=5,b=160:c,e,g,4c6"
+      "example": "hello:d=8,o=5,b=160:c,e,g,4c6",
+      "editor": "melody"
     },
     {
       "key": "spk_set_volume",

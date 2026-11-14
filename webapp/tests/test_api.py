@@ -36,6 +36,7 @@ def test_status(client):
         "waiting": 0,
         "mic_muted": False,
         "volume": None,
+        "knob": None,
     }
 
 

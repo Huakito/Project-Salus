@@ -181,6 +181,7 @@ def test_status_describes_the_connection(rig):
         "waiting": 0,
         "mic_muted": False,
         "volume": None,
+        "knob": None,
     }
 
 
@@ -307,6 +308,12 @@ def test_status_follows_the_volume_the_board_reports(rig):
     assert rig.manager.status()["volume"] is None  # not known until the board says
     rig.board.emit("volume", 65, "state")
     assert volume_becomes(65)
+    rig.board.emit("knob", -3)
+    for _ in range(200):
+        if rig.manager.status()["knob"] == -3:
+            break
+        threading.Event().wait(0.01)
+    assert rig.manager.status()["knob"] == -3
     rig.board.emit("volume", 250, "state")  # nonsense is kept inside 0 to 100
     assert volume_becomes(100)
     rig.manager.disconnect()

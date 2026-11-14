@@ -87,6 +87,42 @@
           <!-- One module for each plain command in commands.json, put here by app.js. -->
           <div class="command-list" id="command-list"></div>
 
+          <form class="command" id="melody-module" aria-labelledby="melody-title" hidden>
+            <div class="command-heading">
+              <h2 id="melody-title">Play melody</h2>
+              <code class="command-key">spk_play_rtttl</code>
+            </div>
+            <p class="hint">Pick a tune, tap one out on the keys, or type it.</p>
+            <div class="pad">
+              <div class="pad-group">
+                <div class="rocker" role="group" aria-label="Ready-made tunes">
+                  <button id="tune-prev" type="button" aria-label="Previous ready-made tune">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>
+                  </button>
+                  <button id="tune-next" type="button" aria-label="Next ready-made tune">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg>
+                  </button>
+                </div>
+                <span class="pad-label" id="tune-name" role="status"></span>
+              </div>
+              <div class="pad-group">
+                <button class="send-key" id="tune-send" type="submit" aria-describedby="tune-send-label"
+                  data-needs-board disabled>Play</button>
+                <span class="pad-label" id="tune-send-label">on robot</span>
+              </div>
+            </div>
+            <div class="note-keys" id="note-keys" role="group" aria-label="Add a note to the tune"></div>
+            <div class="row">
+              <button class="button small" id="tune-undo" type="button">Undo note</button>
+              <button class="button small" id="tune-clear" type="button">Clear</button>
+            </div>
+            <label for="tune-text">Tune (RTTTL)</label>
+            <textarea id="tune-text" rows="3" spellcheck="false" autocapitalize="off" autocomplete="off"
+              aria-describedby="tune-problem"></textarea>
+            <p class="problem" id="tune-problem" role="alert" hidden></p>
+            <p class="result" id="tune-result" role="status"></p>
+          </form>
+
           <section class="command" id="volume-module" aria-labelledby="volume-title" hidden>
             <div class="command-heading">
               <h2 id="volume-title">Volume</h2>
@@ -125,6 +161,26 @@
             </div>
             <p class="result" id="led-result" role="status"></p>
           </form>
+
+          <section class="command" id="knob-module" aria-labelledby="knob-title" hidden>
+            <div class="command-heading">
+              <h2 id="knob-title">Turnstile</h2>
+              <code class="command-key">knob</code>
+            </div>
+            <p class="hint">A game on the robot's turnstile. Turn it to line your light up with the gate, then push it to go through. Six gates, against the clock.</p>
+            <div class="knob-row">
+              <svg class="dial" id="dial" viewBox="0 0 100 100" role="img" aria-label="The turnstile's ring of lights"></svg>
+              <div class="turnstile">
+                <p class="turnstile-goal" id="knob-goal" role="status"></p>
+                <div class="gates" id="knob-gates" aria-hidden="true"></div>
+                <p class="hint" id="knob-time"></p>
+              </div>
+            </div>
+            <div class="row">
+              <button class="button" id="knob-start" type="button" data-needs-board disabled>Start</button>
+              <p class="result" id="knob-result" role="status"></p>
+            </div>
+          </section>
         </div>
 
         <!-- The cables from the console to each module, drawn by app.js. -->

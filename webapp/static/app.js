@@ -88,6 +88,7 @@ function showStatus() {
   el("mic-note").hidden = !muted;
 
   followRobotVolume();
+  followKnob();
 
   let trouble = "";
   if (!status) {
@@ -113,7 +114,8 @@ async function watchStatus() {
       status = null;
     }
     showStatus();
-    await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+    // Checked more often during the knob exercise, so it reacts as the knob moves.
+    await new Promise((resolve) => setTimeout(resolve, knobStep === null ? POLL_MS : KNOB_POLL_MS));
   }
 }
 
@@ -266,7 +268,9 @@ async function loadCommands() {
   const listed = (key) => contract.commands.some((command) => command.key === key);
   const cards = contract.commands.filter((command) => !command.editor && command.show !== false).map(commandCard);
   el("command-list").replaceChildren(...cards);
+  el("melody-module").hidden = !listed("spk_play_rtttl");
   el("volume-module").hidden = !listed("spk_set_volume");
+  el("knob-module").hidden = !contract.events.some((event) => event.key === "knob");
   el("lights-module").hidden = !listed("led_colour");
   note.className = "hint stage-note";
   note.textContent = "Each module wired to the console sends commands listed in commands.json.";
@@ -331,6 +335,246 @@ function followRobotVolume() {
   show(el("volume-result"), "", "");
   showVolume();
 }
+
+// ---- melody: ready-made tunes, note keys, or typed RTTTL ----
+
+const TUNES = [
+  { name: "Hello", text: "hello:d=8,o=5,b=160:c,e,g,4c6" },
+  { name: "Scale", text: "scale:d=8,o=5,b=180:c,d,e,f,g,a,b,4c6" },
+  { name: "Fanfare", text: "fanfare:d=8,o=5,b=170:c,c,c,4e,g,4c6,p,g,2c6" },
+  { name: "Calm", text: "calm:d=4,o=5,b=90:e,g,2c6,b,g,2e" },
+  { name: "Twinkle", text: "twinkle:d=4,o=5,b=140:c,c,g,g,a,a,2g,f,f,e,e,d,d,2c" },
+  { name: "Ode to Joy", text: "ode:d=4,o=5,b=150:e,e,f,g,g,f,e,d,c,c,d,e,e,d,2d" },
+  { name: "Frere Jacques", text: "frere:d=4,o=5,b=150:c,d,e,c,c,d,e,c,e,f,2g,e,f,2g" },
+  { name: "Alert", text: "alert:d=16,o=6,b=200:c,p,c,p,c" },
+];
+const NOTE_KEYS = ["c", "d", "e", "f", "g", "a", "b", "c6", "p"]; // p is a pause
+const NEW_TUNE = "tune:d=8,o=5,b=160:"; // what the note keys start from
+
+// Why the robot could not play this, or null if it can. RTTTL is
+// name:settings:notes, as in hi:d=8,o=5,b=160:c,e,g
+function tuneProblem(text) {
+  const tune = text.trim();
+  if (!tune) return "Pick a tune, or tap or type one first.";
+  if (/[^\x20-\x7e]/.test(tune)) return "A tune can only use plain keyboard characters.";
+  const parts = tune.split(":");
+  if (parts.length !== 3) return "A tune is written name:settings:notes, like hi:d=8,o=5,b=160:c,e,g";
+  const settings = parts[1].trim();
+  if (settings && !settings.split(",").every((setting) => /^\s*[dob]=\d{1,3}\s*$/.test(setting))) {
+    return "The middle part sets d (note length), o (octave) and b (speed), like d=8,o=5,b=160";
+  }
+  const notes = parts[2].split(",").map((note) => note.trim());
+  if (notes.length === 1 && notes[0] === "") return "Add a note or two first.";
+  const bad = notes.find((note) => !/^(1|2|4|8|16|32)?[a-gp]#?\.?[4-7]?\.?$/i.test(note));
+  if (bad !== undefined) return `"${bad}" is not a note. Notes look like c, 4e, g#, 8a6, or p for a pause.`;
+  return null;
+}
+
+function refreshTune() {
+  const text = el("tune-text").value;
+  const problem = tuneProblem(text);
+  el("tune-problem").textContent = problem ?? "";
+  el("tune-problem").hidden = !problem;
+  const tune = TUNES.find((made) => made.text === text);
+  setText(el("tune-name"), tune ? tune.name : "Your own");
+  if (problem) el("tune-send").dataset.blocked = "";
+  else delete el("tune-send").dataset.blocked;
+  refreshButtons();
+}
+
+function tuneEdited() {
+  show(el("tune-result"), "", "");
+  refreshTune();
+}
+
+function stepTune(step) {
+  const now = TUNES.findIndex((made) => made.text === el("tune-text").value);
+  const next = now === -1 ? (step > 0 ? 0 : TUNES.length - 1) : (now + step + TUNES.length) % TUNES.length;
+  el("tune-text").value = TUNES[next].text;
+  tuneEdited();
+}
+
+// The tune as [name, settings, notes], starting a fresh one if the box does not hold a tune.
+function tuneParts() {
+  const parts = el("tune-text").value.trim().split(":");
+  const [name, settings, notes] = parts.length === 3 ? parts : NEW_TUNE.split(":");
+  return [name, settings, notes.split(",").map((note) => note.trim()).filter(Boolean)];
+}
+
+function setNotes(name, settings, notes) {
+  el("tune-text").value = `${name}:${settings}:${notes.join(",")}`;
+  tuneEdited();
+}
+
+for (const note of NOTE_KEYS) {
+  const key = node("button", "note-key", note === "p" ? "-" : note.toUpperCase());
+  key.type = "button";
+  key.setAttribute("aria-label", note === "p" ? "Add a pause" : `Add the note ${note.toUpperCase()}`);
+  key.addEventListener("click", () => {
+    const [name, settings, notes] = tuneParts();
+    setNotes(name, settings, [...notes, note]);
+  });
+  el("note-keys").append(key);
+}
+
+el("tune-undo").addEventListener("click", () => {
+  const [name, settings, notes] = tuneParts();
+  setNotes(name, settings, notes.slice(0, -1));
+});
+el("tune-clear").addEventListener("click", () => setNotes(...NEW_TUNE.split(":").slice(0, 2), []));
+el("tune-prev").addEventListener("click", () => stepTune(-1));
+el("tune-next").addEventListener("click", () => stepTune(1));
+el("tune-text").addEventListener("input", tuneEdited);
+el("tune-text").value = TUNES[0].text;
+
+el("melody-module").addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (el("tune-send").disabled) return;
+  send(el("tune-send"), el("tune-result"), () =>
+    api("/api/command", { key: "spk_play_rtttl", value: el("tune-text").value.trim() }),
+  );
+});
+
+// ---- turnstile: a game that teaches the robot's knob ----
+// Turning the knob sets the volume; pushing it mutes or unmutes the
+// microphone. Each gate asks for both: turn until your light is on the gate,
+// then push to go through.
+
+const KNOB_POLL_MS = 400;
+const RING_LIGHTS = 12; // the lights round the real knob
+const GATES = 6; // an even number, so the microphone ends as it began
+const BEST_KEY = "salus-turnstile-best";
+
+let knobStep = null; // which gate the game is on (0 is the first); null when it is not running
+let knobTarget = null; // the volume, in percent, that opens this gate
+let knobMuted = null; // whether the microphone was muted at the last report: a change is a push
+let knobStartedAt = 0;
+let knobFinished = false;
+
+function robotKnob() {
+  if (status?.state !== "connected" || typeof status.volume !== "number") return null;
+  return { volume: status.volume, muted: status.mic_muted === true };
+}
+
+const ringLight = (volume) => Math.round((volume / 100) * (RING_LIGHTS - 1));
+const seconds = (ms) => `${(ms / 1000).toFixed(1)} s`;
+
+function bestTime() {
+  try {
+    const best = Number(localStorage.getItem(BEST_KEY));
+    return best > 0 ? best : null;
+  } catch {
+    return null; // private windows may refuse storage; the game works without it
+  }
+}
+
+// The page's copy of the knob: one light of its ring shows the volume, as on
+// the real one, and it is red while the microphone is muted. During the game
+// the gate is outlined, and turns green when your light is on it.
+function showDial() {
+  const dial = el("dial");
+  const now = robotKnob();
+  if (!dial.childElementCount) {
+    dial.append(svgNode("circle", { cx: 50, cy: 50, r: 24, class: "dial-knob" }));
+    for (let i = 0; i < RING_LIGHTS; i++) {
+      const angle = (i / RING_LIGHTS) * 2 * Math.PI; // from 12 o'clock, clockwise
+      dial.append(svgNode("rect", { x: 50 + 40 * Math.sin(angle) - 4, y: 50 - 40 * Math.cos(angle) - 4, width: 8, height: 8 }));
+    }
+    dial.append(svgNode("text", { x: 50, y: 55, "text-anchor": "middle", class: "dial-text" }));
+  }
+  const lit = now ? ringLight(now.volume) : -1;
+  const gate = knobStep !== null && knobTarget !== null ? ringLight(knobTarget) : -1;
+  [...dial.querySelectorAll("rect")].forEach((light, i) => {
+    light.classList.toggle("lit", i === lit);
+    light.classList.toggle("gate", i === gate);
+  });
+  dial.classList.toggle("muted", now?.muted === true);
+  dial.classList.toggle("lined-up", now !== null && knobStep !== null && now.volume === knobTarget);
+  setText(dial.querySelector("text"), now ? `${now.volume}%` : "?");
+}
+
+function showTurnstile() {
+  const passed = knobFinished ? GATES : (knobStep ?? 0);
+  el("knob-gates").replaceChildren(
+    ...Array.from({ length: GATES }, (_, i) => node("span", i < passed ? "passed" : i === knobStep ? "open" : "")),
+  );
+  let goal = "Press Start, then use the turnstile on the robot.";
+  if (knobStep !== null) goal = `Gate ${knobStep + 1} of ${GATES}: turn to ${knobTarget}%, then push.`;
+  else if (knobFinished) goal = "All six gates passed!";
+  setText(el("knob-goal"), goal);
+  const best = bestTime();
+  if (knobStep === null) setText(el("knob-time"), best ? `Best time: ${seconds(best)}` : "");
+  setText(el("knob-start"), knobStep !== null || knobFinished ? "Start again" : "Start");
+  showDial();
+  scheduleWires();
+}
+
+// A gate somewhere else on the ring: at least 20% away from where the knob is.
+function nextGate(volume) {
+  const choices = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].filter((v) => Math.abs(v - volume) >= 20);
+  knobTarget = choices[Math.floor(Math.random() * choices.length)];
+}
+
+// Called with every status report: update the dial, and move the game on.
+function followKnob() {
+  const now = robotKnob();
+  if (knobStep === null || !now) {
+    showDial();
+    return;
+  }
+  setText(el("knob-time"), `Time: ${seconds(performance.now() - knobStartedAt)}`);
+  if (knobTarget === null) nextGate(now.volume); // the game began before the robot had reported
+  const pushed = knobMuted !== null && now.muted !== knobMuted;
+  knobMuted = now.muted;
+  if (pushed && now.volume === knobTarget) {
+    if (knobStep + 1 < GATES) {
+      knobStep += 1;
+      nextGate(now.volume);
+      show(el("knob-result"), "ok", "Through!");
+    } else {
+      finishTurnstile();
+    }
+  } else if (pushed) {
+    show(el("knob-result"), "error", `Not yet: you are on ${now.volume}%.`);
+  }
+  showTurnstile();
+}
+
+function finishTurnstile() {
+  const took = performance.now() - knobStartedAt;
+  const best = bestTime();
+  knobStep = null;
+  knobFinished = true;
+  if (!best || took < best) {
+    try {
+      localStorage.setItem(BEST_KEY, String(Math.round(took)));
+    } catch {
+      // not kept, then
+    }
+  }
+  show(el("knob-result"), "ok", `${seconds(took)}${best && took >= best ? "" : ", a new best"}!`);
+  // A small reward on the robot. If it cannot be sent, the game is still won.
+  api("/api/command", { key: "led_animation", value: { r: 0, g: 255, b: 80 } }).catch(() => {});
+  api("/api/command", { key: "spk_play_rtttl", value: TUNES.find((tune) => tune.name === "Fanfare").text }).catch(() => {});
+}
+
+el("knob-start").addEventListener("click", () => {
+  knobFinished = false;
+  knobStep = null;
+  if (status?.mode === "fake") {
+    show(el("knob-result"), "error", "The fake board has no turnstile to turn.");
+    showTurnstile();
+    return;
+  }
+  const now = robotKnob();
+  knobStep = 0;
+  knobTarget = null;
+  knobMuted = now ? now.muted : null;
+  knobStartedAt = performance.now();
+  if (now) nextGate(now.volume);
+  show(el("knob-result"), "", "");
+  showTurnstile();
+});
 
 // ---- lights: the robot's 3x3 grid ----
 
@@ -404,7 +648,7 @@ el("led-meter").addEventListener("click", () => {
   send(el("led-meter"), el("led-result"), () => api("/api/command", { key: "led_meter", value: null }));
 });
 
-for (const module of [el("volume-module"), el("lights-module")]) {
+for (const module of [el("melody-module"), el("volume-module"), el("lights-module"), el("knob-module")]) {
   for (const type of ["mouseenter", "mouseleave", "focusin", "focusout"]) {
     module.addEventListener(type, scheduleWires);
   }
@@ -490,6 +734,8 @@ sizes.observe(el("stage"));
 sizes.observe(el("console"));
 sizes.observe(el("volume-module"));
 sizes.observe(el("lights-module"));
+sizes.observe(el("melody-module"));
+sizes.observe(el("knob-module"));
 
 // ---- the face editor ----
 
@@ -563,6 +809,8 @@ el("face-form").addEventListener("submit", (event) => {
 refreshFace();
 showVolume();
 showGridColour();
+refreshTune();
+showTurnstile();
 watchStatus();
 loadCommands().then(() => {
   // Both pictures of the robot's screen take its real shape. A whole number of

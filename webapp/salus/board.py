@@ -209,6 +209,8 @@ class BoardManager:
                 "mic_muted": self._latest.get("mic_muted") in (1, "1"),
                 # Speaker volume as a percentage, or None until the board has said.
                 "volume": self._volume(),
+                # The knob's running count of clicks, or None until it has been turned.
+                "knob": self._knob(),
             }
 
     def _volume(self) -> int | None:
@@ -216,6 +218,10 @@ class BoardManager:
         if isinstance(heard, bool) or not isinstance(heard, (int, float)):
             return None
         return max(0, min(100, round(heard)))
+
+    def _knob(self) -> int | None:
+        heard = self._latest.get("knob")
+        return heard if isinstance(heard, int) and not isinstance(heard, bool) else None
 
     def wait_for(self, state: str, timeout: float) -> bool:
         """Wait until the board is in ``state``. False if that did not happen in time."""

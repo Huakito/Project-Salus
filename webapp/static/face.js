@@ -106,21 +106,43 @@ export function drawFace(canvas, face, screen, cssColour) {
   lines.forEach((line, row) => drawLine(ctx, line, left, top + row * CELL_HEIGHT * size, size));
 }
 
-// Draw the volume screen the robot shows when its volume changes: the same
-// sums as drawVolume() in firmware/project.yaml. `percent` is 0 to 100.
+// Draw the volume screen the robot shows when its volume changes. The layout
+// is the same sums as drawVolume() in firmware/project.yaml, where the words
+// sit nearer the top than the bar does the bottom. Here, and only here, the
+// picture is drawn a little smaller and moved so it sits in the middle.
+// `percent` is 0 to 100.
 export function drawVolume(canvas, screen, percent) {
   const ctx = blankScreen(canvas, screen);
   const { width, height } = screen;
   const size = Math.max(1, Math.min(Math.floor(width / 80), Math.floor(height / 40)));
   const label = `Volume ${percent}%`;
-  ctx.fillStyle = "#fff";
-  drawLine(ctx, label, Math.floor((width - label.length * CELL_WIDTH * size) / 2), Math.floor(height / 10), size);
-
-  // The outline of the bar, one screen pixel thick, then its cyan filling.
+  const labelWidth = label.length * CELL_WIDTH * size;
+  const labelLeft = Math.floor((width - labelWidth) / 2);
+  const labelTop = Math.floor(height / 10);
   const x = Math.floor(width / 16);
   const y = Math.floor(height / 2);
   const barWidth = width - 2 * x;
   const barHeight = Math.floor(height / 3);
+
+  // One canvas pixel fewer for each screen pixel (a whole number, so the
+  // font's squares stay sharp), with the words and the bar centred as a block.
+  const zoom = canvas.width / screen.width;
+  const unit = Math.max(1, Math.round(zoom) - 1);
+  const left = Math.min(labelLeft, x);
+  const right = Math.max(labelLeft + labelWidth, x + barWidth);
+  const bottom = y + barHeight;
+  ctx.setTransform(
+    unit,
+    0,
+    0,
+    unit,
+    Math.round((canvas.width - unit * (left + right)) / 2),
+    Math.round((canvas.height - unit * (labelTop + bottom)) / 2),
+  );
+
+  ctx.fillStyle = "#fff";
+  drawLine(ctx, label, labelLeft, labelTop, size);
+  // The outline of the bar, one screen pixel thick, then its cyan filling.
   ctx.fillRect(x, y, barWidth, 1);
   ctx.fillRect(x, y + barHeight - 1, barWidth, 1);
   ctx.fillRect(x, y, 1, barHeight);
