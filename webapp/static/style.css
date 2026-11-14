@@ -1626,6 +1626,30 @@ body:has(.garden-view:not([hidden])) { overflow: hidden; }
   .garden-day { display: none; }
 }
 
+/* Keep plants inside the soil beds and make removal deliberate. */
+.world-plant {
+  width: 74px;
+  min-height: 82px;
+}
+
+.world-crop {
+  width: 56px;
+  height: 56px;
+}
+
+.plant-panel #plant-delete {
+  grid-column: 1 / -1;
+  border-color: #9b5147;
+  background: #fff0e8;
+  color: #713229;
+}
+
+.plant-panel #plant-delete.confirming {
+  border-color: #713229;
+  background: #b84c3f;
+  color: #fff8ef;
+}
+
 /* ---- visual refinement: return to the quiet, card-based original ---- */
 
 :root {

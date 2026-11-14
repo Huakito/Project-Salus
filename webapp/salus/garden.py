@@ -166,6 +166,13 @@ class GardenStore:
             db.execute("UPDATE garden_plants SET plot_slot=? WHERE id=?", (plot_slot, plant_id))
         return next(p for p in self.state()["plants"] if p["id"] == plant_id)
 
+    def delete(self, plant_id: int) -> None:
+        with self._connect() as db:
+            if not db.execute("SELECT 1 FROM garden_plants WHERE id=?", (plant_id,)).fetchone():
+                raise ValueError("That plant is not in the garden.")
+            db.execute("DELETE FROM garden_care_log WHERE plant_id=?", (plant_id,))
+            db.execute("DELETE FROM garden_plants WHERE id=?", (plant_id,))
+
     def care(self, plant_id: int, activity: str, duration_seconds: int, score: float) -> tuple[dict, bool]:
         with self._connect() as db:
             today = self._day(db)

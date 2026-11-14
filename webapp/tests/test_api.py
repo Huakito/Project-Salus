@@ -243,6 +243,13 @@ def test_garden_persists_and_never_kills_a_missed_plant(contract_file, data_dir)
         assert next(plant for plant in swapped if plant["nickname"] == "Lemon Queen")["plot_slot"] == 1
         full = garden_client.post("/api/garden/plants", json={"species": "tulip"})
         assert full.status_code == 422
+        field_poppy = next(plant for plant in swapped if plant["nickname"] == "Field Poppy")
+        deleted = garden_client.post(f"/api/garden/plants/{field_poppy['id']}/delete", json={})
+        assert deleted.status_code == 200
+        replacement = garden_client.post("/api/garden/plants", json={
+            "species": "tulip", "nickname": "Test Tulip", "plot_slot": 23
+        })
+        assert replacement.status_code == 200
         cared = garden_client.post(f"/api/garden/plants/{sunflower['id']}/care", json={
             "activity": "water", "duration_seconds": 12, "score": 1
         }).json()

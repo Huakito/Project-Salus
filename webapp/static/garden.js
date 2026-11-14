@@ -6,10 +6,10 @@ let careStarted = 0;
 let careCleanup = () => {};
 const EARLY_STAGE_SPRITES = [0, 8, 13];
 const PLANT_SPOTS = [
-  [22,15.5], [32,15.5], [42,15.5], [22,28.5], [32,28.5], [42,28.5],
-  [67,15.5], [77,15.5], [87,15.5], [67,28.5], [77,28.5], [87,28.5],
-  [22,71.5], [32,71.5], [42,71.5], [22,84.5], [32,84.5], [42,84.5],
-  [67,71.5], [77,71.5], [87,71.5], [67,84.5], [77,84.5], [87,84.5],
+  [22.5,15.5], [32,15.5], [41.5,15.5], [22.5,28.5], [32,28.5], [41.5,28.5],
+  [67.5,15.5], [77,15.5], [86.5,15.5], [67.5,28.5], [77,28.5], [86.5,28.5],
+  [22.5,71.5], [32,71.5], [41.5,71.5], [22.5,84.5], [32,84.5], [41.5,84.5],
+  [67.5,71.5], [77,71.5], [86.5,71.5], [67.5,84.5], [77,84.5], [86.5,84.5],
 ];
 const player = {x:50, y:82, direction:0, frame:0};
 const robot = {x:46, y:86};
@@ -18,6 +18,7 @@ let lastWalkFrame = 0;
 let lastKnobValue = null;
 let speechFaceTimer = null;
 let movingPlant = false;
+let deleteConfirmId = null;
 
 async function request(path, body) {
   const response = await fetch(path, body === undefined ? {} : {
@@ -130,6 +131,8 @@ function render() {
   el("plant-care").textContent = plant.needs_care ? plant.care_label : "Already cared for today";
   el("plant-care").disabled = !plant.needs_care;
   el("plant-move").textContent = movingPlant ? "Cancel moving" : "Move on bed";
+  el("plant-delete").textContent = deleteConfirmId === plant.id ? "Confirm remove" : "Remove plant";
+  el("plant-delete").classList.toggle("confirming", deleteConfirmId === plant.id);
   el("placement-hint").hidden = !movingPlant;
 }
 
@@ -187,6 +190,26 @@ async function moveSelectedPlant(plotSlot) {
   }
 }
 
+async function deleteSelectedPlant() {
+  const plant = selectedPlant();
+  if (!plant) return;
+  if (deleteConfirmId !== plant.id) {
+    deleteConfirmId = plant.id;
+    el("garden-result").textContent = `Press confirm to remove ${plant.nickname}.`;
+    render();
+    return;
+  }
+  try {
+    await request(`/api/garden/plants/${plant.id}/delete`, {});
+    selectedId = null;
+    deleteConfirmId = null;
+    movingPlant = false;
+    await loadGarden();
+  } catch (error) {
+    el("garden-result").textContent = error.message;
+  }
+}
+
 function renderHistory() {
   const rows = state.history ?? [];
   el("garden-history").replaceChildren(...(rows.length ? rows.map((item) => {
@@ -202,7 +225,10 @@ function renderHistory() {
 }
 
 async function selectPlant(id) {
-  if (selectedId !== Number(id)) movingPlant = false;
+  if (selectedId !== Number(id)) {
+    movingPlant = false;
+    deleteConfirmId = null;
+  }
   selectedId = Number(id);
   render();
   const plant = selectedPlant();
@@ -399,8 +425,10 @@ function tellAboutSelected() {
 el("plant-care").addEventListener("click", startCareGame);
 el("plant-move").addEventListener("click", () => {
   movingPlant = !movingPlant;
+  deleteConfirmId = null;
   render();
 });
+el("plant-delete").addEventListener("click", deleteSelectedPlant);
 el("care-cancel").addEventListener("click", () => { careCleanup(); el("care-game").hidden = true; });
 el("dialogue-close").addEventListener("click", () => { el("robot-dialogue").hidden = true; speechSynthesis?.cancel(); stopSpeechFace(); });
 window.addEventListener("keydown", (event) => {

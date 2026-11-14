@@ -362,6 +362,14 @@ def create_app(
         except ValueError as exc:
             return JSONResponse({"detail": str(exc)}, status_code=422)
 
+    @app.post("/api/garden/plants/{plant_id}/delete")
+    def delete_garden_plant(plant_id: int) -> dict:
+        try:
+            garden.delete(plant_id)
+            return {"ok": True}
+        except ValueError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=404)
+
     @app.post("/api/garden/plants/{plant_id}/care")
     def care_for_garden_plant(plant_id: int, request: GardenCareRequest) -> dict:
         try:
