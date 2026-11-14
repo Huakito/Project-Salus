@@ -177,8 +177,8 @@ def test_movement_session_is_saved_without_camera_data(contract_file, data_dir):
     )
     with TestClient(app, base_url="http://127.0.0.1:8000") as client:
         session = {
-            "game": "salus_says",
-            "mode": "seated",
+            "game": "hand_signals",
+            "mode": "hands",
             "duration_seconds": 95,
             "movements_offered": ["wings", "reach"],
             "movements_completed": ["wings"],
@@ -188,12 +188,12 @@ def test_movement_session_is_saved_without_camera_data(contract_file, data_dir):
         }
         response = client.post("/api/movement-sessions", json=session)
         assert response.status_code == 200
-        assert response.json()["feedback"] == "Saved. You found 1 of 2 shapes."
+        assert response.json()["feedback"] == "Saved. You found 1 of 2 signals."
         assert response.json()["feedback_source"] == "local"
 
     saved = json.loads((data_dir / "movement-sessions.jsonl").read_text())
-    assert saved["game"] == "salus_says"
-    assert saved["mode"] == "seated"
+    assert saved["game"] == "hand_signals"
+    assert saved["mode"] == "hands"
     assert "video" not in saved
     assert saved["feedback_source"] == "local"
 

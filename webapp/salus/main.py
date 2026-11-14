@@ -71,8 +71,8 @@ class MovementSession(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    game: Literal["salus_says"]
-    mode: Literal["standing", "seated"]
+    game: Literal["salus_says", "hand_signals"]
+    mode: Literal["standing", "seated", "hands"]
     duration_seconds: int = Field(ge=1, le=3600)
     movements_offered: list[str] = Field(min_length=1, max_length=30)
     movements_completed: list[str] = Field(max_length=30)

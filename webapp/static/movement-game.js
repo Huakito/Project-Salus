@@ -11,75 +11,53 @@ const CONNECTIONS = [
 
 const POSES = [
   {
-    key: "wings", name: "Open wings", cue: "Let both arms open comfortably to the sides", face: "(^_^)",
-    modes: ["standing", "seated"],
-    matches: (p, s) => level(p[15], p[11], s * 0.65) && level(p[16], p[12], s * 0.65) && Math.abs(p[15].x - p[16].x) > s * 2.8,
+    key: "wave", name: "Wave hello", cue: "Raise either hand and give Salus a small wave", face: "(^_^)/",
+    motion: "wave",
   },
   {
-    key: "reach", name: "Reach high", cue: "Take both hands overhead without forcing the stretch", face: "\\(^o^)/",
-    modes: ["standing", "seated"], matches: (p) => p[15].y < p[0].y && p[16].y < p[0].y,
+    key: "both_up", name: "Both hands up", cue: "Lift both hands above your shoulders", face: "\\(^o^)/",
+    matches: (p) => p[15].y < p[11].y && p[16].y < p[12].y,
   },
   {
     key: "together", name: "Hands together", cue: "Bring your hands together in front of you", face: "(._.)",
-    modes: ["standing", "seated"], matches: (p, s) => distance(p[15], p[16]) < s * 0.7 && Math.max(p[15].y, p[16].y) < p[23].y,
+    matches: (p, s) => distance(p[15], p[16]) < s * 0.7,
   },
   {
-    key: "left_reach", name: "One hand high", cue: "Lift the hand on the left of the screen", face: "(^_^)/",
-    modes: ["standing", "seated"], matches: (p) => p[16].y < p[0].y && p[15].y > p[11].y,
+    key: "left_up", name: "Left screen hand", cue: "Lift the hand on the left of the screen", face: "(^_^)/",
+    matches: (p) => p[16].y < p[12].y && p[15].y > p[11].y,
   },
   {
-    key: "right_reach", name: "Other hand high", cue: "Lift the hand on the right of the screen", face: "\\(^_^)",
-    modes: ["standing", "seated"], matches: (p) => p[15].y < p[0].y && p[16].y > p[12].y,
+    key: "right_up", name: "Right screen hand", cue: "Lift the hand on the right of the screen", face: "\\(^_^)",
+    matches: (p) => p[15].y < p[11].y && p[16].y > p[12].y,
   },
   {
-    key: "goalposts", name: "Goalposts", cue: "Bend both elbows and point your hands upward", face: "[o_o]",
-    modes: ["standing", "seated"],
-    matches: (p, s) => level(p[13], p[11], s * 0.8) && level(p[14], p[12], s * 0.8) && p[15].y < p[13].y && p[16].y < p[14].y,
-  },
-  {
-    key: "hands_shoulders", name: "Hands to shoulders", cue: "Rest each hand close to its shoulder", face: "(o_o)",
-    modes: ["standing", "seated"],
+    key: "hands_shoulders", name: "Touch shoulders", cue: "Bring each hand close to its shoulder", face: "(o_o)",
     matches: (p, s) => distance(p[15], p[11]) < s * 0.9 && distance(p[16], p[12]) < s * 0.9,
   },
   {
-    key: "hands_hips", name: "Hands to hips", cue: "Place both hands near your hips", face: "(^.^)",
-    modes: ["standing", "seated"],
-    matches: (p, s) => distance(p[15], p[23]) < s * 1.05 && distance(p[16], p[24]) < s * 1.05,
+    key: "left_cross", name: "Cross one hand", cue: "Move the hand on the left of the screen to the opposite shoulder", face: "(^.-)",
+    matches: (p, s) => distance(p[16], p[12]) < s * 0.9,
   },
   {
-    key: "crossed", name: "Comfortable cross", cue: "Bring each hand toward the opposite shoulder", face: "(-_-)",
-    modes: ["standing", "seated"],
+    key: "right_cross", name: "Cross the other hand", cue: "Move the hand on the right of the screen to the opposite shoulder", face: "(-.^)",
+    matches: (p, s) => distance(p[15], p[11]) < s * 0.9,
+  },
+  {
+    key: "crossed", name: "Cross both hands", cue: "Bring both hands toward the opposite shoulders", face: "(-_-)",
     matches: (p, s) => distance(p[15], p[12]) < s * 1.05 && distance(p[16], p[11]) < s * 1.05,
   },
   {
-    key: "diamond", name: "Diamond", cue: "Bring your hands together above your head", face: "/^_^\\",
-    modes: ["standing", "seated"],
-    matches: (p, s) => distance(p[15], p[16]) < s * 0.85 && p[15].y < p[0].y && p[16].y < p[0].y,
+    key: "frame_face", name: "Frame your face", cue: "Bring both hands up beside your face", face: "\\(o_o)/",
+    required: [7, 8],
+    matches: (p, s) => distance(p[15], p[7]) < s * 1.1 && distance(p[16], p[8]) < s * 1.1,
   },
   {
-    key: "left_side", name: "Long line left", cue: "Open one arm toward the left of the screen", face: "<(^_^)",
-    modes: ["standing", "seated"],
+    key: "left_side", name: "Hand out left", cue: "Move one hand toward the left edge of the screen", face: "<(^_^)",
     matches: (p, s) => level(p[16], p[12], s * 0.65) && p[16].x < p[12].x - s * 1.1 && p[15].y > p[11].y,
   },
   {
-    key: "right_side", name: "Long line right", cue: "Open one arm toward the right of the screen", face: "(^_)>",
-    modes: ["standing", "seated"],
+    key: "right_side", name: "Hand out right", cue: "Move one hand toward the right edge of the screen", face: "(^_)>",
     matches: (p, s) => level(p[15], p[11], s * 0.65) && p[15].x > p[11].x + s * 1.1 && p[16].y > p[12].y,
-  },
-  {
-    key: "wide_stance", name: "Wide stance", cue: "Place your feet a comfortable distance apart", face: "(^_^)",
-    modes: ["standing"], required: [27, 28],
-    matches: (p, s) => Math.abs(p[27].x - p[28].x) > s * 2.1,
-  },
-  {
-    key: "left_balance", name: "Light balance", cue: "Lift the knee on the left of the screen a little", face: "(^_~)",
-    modes: ["standing"], required: [25, 26],
-    matches: (p, s) => p[26].y < p[25].y - s * 0.7,
-  },
-  {
-    key: "right_balance", name: "Switch balance", cue: "Lift the other knee a little", face: "(~_^)",
-    modes: ["standing"], required: [25, 26],
-    matches: (p, s) => p[25].y < p[26].y - s * 0.7,
   },
 ];
 
@@ -112,6 +90,9 @@ let safetyPaused = false;
 let trackingSamples = 0;
 let trackingHits = 0;
 let flowToken = 0;
+let waveSamples = [];
+let recognitionAttempts = 0;
+let recognitionHandled = false;
 
 function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function level(a, b, tolerance) { return Math.abs(a.y - b.y) < tolerance; }
@@ -139,14 +120,23 @@ async function setRobotFace(text, colour = "#1a6964") {
   try { await api("/api/face", { text, colour }); } catch { /* The game also works without the robot. */ }
 }
 
-function say(text) {
-  if (!el("game-voice").checked || !("speechSynthesis" in window)) return;
-  speechSynthesis.cancel();
-  const message = new SpeechSynthesisUtterance(text);
-  message.rate = 0.9;
-  message.pitch = 1;
-  speechSynthesis.speak(message);
+function speak(text, force = false) {
+  return new Promise((resolve) => {
+    if ((!force && !el("game-voice").checked) || !("speechSynthesis" in window)) {
+      resolve();
+      return;
+    }
+    speechSynthesis.cancel();
+    const message = new SpeechSynthesisUtterance(text);
+    message.rate = 0.9;
+    message.pitch = 1;
+    message.onend = resolve;
+    message.onerror = resolve;
+    speechSynthesis.speak(message);
+  });
 }
+
+function say(text) { void speak(text); }
 
 async function loadTracker() {
   if (landmarker) return;
@@ -162,8 +152,7 @@ async function loadTracker() {
 }
 
 function availablePoses() {
-  const mode = document.querySelector('input[name="movement-mode"]:checked').value;
-  return POSES.filter((pose) => pose.modes.includes(mode));
+  return POSES;
 }
 
 function renderPoseLibrary() {
@@ -190,6 +179,7 @@ function showPose() {
   if (!pose) return finishGame();
   phase = "pose";
   holdStarted = null;
+  waveSamples = [];
   el("hold-progress").style.width = "0%";
   el("pose-count").textContent = `${poseIndex + 1} / ${selectedPoses.length}`;
   el("pose-name").textContent = pose.name;
@@ -201,7 +191,7 @@ function showPose() {
   setRobotFace(pose.face);
 }
 
-async function transitionToNextPose(message = "Take a moment before the next shape") {
+async function transitionToNextPose(message = "Take a moment before the next signal") {
   if (!running) return;
   if (poseIndex >= selectedPoses.length) return finishGame();
   phase = "transition";
@@ -221,7 +211,20 @@ async function transitionToNextPose(message = "Take a moment before the next sha
 function visible(point) { return (point.visibility ?? 1) > 0.55; }
 
 function confidentPose(points, pose) {
-  return [0, 11, 12, 15, 16, 23, 24, ...(pose?.required ?? [])].every((index) => visible(points[index]));
+  return [0, 11, 12, 13, 14, 15, 16, ...(pose?.required ?? [])].every((index) => visible(points[index]));
+}
+
+function waveMatches(points, shoulderWidth) {
+  const wrist = points[15].y < points[11].y ? points[15] : points[16].y < points[12].y ? points[16] : null;
+  if (!wrist) {
+    waveSamples = [];
+    return false;
+  }
+  const now = performance.now();
+  waveSamples.push({ at: now, x: wrist.x });
+  waveSamples = waveSamples.filter((sample) => now - sample.at < 1400);
+  const positions = waveSamples.map((sample) => sample.x);
+  return positions.length >= 5 && Math.max(...positions) - Math.min(...positions) > shoulderWidth * 0.75;
 }
 
 function drawCamera(points) {
@@ -281,14 +284,20 @@ function updatePose(points) {
   if (!pose || !points || !confidentPose(points, pose)) {
     holdStarted = null;
     el("hold-progress").style.width = "0%";
-    el("camera-status").textContent = pose?.required?.length ? "Move back until your whole body is visible" : "Move back until your upper body is visible";
+    el("camera-status").textContent = "Keep your hands and shoulders in view";
     return;
   }
   const shoulderWidth = distance(points[11], points[12]);
-  if (shoulderWidth < 0.04 || !pose.matches(points, shoulderWidth)) {
+  const matched = pose.motion === "wave" ? waveMatches(points, shoulderWidth) : pose.matches(points, shoulderWidth);
+  if (shoulderWidth < 0.04 || !matched) {
     holdStarted = null;
     el("hold-progress").style.width = "0%";
     el("camera-status").textContent = "Take your time finding the shape";
+    return;
+  }
+  if (pose.motion === "wave") {
+    el("hold-progress").style.width = "100%";
+    completePose();
     return;
   }
   el("camera-status").textContent = "That’s it — stay there comfortably";
@@ -313,22 +322,23 @@ function completePose() {
   else window.setTimeout(() => transitionToNextPose(), 900);
 }
 
-function beginCheckIn(pose) {
+async function beginCheckIn(pose) {
   if (!running) return;
   phase = "checkin";
+  recognitionAttempts = 0;
+  recognitionHandled = false;
   activeQuestion = CHECK_IN_QUESTIONS[Math.floor(Math.random() * CHECK_IN_QUESTIONS.length)];
   el("pose-card").hidden = true;
   el("checkin-question").textContent = activeQuestion;
-  el("checkin-answer").value = "";
-  el("checkin-status").textContent = "";
+  el("checkin-transcript").textContent = "";
+  el("checkin-transcript").hidden = true;
+  el("checkin-status").textContent = "Salus is asking…";
   el("checkin-reply").hidden = true;
-  el("checkin-send").disabled = false;
-  el("checkin-listen").disabled = false;
-  el("checkin-continue").textContent = "Continue";
   el("checkin-card").hidden = false;
   el("camera-status").textContent = `${pose.name} complete`;
   setRobotFace("(o_o)");
-  say(activeQuestion);
+  await speak(activeQuestion, true);
+  if (running && phase === "checkin") listenForCheckIn();
 }
 
 function stopRecognition() {
@@ -339,41 +349,70 @@ function stopRecognition() {
 function listenForCheckIn() {
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Recognition) {
-    el("checkin-status").textContent = "Speech input is not available here. You can type instead.";
+    moveOnWithoutAnswer("Speech recognition is not available here, so we’ll keep going.");
     return;
   }
   stopRecognition();
+  recognitionAttempts += 1;
+  recognitionHandled = false;
   recognition = new Recognition();
   recognition.lang = navigator.language || "en-US";
   recognition.interimResults = true;
   recognition.continuous = false;
   recognition.onstart = () => {
-    el("checkin-listen").disabled = true;
-    el("checkin-status").textContent = "Listening…";
+    el("checkin-status").textContent = "Listening — answer aloud";
   };
   recognition.onresult = (event) => {
-    el("checkin-answer").value = Array.from(event.results).map((result) => result[0].transcript).join(" ");
-    el("checkin-status").textContent = event.results[event.results.length - 1].isFinal
-      ? "Transcript ready. Check it, then press Respond." : "Listening…";
+    const answer = Array.from(event.results).map((result) => result[0].transcript).join(" ").trim();
+    el("checkin-transcript").textContent = `“${answer}”`;
+    el("checkin-transcript").hidden = !answer;
+    if (event.results[event.results.length - 1].isFinal && answer && !recognitionHandled) {
+      recognitionHandled = true;
+      sendCheckIn(answer);
+    }
   };
   recognition.onerror = (event) => {
-    el("checkin-status").textContent = event.error === "not-allowed"
-      ? "Microphone access was not allowed. You can type instead."
-      : "I couldn’t catch that. You can try again or type instead.";
+    if (recognitionHandled) return;
+    recognitionHandled = true;
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      moveOnWithoutAnswer("Microphone access was not available, so we’ll keep going.");
+    } else {
+      retryOrMoveOn();
+    }
   };
-  recognition.onend = () => { el("checkin-listen").disabled = false; };
+  recognition.onend = () => {
+    if (!recognitionHandled && phase === "checkin") {
+      recognitionHandled = true;
+      retryOrMoveOn();
+    }
+  };
   recognition.start();
 }
 
-async function sendCheckIn() {
-  const answer = el("checkin-answer").value.trim();
-  if (!answer) {
-    el("checkin-status").textContent = "Add a short answer first, or skip this check-in.";
-    return;
+function retryOrMoveOn() {
+  if (recognitionAttempts < 2) {
+    el("checkin-status").textContent = "I didn’t catch that. Listening once more…";
+    window.setTimeout(listenForCheckIn, 1200);
+  } else {
+    moveOnWithoutAnswer("I didn’t catch that, so we’ll keep going.");
   }
+}
+
+async function moveOnWithoutAnswer(message) {
+  if (phase !== "checkin") return;
+  recognitionHandled = true;
   stopRecognition();
-  el("checkin-send").disabled = true;
-  el("checkin-listen").disabled = true;
+  el("checkin-status").textContent = message;
+  await speak(message, true);
+  await delay(1200);
+  if (running && phase === "checkin") {
+    el("checkin-card").hidden = true;
+    transitionToNextPose("Next signal when you’re ready");
+  }
+}
+
+async function sendCheckIn(answer) {
+  stopRecognition();
   el("checkin-status").textContent = "Putting that into words…";
   try {
     const reply = await api("/api/check-in", { question: activeQuestion, answer });
@@ -387,26 +426,15 @@ async function sendCheckIn() {
     el("checkin-status").textContent = "";
     if (safetyPaused) {
       pauseCameraForSafety();
-      el("checkin-continue").textContent = "End run";
     }
-    say(reply.response);
+    await speak(reply.response, true);
+    await delay(1400);
+    el("checkin-card").hidden = true;
+    if (safetyPaused) finishGame();
+    else if (running) transitionToNextPose("Next signal when you’re ready");
   } catch (error) {
-    el("checkin-status").textContent = error.message;
-    el("checkin-send").disabled = false;
-    el("checkin-listen").disabled = false;
+    moveOnWithoutAnswer("I couldn’t make a reply just now, so we’ll keep going.");
   }
-}
-
-function continueAfterCheckIn() {
-  el("checkin-card").hidden = true;
-  if (safetyPaused) finishGame();
-  else transitionToNextPose("Next shape when you’re ready");
-}
-
-function skipCheckIn() {
-  stopRecognition();
-  el("checkin-card").hidden = true;
-  transitionToNextPose("Next shape when you’re ready");
 }
 
 async function startGame() {
@@ -490,10 +518,11 @@ function finishGame() {
   const duration = Math.max(1, Math.round((Date.now() - sessionStarted) / 1000));
   stopCamera();
   renderProgress();
-  el("summary-copy").textContent = `${completed.length} shapes completed in ${duration} seconds${skipped.length ? `, ${skipped.length} skipped` : ""}.`;
+  const signalNoun = completed.length === 1 ? "hand signal" : "hand signals";
+  el("summary-copy").textContent = `${completed.length} ${signalNoun} completed in ${duration} seconds${skipped.length ? `, ${skipped.length} skipped` : ""}.`;
   el("game-summary").dataset.duration = duration;
   el("game-summary").hidden = false;
-  say(`Run complete. ${completed.length} shapes completed.`);
+  say(`Run complete. ${completed.length} ${signalNoun} completed.`);
   setRobotFace("(^_^)");
 }
 
@@ -503,14 +532,14 @@ function skipPose() {
   skipped.push(selectedPoses[poseIndex].key);
   poseIndex += 1;
   renderProgress();
-  transitionToNextPose("No problem. Next shape");
+  transitionToNextPose("No problem. Next signal");
 }
 
 async function saveSession() {
   const selected = document.querySelector('input[name="game-feeling"]:checked');
   const payload = {
-    game: "salus_says",
-    mode: document.querySelector('input[name="movement-mode"]:checked').value,
+    game: "hand_signals",
+    mode: "hands",
     duration_seconds: Number(el("game-summary").dataset.duration),
     movements_offered: selectedPoses.map((pose) => pose.key),
     movements_completed: completed,
@@ -547,15 +576,9 @@ for (const tab of document.querySelectorAll("[data-view]")) {
   });
 }
 
-for (const input of document.querySelectorAll('input[name="movement-mode"]')) input.addEventListener("change", renderPoseLibrary);
 el("game-start").addEventListener("click", startGame);
 el("game-skip").addEventListener("click", skipPose);
 el("game-stop").addEventListener("click", finishGame);
 el("game-save").addEventListener("click", saveSession);
-el("checkin-listen").addEventListener("click", listenForCheckIn);
-el("checkin-send").addEventListener("click", sendCheckIn);
-el("checkin-skip").addEventListener("click", skipCheckIn);
-el("checkin-continue").addEventListener("click", continueAfterCheckIn);
-
 renderPoseLibrary();
 renderProgress();

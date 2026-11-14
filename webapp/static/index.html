@@ -40,63 +40,47 @@
 
       <main class="play-view" id="play-view">
         <section class="game-intro" aria-labelledby="game-title">
-          <p class="eyebrow">Movement</p>
-          <h2 id="game-title">Salus Says</h2>
-          <p>A short set of comfortable shapes, chosen differently each time. Take each one at your own pace.</p>
-          <div class="game-options" aria-label="Game options">
-            <label class="option-card">
-              <input type="radio" name="movement-mode" value="standing" checked>
-              <span><strong>Standing</strong><small>Whole-body camera view</small></span>
-            </label>
-            <label class="option-card">
-              <input type="radio" name="movement-mode" value="seated">
-              <span><strong>Seated</strong><small>Upper-body movements</small></span>
-            </label>
-          </div>
+          <p class="eyebrow">Camera demo</p>
+          <h2 id="game-title">Hand Signals</h2>
+          <p>Five small hand movements, chosen differently each time. Stay where you are and keep your hands in view.</p>
           <details class="pose-library">
-            <summary>See the possible shapes</summary>
+            <summary>See the possible signals</summary>
             <div id="pose-library-list"></div>
           </details>
           <div class="game-actions">
             <button class="button primary game-start" id="game-start" type="button">Begin</button>
             <div class="game-toggles">
               <label class="voice-toggle"><input id="game-voice" type="checkbox" checked> Spoken guidance</label>
-              <label class="voice-toggle"><input id="game-checkins" type="checkbox" checked> One check-in</label>
+              <label class="voice-toggle"><input id="game-checkins" type="checkbox" checked> One spoken check-in</label>
             </div>
           </div>
-          <p class="privacy-note">Video stays on this computer and is never saved. If you answer a check-in, only the transcript is used for the reply and stored with the run.</p>
+          <p class="privacy-note">Video stays on this computer and is never saved. Your browser handles speech recognition; only the resulting transcript is used for the reply and stored with the run.</p>
         </section>
 
-        <section class="game-board" id="game-board" aria-label="Salus Says camera game">
+        <section class="game-board" id="game-board" aria-label="Hand Signals camera game">
           <div class="camera-shell" id="camera-shell" data-state="idle">
             <video id="game-video" playsinline muted hidden></video>
             <canvas id="game-canvas" width="960" height="720" aria-label="Camera view with movement guide"></canvas>
             <div class="camera-empty" id="camera-empty">
               <span class="camera-face" aria-hidden="true">(o_o)</span>
               <strong>Ready when you are</strong>
-              <span>Place the laptop where it can see your upper body.</span>
+              <span>Place the laptop where it can see your hands and shoulders.</span>
             </div>
             <div class="camera-status" id="camera-status" role="status">Camera off</div>
             <div class="pose-card" id="pose-card" hidden>
               <span id="pose-count">1 / 5</span>
-              <strong id="pose-name">Open wings</strong>
-              <span id="pose-cue">Stretch both arms out to the sides</span>
+              <strong id="pose-name">Hands together</strong>
+              <span id="pose-cue">Bring your hands together in front of you</span>
               <div class="hold-track" aria-hidden="true"><span id="hold-progress"></span></div>
             </div>
             <section class="checkin-card" id="checkin-card" hidden aria-labelledby="checkin-question">
               <p class="eyebrow">A moment here</p>
               <h3 id="checkin-question">What pace feels right from here?</h3>
-              <p class="checkin-hint">Keep the shape if it feels comfortable, or relax. Type an answer, or use the microphone.</p>
-              <textarea id="checkin-answer" rows="2" maxlength="1000" placeholder="Your answer…"></textarea>
-              <div class="checkin-actions">
-                <button class="button quiet" id="checkin-listen" type="button">Answer aloud</button>
-                <button class="button primary" id="checkin-send" type="button">Respond</button>
-                <button class="button quiet" id="checkin-skip" type="button">Skip</button>
-              </div>
+              <p class="checkin-hint">Relax your hands and answer aloud. Salus will listen, respond, and continue on its own.</p>
+              <p class="checkin-transcript" id="checkin-transcript" hidden></p>
               <p class="checkin-status" id="checkin-status" role="status"></p>
               <div class="checkin-reply" id="checkin-reply" hidden>
                 <p id="checkin-reply-text"></p>
-                <button class="button primary" id="checkin-continue" type="button">Continue</button>
               </div>
             </section>
           </div>

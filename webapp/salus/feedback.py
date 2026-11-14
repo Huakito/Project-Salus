@@ -77,12 +77,13 @@ def local_feedback(session: Mapping[str, Any]) -> Feedback:
     """Useful feedback when cloud feedback is disabled or unavailable."""
     found = len(session["movements_completed"])
     offered = len(session["movements_offered"])
+    noun = "signals" if session["game"] == "hand_signals" else "shapes"
     if session.get("feeling") == "not_for_me":
         message = "Saved. We can try a different kind of game next time."
     elif found == offered:
-        message = f"Saved. You found all {found} shapes."
+        message = f"Saved. You found all {found} {noun}."
     elif found:
-        message = f"Saved. You found {found} of {offered} shapes."
+        message = f"Saved. You found {found} of {offered} {noun}."
     else:
         message = "Saved. The camera game is ready whenever you want another go."
     return Feedback(message=message, source="local")
