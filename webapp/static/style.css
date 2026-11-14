@@ -2465,3 +2465,76 @@ body:has(.play-view:not([hidden])) .topbar-inner,
   text-decoration-thickness: 2px;
   text-underline-offset: 0.18em;
 }
+
+/* Movable live robot display, shown only while the Movement page is open. */
+.floating-screen {
+  position: fixed;
+  z-index: 100;
+  width: 230px;
+  border: 1px solid var(--edge);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 8px 10px 0 rgb(19 42 33 / .28);
+}
+
+.floating-screen.dragging {
+  opacity: .9;
+  box-shadow: 12px 14px 0 rgb(19 42 33 / .22);
+}
+
+.floating-screen-handle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  padding-left: 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--field);
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+
+.floating-screen-handle strong {
+  font-size: .72rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.floating-screen-handle button {
+  align-self: stretch;
+  width: 42px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.1rem;
+}
+
+.floating-screen-body { padding: 10px; }
+
+.floating-screen-body canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border: 8px solid #0e1915;
+  background: #000;
+  image-rendering: pixelated;
+}
+
+.floating-screen-body span {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: .65rem;
+  text-align: right;
+}
+
+.floating-screen-handle:focus-visible {
+  outline: 3px solid var(--note);
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .floating-screen { width: 200px; }
+}

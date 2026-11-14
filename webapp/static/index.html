@@ -126,6 +126,17 @@
           </dl>
           <p class="hardware-readout">The square shown here before was a preview of the robot's 3×3 light grid.</p>
         </aside>
+
+        <aside class="floating-screen" id="floating-screen" aria-label="Movable live robot screen">
+          <header class="floating-screen-handle" id="floating-screen-handle" tabindex="0" aria-label="Move robot face window with pointer or arrow keys">
+            <strong>Salus face</strong>
+            <button type="button" id="floating-screen-toggle" aria-label="Minimise robot face window">−</button>
+          </header>
+          <div class="floating-screen-body" id="floating-screen-body">
+            <canvas id="floating-screen-canvas" width="480" height="240" role="img" aria-label="Live robot face"></canvas>
+            <span id="floating-screen-status" role="status" aria-live="polite">Live</span>
+          </div>
+        </aside>
       </main>
 
       <main class="stage" id="stage" role="tabpanel" aria-labelledby="home-tab">
