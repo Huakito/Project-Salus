@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from salus.contract import DEFAULT_PATH
 from salus.main import create_app
-from salus.feedback import Feedback, FeedbackService, local_feedback
+from salus.feedback import CheckInReply, Feedback, FeedbackService, local_feedback
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def contract_file(tmp_path):
 
 @pytest.fixture
 def client(contract_file):
-    app = create_app(mode="fake", contract_path=contract_file)
+    app = create_app(mode="fake", contract_path=contract_file, feedback_service=FeedbackService())
     # The app only answers to its own address, so the test client must use it.
     with TestClient(app, base_url="http://127.0.0.1:8000") as client:
         assert app.state.manager.wait_for("connected", 2)
@@ -279,6 +279,67 @@ def test_movement_session_rejects_unexpected_camera_data(client):
     )
     assert response.status_code == 422
     assert "video" in response.json()["detail"]
+
+
+def test_check_in_has_a_local_fallback_and_accepts_no_audio(client):
+    response = client.post(
+        "/api/check-in",
+        json={"question": "What pace feels right?", "answer": "A little slower would be good."},
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "response": "Thanks for telling me. We can take that with us and move on when you’re ready.",
+        "response_source": "local",
+        "safety_pause": False,
+    }
+
+    rejected = client.post(
+        "/api/check-in",
+        json={"question": "How is the pace?", "answer": "Fine", "audio": "not accepted"},
+    )
+    assert rejected.status_code == 422
+    assert "audio" in rejected.json()["detail"]
+
+
+def test_check_in_uses_a_scripted_pause_for_direct_self_harm_language(client):
+    response = client.post(
+        "/api/check-in",
+        json={"question": "What is on your mind?", "answer": "I want to hurt myself."},
+    )
+    assert response.status_code == 200
+    assert response.json()["response_source"] == "scripted_safety"
+    assert response.json()["safety_pause"] is True
+
+
+def test_openai_check_in_is_bounded_and_structured():
+    class Parsed:
+        output_parsed = type("Output", (), {"message": "A slower pace sounds like a good fit for the next few shapes."})()
+
+    class Responses:
+        def __init__(self):
+            self.request = None
+
+        def parse(self, **kwargs):
+            self.request = kwargs
+            return Parsed()
+
+    client = type("Client", (), {"responses": Responses()})()
+    service = FeedbackService(client=client, model="test-model")
+    reply = service.check_in_reply("What pace feels right?", "A little slower.")
+
+    assert reply == CheckInReply(
+        message="A slower pace sounds like a good fit for the next few shapes.",
+        source="openai",
+    )
+    sent = client.responses.request
+    assert sent["store"] is False
+    assert sent["max_output_tokens"] == 120
+    assert sent["text_format"].__name__ == "ModelCheckInReply"
+    assert json.loads(sent["input"][1]["content"]) == {
+        "check_in_question": "What pace feels right?",
+        "answer": "A little slower.",
+    }
 
 
 # ---- only this computer, and only our own page ----

@@ -40,9 +40,9 @@
 
       <main class="play-view" id="play-view">
         <section class="game-intro" aria-labelledby="game-title">
-          <p class="eyebrow">Movement game 01</p>
+          <p class="eyebrow">Movement</p>
           <h2 id="game-title">Salus Says</h2>
-          <p>Copy five simple shapes. Salus watches the outline of the movement and keeps the game moving.</p>
+          <p>A short set of comfortable shapes, chosen differently each time. Take each one at your own pace.</p>
           <div class="game-options" aria-label="Game options">
             <label class="option-card">
               <input type="radio" name="movement-mode" value="standing" checked>
@@ -53,11 +53,18 @@
               <span><strong>Seated</strong><small>Upper-body movements</small></span>
             </label>
           </div>
+          <details class="pose-library">
+            <summary>See the possible shapes</summary>
+            <div id="pose-library-list"></div>
+          </details>
           <div class="game-actions">
-            <button class="button game-start" id="game-start" type="button">Start game</button>
-            <label class="voice-toggle"><input id="game-voice" type="checkbox" checked> Salus talks</label>
+            <button class="button primary game-start" id="game-start" type="button">Begin</button>
+            <div class="game-toggles">
+              <label class="voice-toggle"><input id="game-voice" type="checkbox" checked> Spoken guidance</label>
+              <label class="voice-toggle"><input id="game-checkins" type="checkbox" checked> One check-in</label>
+            </div>
           </div>
-          <p class="privacy-note">Camera frames stay on this computer. The game saves movement results, not video.</p>
+          <p class="privacy-note">Video stays on this computer and is never saved. If you answer a check-in, only the transcript is used for the reply and stored with the run.</p>
         </section>
 
         <section class="game-board" id="game-board" aria-label="Salus Says camera game">
@@ -76,6 +83,22 @@
               <span id="pose-cue">Stretch both arms out to the sides</span>
               <div class="hold-track" aria-hidden="true"><span id="hold-progress"></span></div>
             </div>
+            <section class="checkin-card" id="checkin-card" hidden aria-labelledby="checkin-question">
+              <p class="eyebrow">A moment here</p>
+              <h3 id="checkin-question">What pace feels right from here?</h3>
+              <p class="checkin-hint">Keep the shape if it feels comfortable, or relax. Type an answer, or use the microphone.</p>
+              <textarea id="checkin-answer" rows="2" maxlength="1000" placeholder="Your answer…"></textarea>
+              <div class="checkin-actions">
+                <button class="button quiet" id="checkin-listen" type="button">Answer aloud</button>
+                <button class="button primary" id="checkin-send" type="button">Respond</button>
+                <button class="button quiet" id="checkin-skip" type="button">Skip</button>
+              </div>
+              <p class="checkin-status" id="checkin-status" role="status"></p>
+              <div class="checkin-reply" id="checkin-reply" hidden>
+                <p id="checkin-reply-text"></p>
+                <button class="button primary" id="checkin-continue" type="button">Continue</button>
+              </div>
+            </section>
           </div>
 
           <div class="game-progress" id="game-progress" aria-label="Game progress"></div>

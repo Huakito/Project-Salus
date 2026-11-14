@@ -56,6 +56,16 @@ class FaceRequest(BaseModel):
     colour: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
 
 
+class MovementCheckIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(min_length=1, max_length=300)
+    answer: str = Field(min_length=1, max_length=1000)
+    response: str = Field(min_length=1, max_length=500)
+    response_source: Literal["openai", "local", "scripted_safety"]
+    safety_pause: bool = False
+
+
 class MovementSession(BaseModel):
     """The compact result of a camera game. Camera images are never accepted."""
 
@@ -69,6 +79,16 @@ class MovementSession(BaseModel):
     movements_skipped: list[str] = Field(max_length=30)
     tracking_quality: float = Field(ge=0, le=1)
     feeling: Literal["not_for_me", "okay", "good"] | None = None
+    check_ins: list[MovementCheckIn] = Field(default_factory=list, max_length=5)
+
+
+class CheckInRequest(BaseModel):
+    """A transcript only. Audio is never accepted by this server."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(min_length=1, max_length=300)
+    answer: str = Field(min_length=1, max_length=1000)
 
 
 class _HideStatusPolls(logging.Filter):
@@ -238,6 +258,17 @@ def create_app(
             "feedback": feedback.message,
             "feedback_source": feedback.source,
             "recorded_at": record["recorded_at"],
+        }
+
+    @app.post("/api/check-in")
+    def answer_check_in(request: CheckInRequest) -> dict:
+        """Reply to a typed or browser-transcribed answer. No audio reaches the server."""
+        reply = feedback_service.check_in_reply(request.question, request.answer)
+        return {
+            "ok": True,
+            "response": reply.message,
+            "response_source": reply.source,
+            "safety_pause": reply.safety_pause,
         }
 
     # Everything else is the page. Mounted last so it cannot shadow the API.

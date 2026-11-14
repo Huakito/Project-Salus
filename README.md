@@ -47,8 +47,9 @@ Built and tested:
 - A face editor with a live preview in the screen's own font.
 - A fake board, so the app can be worked on without the robot.
 - A local camera movement game, **Salus Says**, with standing and seated modes,
-  five pose challenges, spoken cues, robot-face reactions and local result
-  logging. Pose tracking runs in the browser; camera frames are not saved.
+  five shapes sampled from a 15-pose library, calm timed transitions, spoken
+  cues, optional check-ins, robot-face reactions and local result logging. Pose
+  tracking runs in the browser; camera frames are not saved.
 - Optional, structured OpenAI feedback after a saved run, with an automatic
   local fallback if no key is configured or the request fails.
 
