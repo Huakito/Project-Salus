@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from salus.contract import DEFAULT_PATH
 from salus.main import create_app
+from salus.feedback import CheckInReply, Feedback, FeedbackService, local_feedback
 
 
 @pytest.fixture
@@ -20,11 +21,16 @@ def contract_file(tmp_path):
 
 @pytest.fixture
 def client(contract_file):
-    app = create_app(mode="fake", contract_path=contract_file)
+    app = create_app(mode="fake", contract_path=contract_file, feedback_service=FeedbackService())
     # The app only answers to its own address, so the test client must use it.
     with TestClient(app, base_url="http://127.0.0.1:8000") as client:
         assert app.state.manager.wait_for("connected", 2)
         yield client
+
+
+@pytest.fixture
+def data_dir(tmp_path):
+    return tmp_path / "data"
 
 
 def test_status(client):
@@ -44,6 +50,16 @@ def test_the_page_is_served(client):
     page = client.get("/")
     assert page.status_code == 200
     assert "<title>Salus" in page.text
+
+
+def test_settings_survive_between_requests(client):
+    saved = client.post("/api/settings", json={
+        "spoken_guidance": False, "spoken_check_ins": True, "robot_colour": "#224466"
+    })
+    assert saved.status_code == 200
+    assert client.get("/api/settings").json() == {
+        "spoken_guidance": False, "spoken_check_ins": True, "robot_colour": "#224466"
+    }
 
 
 def test_commands_are_the_contents_of_commands_json(client, contract_file):
@@ -124,6 +140,22 @@ def test_a_face_of_several_lines_keeps_its_line_breaks(client):
     assert response.json() == {"ok": True, "text": " /\\_/\\\n( o.o )", "colour": 65535}
 
 
+def test_live_screen_tracks_faces_and_volume(client):
+    initial = client.get("/api/screen-state").json()
+    assert initial["kind"] == "face"
+
+    client.post("/api/face", json={"text": "(o_o)", "colour": "#12ab34"})
+    face = client.get("/api/screen-state").json()
+    assert face["kind"] == "face"
+    assert face["text"] == "(o_o)"
+    assert face["colour"] == "#12ab34"
+
+    client.post("/api/command", json={"key": "spk_set_volume", "value": 0.65})
+    volume = client.get("/api/screen-state").json()
+    assert volume["kind"] == "volume"
+    assert volume["volume"] == 65
+
+
 @pytest.mark.parametrize(
     "text, reason",
     [
@@ -165,6 +197,202 @@ def test_events_start_out_empty(client):
     assert client.get("/api/events").json() == []
 
 
+def test_movement_session_is_saved_without_camera_data(contract_file, data_dir):
+    app = create_app(
+        mode="fake",
+        contract_path=contract_file,
+        data_dir=data_dir,
+        feedback_service=FeedbackService(),
+    )
+    with TestClient(app, base_url="http://127.0.0.1:8000") as client:
+        session = {
+            "game": "hand_signals",
+            "mode": "hands",
+            "duration_seconds": 95,
+            "movements_offered": ["wings", "reach"],
+            "movements_completed": ["wings"],
+            "movements_skipped": ["reach"],
+            "tracking_quality": 0.91,
+            "feeling": "good",
+        }
+        response = client.post("/api/movement-sessions", json=session)
+        assert response.status_code == 200
+        assert response.json()["feedback"] == "Saved. You found 1 of 2 signals."
+        assert response.json()["feedback_source"] == "local"
+
+    saved = json.loads((data_dir / "movement-sessions.jsonl").read_text())
+    assert saved["game"] == "hand_signals"
+    assert saved["mode"] == "hands"
+    assert "video" not in saved
+    assert saved["feedback_source"] == "local"
+
+
+def test_garden_persists_and_never_kills_a_missed_plant(contract_file, data_dir):
+    app = create_app(mode="fake", contract_path=contract_file, data_dir=data_dir, feedback_service=FeedbackService())
+    with TestClient(app, base_url="http://127.0.0.1:8000") as garden_client:
+        initial = garden_client.get("/api/garden").json()
+        assert initial["plants"][0]["needs_care"] is True
+        added = garden_client.post("/api/garden/plants", json={"species": "sunflower", "nickname": "Sunny"}).json()["plant"]
+        cared = garden_client.post(f"/api/garden/plants/{added['id']}/care", json={
+            "activity": "water", "duration_seconds": 12, "score": 1
+        }).json()
+        assert cared["changed"] is True
+        assert cared["plant"]["growth"] == 1
+        garden_client.post("/api/garden/admin", json={"action": "advance_day", "days": 10})
+        later = garden_client.get("/api/garden").json()
+        sunny = next(plant for plant in later["plants"] if plant["nickname"] == "Sunny")
+        assert sunny["needs_care"] is True
+        assert sunny["growth"] == 1
+        assert "dead" not in sunny
+        assert later["history"][0]["activity"] == "water"
+        assert later["history"][0]["duration_seconds"] == 12
+
+
+def test_openai_feedback_receives_only_derived_session_data():
+    class Parsed:
+        output_parsed = type("Output", (), {"message": "Nice work — three steady shapes found."})()
+
+    class Responses:
+        def __init__(self):
+            self.request = None
+
+        def parse(self, **kwargs):
+            self.request = kwargs
+            return Parsed()
+
+    client = type("Client", (), {"responses": Responses()})()
+    service = FeedbackService(client=client, model="test-model")
+    result = service.movement_feedback(
+        {
+            "game": "salus_says",
+            "mode": "standing",
+            "duration_seconds": 50,
+            "movements_offered": ["wings", "reach", "balance"],
+            "movements_completed": ["wings", "reach", "balance"],
+            "movements_skipped": [],
+            "tracking_quality": 0.876,
+            "feeling": "good",
+        }
+    )
+    sent = client.responses.request
+    assert result == Feedback(message="Nice work — three steady shapes found.", source="openai")
+    assert sent["model"] == "test-model"
+    assert sent["store"] is False
+    assert sent["max_output_tokens"] == 100
+    assert sent["text_format"].__name__ == "ModelFeedback"
+    payload = json.loads(sent["input"][1]["content"])
+    assert payload["tracking_quality"] == 0.88
+    assert set(payload) == {
+        "game",
+        "mode",
+        "duration_seconds",
+        "movements_offered",
+        "movements_completed",
+        "movements_skipped",
+        "tracking_quality",
+        "feeling",
+    }
+
+
+def test_openai_failure_falls_back_without_losing_the_session():
+    class Responses:
+        def parse(self, **kwargs):
+            raise TimeoutError
+
+    client = type("Client", (), {"responses": Responses()})()
+    session = {
+        "game": "salus_says",
+        "mode": "seated",
+        "duration_seconds": 20,
+        "movements_offered": ["wings"],
+        "movements_completed": ["wings"],
+        "movements_skipped": [],
+        "tracking_quality": 0.7,
+        "feeling": None,
+    }
+    assert FeedbackService(client=client).movement_feedback(session) == local_feedback(session)
+
+
+def test_movement_session_rejects_unexpected_camera_data(client):
+    response = client.post(
+        "/api/movement-sessions",
+        json={
+            "game": "salus_says",
+            "mode": "standing",
+            "duration_seconds": 30,
+            "movements_offered": ["wings"],
+            "movements_completed": [],
+            "movements_skipped": [],
+            "tracking_quality": 0.5,
+            "video": "should not be accepted",
+        },
+    )
+    assert response.status_code == 422
+    assert "video" in response.json()["detail"]
+
+
+def test_check_in_has_a_local_fallback_and_accepts_no_audio(client):
+    response = client.post(
+        "/api/check-in",
+        json={"question": "What pace feels right?", "answer": "A little slower would be good."},
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "response": "Thanks for telling me. We can take that with us and move on when you’re ready.",
+        "response_source": "local",
+        "safety_pause": False,
+    }
+
+    rejected = client.post(
+        "/api/check-in",
+        json={"question": "How is the pace?", "answer": "Fine", "audio": "not accepted"},
+    )
+    assert rejected.status_code == 422
+    assert "audio" in rejected.json()["detail"]
+
+
+def test_check_in_uses_a_scripted_pause_for_direct_self_harm_language(client):
+    response = client.post(
+        "/api/check-in",
+        json={"question": "What is on your mind?", "answer": "I want to hurt myself."},
+    )
+    assert response.status_code == 200
+    assert response.json()["response_source"] == "scripted_safety"
+    assert response.json()["safety_pause"] is True
+
+
+def test_openai_check_in_is_bounded_and_structured():
+    class Parsed:
+        output_parsed = type("Output", (), {"message": "A slower pace sounds like a good fit for the next few shapes."})()
+
+    class Responses:
+        def __init__(self):
+            self.request = None
+
+        def parse(self, **kwargs):
+            self.request = kwargs
+            return Parsed()
+
+    client = type("Client", (), {"responses": Responses()})()
+    service = FeedbackService(client=client, model="test-model")
+    reply = service.check_in_reply("What pace feels right?", "A little slower.")
+
+    assert reply == CheckInReply(
+        message="A slower pace sounds like a good fit for the next few shapes.",
+        source="openai",
+    )
+    sent = client.responses.request
+    assert sent["store"] is False
+    assert sent["max_output_tokens"] == 120
+    assert sent["text_format"].__name__ == "ModelCheckInReply"
+    assert json.loads(sent["input"][1]["content"]) == {
+        "check_in_question": "What pace feels right?",
+        "answer": "A little slower.",
+        "local_history": "",
+    }
+
+
 # ---- only this computer, and only our own page ----
 
 
@@ -189,7 +417,10 @@ def test_our_own_page_can(client):
 def test_responses_forbid_loading_anything_from_elsewhere(client):
     for path in ("/", "/api/status"):
         headers = client.get(path).headers
-        assert headers["content-security-policy"] == "default-src 'self'; frame-ancestors 'none'"
+        assert headers["content-security-policy"] == (
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; frame-ancestors 'none'"
+        )
+        assert headers["permissions-policy"] == "camera=(self), microphone=(self)"
         assert headers["cache-control"] == "no-cache"
 
 

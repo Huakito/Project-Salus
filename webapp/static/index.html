@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Salus robot control</title>
+    <title>Salus</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="style.css">
     <script type="module" src="app.js"></script>
@@ -16,6 +16,11 @@
           <h1>Salus</h1>
           <span class="brand-sub">Handheld helper</span>
         </div>
+        <nav class="main-nav" aria-label="Main sections" role="tablist">
+          <button class="nav-tab active" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="true">Movement</button>
+          <button class="nav-tab" id="garden-tab" type="button" role="tab" data-view="garden" aria-controls="garden-view" aria-selected="false" tabindex="-1">Garden</button>
+          <button class="nav-tab" id="workshop-tab" type="button" role="tab" data-view="workshop" aria-controls="stage" aria-selected="false" tabindex="-1">Workshop</button>
+        </nav>
         <div class="link">
           <p class="mic-note" id="mic-note" role="status" hidden></p>
           <p class="status" id="status" role="status" data-state="offline">
@@ -35,7 +40,196 @@
       </p>
       <p class="notice trouble" id="notice" role="status" hidden></p>
 
-      <main class="stage" id="stage">
+      <main class="play-view" id="play-view" role="tabpanel" aria-labelledby="play-tab">
+        <section class="game-intro" aria-labelledby="game-title">
+          <p class="eyebrow">Camera demo</p>
+          <h2 id="game-title">Hand Signals</h2>
+          <p>Five small hand movements, chosen differently each time. Stay where you are and keep your hands in view.</p>
+          <details class="pose-library">
+            <summary>See the possible signals</summary>
+            <div id="pose-library-list"></div>
+          </details>
+          <div class="game-actions">
+            <button class="button primary game-start" id="game-start" type="button">Begin</button>
+            <div class="game-toggles">
+              <label class="voice-toggle"><input id="game-voice" type="checkbox" checked> Spoken guidance</label>
+              <label class="voice-toggle"><input id="game-checkins" type="checkbox" checked> One spoken check-in</label>
+            </div>
+          </div>
+          <p class="privacy-note">Video stays on this computer and is never saved. Your browser handles speech recognition; only the resulting transcript is used for the reply and stored with the run.</p>
+        </section>
+
+        <section class="game-board" id="game-board" aria-label="Hand Signals camera game">
+          <div class="camera-shell" id="camera-shell" data-state="idle">
+            <video id="game-video" playsinline muted hidden></video>
+            <canvas id="game-canvas" width="960" height="720" aria-label="Camera view with movement guide"></canvas>
+            <div class="camera-empty" id="camera-empty">
+              <span class="camera-face" aria-hidden="true">(o_o)</span>
+              <strong>Ready when you are</strong>
+              <span>Place the laptop normally and bring either hand into view.</span>
+            </div>
+            <div class="camera-status" id="camera-status" role="status">Camera off</div>
+          </div>
+          <div class="pose-card" id="pose-card" hidden>
+            <span id="pose-count">1 / 5</span>
+            <strong id="pose-name">Hands together</strong>
+            <span id="pose-cue">Bring your hands together in front of you</span>
+            <div class="hold-track" aria-hidden="true"><span id="hold-progress"></span></div>
+          </div>
+            <section class="checkin-card" id="checkin-card" hidden aria-labelledby="checkin-question">
+              <p class="eyebrow">A moment here</p>
+              <h3 id="checkin-question">What pace feels right from here?</h3>
+              <p class="checkin-hint">Relax your hands and answer aloud. Salus will listen, respond, and continue on its own.</p>
+              <p class="checkin-transcript" id="checkin-transcript" hidden></p>
+              <p class="checkin-status" id="checkin-status" role="status"></p>
+              <div class="checkin-reply" id="checkin-reply" hidden>
+                <p id="checkin-reply-text"></p>
+              </div>
+            </section>
+
+          <div class="game-progress" id="game-progress" aria-label="Game progress"></div>
+          <div class="game-controls">
+            <button class="button" id="game-skip" type="button" disabled>Skip</button>
+            <button class="button" id="game-stop" type="button" disabled>Stop</button>
+          </div>
+          <p class="problem" id="game-problem" role="alert" hidden></p>
+
+          <section class="game-summary" id="game-summary" hidden aria-labelledby="summary-title">
+            <p class="eyebrow">Run complete</p>
+            <h3 id="summary-title">Nice one.</h3>
+            <p id="summary-copy"></p>
+            <fieldset>
+              <legend>How was that?</legend>
+              <div class="feeling-options">
+                <label><input type="radio" name="game-feeling" value="not_for_me"> Not for me</label>
+                <label><input type="radio" name="game-feeling" value="okay"> Okay</label>
+                <label><input type="radio" name="game-feeling" value="good"> Good</label>
+              </div>
+            </fieldset>
+            <button class="button game-save" id="game-save" type="button">Save run</button>
+            <p class="result" id="game-save-result" role="status"></p>
+          </section>
+        </section>
+
+        <aside class="play-hardware command" aria-labelledby="play-hardware-title">
+          <div class="command-heading">
+            <h2 id="play-hardware-title">Session info</h2>
+            <code class="command-key">local</code>
+          </div>
+          <dl class="session-facts">
+            <div><dt>Camera</dt><dd>Never recorded</dd></div>
+            <div><dt>Saved</dt><dd>Scores and check-ins</dd></div>
+            <div><dt>Robot</dt><dd>Face, lights and sound react</dd></div>
+          </dl>
+          <p class="hardware-readout">The square shown here before was a preview of the robot's 3×3 light grid.</p>
+        </aside>
+      </main>
+
+      <main class="garden-view" id="garden-view" role="tabpanel" aria-labelledby="garden-tab" hidden>
+        <header class="garden-heading">
+          <div>
+            <p class="eyebrow">A quiet place to return to</p>
+            <h2>Your garden</h2>
+            <p>Walk with WASD or the arrow keys. Click a plant when you are nearby.</p>
+          </div>
+          <div class="garden-day"><span>Garden day</span><strong id="garden-day">—</strong></div>
+        </header>
+
+        <section class="garden-layout">
+          <div class="garden-world" id="garden-world" tabindex="0" aria-label="Walkable garden. Use arrow keys or WASD.">
+            <div class="farm-path path-horizontal" aria-hidden="true"></div>
+            <div class="farm-path path-vertical" aria-hidden="true"></div>
+            <div class="farm-bed bed-one" aria-hidden="true"></div>
+            <div class="farm-bed bed-two" aria-hidden="true"></div>
+            <div class="farm-bed bed-three" aria-hidden="true"></div>
+            <div class="farm-bed bed-four" aria-hidden="true"></div>
+            <div class="farm-prop crate" aria-hidden="true"></div>
+            <div class="farm-prop barrel" aria-hidden="true"></div>
+            <div class="farm-decoration oak oak-left" aria-hidden="true"></div>
+            <div class="farm-decoration oak oak-right" aria-hidden="true"></div>
+            <div class="farm-decoration bush bush-left" aria-hidden="true"></div>
+            <div class="farm-decoration bush bush-right" aria-hidden="true"></div>
+            <div class="farm-decoration flowers flowers-left" aria-hidden="true"></div>
+            <div class="farm-decoration flowers flowers-right" aria-hidden="true"></div>
+            <div class="farm-decoration rock" aria-hidden="true"></div>
+            <div class="farm-decoration hay" aria-hidden="true"></div>
+            <div class="farm-decoration chicken" aria-hidden="true"></div>
+            <div class="spring-prop spring-bench" aria-hidden="true"></div>
+            <div class="spring-prop spring-pot" aria-hidden="true"></div>
+            <div class="spring-prop spring-tulips tulips-one" aria-hidden="true"></div>
+            <div class="spring-prop spring-tulips tulips-two" aria-hidden="true"></div>
+            <div class="spring-prop spring-daffodils daffodils-one" aria-hidden="true"></div>
+            <div class="spring-prop spring-daffodils daffodils-two" aria-hidden="true"></div>
+            <div class="spring-pond" aria-hidden="true">
+              <span class="pond-nw"></span><span class="pond-ne"></span>
+              <span class="pond-sw"></span><span class="pond-se"></span>
+            </div>
+            <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
+            <div class="game-character" id="game-character" aria-hidden="true"></div>
+            <div class="robot-follower" id="robot-follower" aria-label="Salus follows you"><img src="favicon.svg" alt=""></div>
+            <div class="game-help">WASD / arrows to move · click nearby plants</div>
+          </div>
+          <aside class="plant-panel" id="plant-panel" aria-label="Garden information and controls">
+            <div class="robot-dialogue" id="robot-dialogue" role="status" aria-live="polite" hidden>
+              <strong>Salus</strong><p id="robot-dialogue-text"></p><button type="button" id="dialogue-close">OK</button>
+            </div>
+            <p class="eyebrow">Plant guide</p>
+            <div id="plant-empty">Choose a plant to see what it needs.</div>
+            <div id="plant-details" hidden>
+              <div class="plant-large" id="plant-large" aria-hidden="true"></div>
+              <h3 id="plant-name"></h3>
+              <p id="plant-about"></p>
+              <p class="plant-state" id="plant-state"></p>
+              <button class="button primary" id="plant-care" type="button"></button>
+              <button class="button quiet" id="plant-tell" type="button">Tell me about it</button>
+              <p class="result" id="garden-result" role="status"></p>
+              <p class="hardware-hint">Robot: turn the knob to choose a plant · press the main button or knob to care for it</p>
+            </div>
+          </aside>
+          <aside class="garden-tools" id="garden-tools" aria-label="Seeds, developer options and garden journal"></aside>
+        </section>
+
+        <section class="care-game" id="care-game" hidden aria-labelledby="care-game-title">
+          <div class="care-game-card">
+            <p class="eyebrow" id="care-game-type">Daily care</p>
+            <h3 id="care-game-title">Care activity</h3>
+            <p id="care-game-copy"></p>
+            <div class="care-stage" id="care-stage"></div>
+            <div class="care-progress" aria-hidden="true"><span id="care-progress"></span></div>
+            <p id="care-game-status" role="status"></p>
+            <button class="button quiet" id="care-cancel" type="button">Not now</button>
+          </div>
+        </section>
+
+        <details class="seed-shelf" id="seed-shelf">
+          <summary>Seed shelf</summary>
+          <div class="section-heading"><div><p class="eyebrow">Seed shelf</p><h3>Add a plant</h3></div></div>
+          <form id="seed-form">
+            <div class="seed-list" id="seed-list"></div>
+            <label>Nickname <input id="plant-nickname" type="text" maxlength="30" placeholder="Optional"></label>
+            <button class="button" type="submit">Plant it</button>
+          </form>
+        </details>
+
+        <details class="admin-tools" id="admin-tools">
+          <summary>Developer options</summary>
+          <p>Test progress without waiting for real days.</p>
+          <a class="screen-preview-link" href="screen.html" target="_blank" rel="noopener">Open live robot screen</a>
+          <div class="admin-actions">
+            <button class="button" type="button" data-admin="advance_day">Advance one day</button>
+            <button class="button" type="button" data-admin="grow_all">Grow everything</button>
+            <button class="button" type="button" data-admin="make_due">Make all care due</button>
+            <button class="button" type="button" data-admin="flower_all">Flower everything</button>
+          </div>
+        </details>
+        <details class="garden-journal" id="garden-journal">
+          <summary>Garden journal</summary>
+          <div id="garden-history"></div>
+        </details>
+        <p class="asset-credit">Garden art: Tulipmere Village Lite by Zmuda KI and Cozy Farm Lite by Spaceyyy. Additional plants: SpiderDave, CC0.</p>
+      </main>
+
+      <main class="stage" id="stage" role="tabpanel" aria-labelledby="workshop-tab" hidden>
         <section class="console" id="console" aria-labelledby="face-title" data-board="offline">
           <div class="console-top">
             <span class="console-led" aria-hidden="true"></span>
@@ -187,7 +381,18 @@
         <svg class="wires" id="wires" aria-hidden="true"></svg>
       </main>
 
-      <p class="hint stage-note" id="commands-note"></p>
+      <p class="hint stage-note" id="commands-note" hidden></p>
     </div>
+
+    <aside class="floating-screen" id="floating-screen" aria-label="Movable live robot screen">
+      <header class="floating-screen-handle" id="floating-screen-handle" tabindex="0" aria-label="Move robot face window with pointer or arrow keys">
+        <strong>Salus face</strong>
+        <button type="button" id="floating-screen-toggle" aria-label="Minimise robot face window">−</button>
+      </header>
+      <div class="floating-screen-body" id="floating-screen-body">
+        <canvas id="floating-screen-canvas" width="480" height="240" role="img" aria-label="Live robot face"></canvas>
+        <span id="floating-screen-status" role="status" aria-live="polite">Live</span>
+      </div>
+    </aside>
   </body>
 </html>

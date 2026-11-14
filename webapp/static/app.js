@@ -2,6 +2,9 @@
 // the face on its screen. Everything goes through the server's /api endpoints.
 
 import { checkFace, drawFace, drawVolume, rgb565, rgb565ToCss } from "./face.js";
+import "./movement-game.js";
+import "./garden.js";
+import "./floating-screen.js";
 
 const POLL_MS = 1500; // how often to ask whether the board is still connected
 const PREVIEW_WIDTH = 960; // about how many pixels wide to draw the preview, so small text stays sharp
@@ -788,7 +791,10 @@ function faceEdited() {
 }
 
 el("face-text").addEventListener("input", faceEdited);
-el("face-colour").addEventListener("input", faceEdited);
+el("face-colour").addEventListener("input", () => {
+  faceEdited();
+  api("/api/settings", { robot_colour: el("face-colour").value }).catch(() => {});
+});
 
 el("face-text").addEventListener("keydown", (event) => {
   // Enter makes a new line of art; Ctrl+Enter (Cmd+Enter on a Mac) sends it.
@@ -807,6 +813,12 @@ el("face-form").addEventListener("submit", (event) => {
 // ---- start ----
 
 refreshFace();
+api("/api/settings").then((settings) => {
+  if (settings.robot_colour) {
+    el("face-colour").value = settings.robot_colour;
+    refreshFace();
+  }
+}).catch(() => {});
 showVolume();
 showGridColour();
 refreshTune();

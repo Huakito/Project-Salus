@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Salus live screen</title>
+    <link rel="icon" href="favicon.svg">
+    <link rel="stylesheet" href="screen.css">
+    <script type="module" src="screen.js"></script>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Live hardware preview</p>
+      <h1>Robot screen</h1>
+      <p class="help">Keep this tab open beside the app. It follows every face and volume screen sent to Salus.</p>
+      <section class="robot-shell" aria-label="Live preview of the robot display">
+        <div class="screen-bezel">
+          <canvas id="live-screen" width="960" height="480" role="img" aria-label="Current robot screen"></canvas>
+        </div>
+        <div class="speaker" aria-hidden="true"></div>
+      </section>
+      <p class="status" id="screen-status" role="status" aria-live="polite">Connecting…</p>
+    </main>
+  </body>
+</html>

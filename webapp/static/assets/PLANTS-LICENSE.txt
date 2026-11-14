@@ -1,0 +1,10 @@
+plants-cc0.png
+
+Title: Flowers
+Author: SpiderDave
+Source: https://opengameart.org/content/flowers
+License: CC0 1.0 Universal (public domain dedication)
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+
+The source states that attribution is not required. It is included here to
+make the asset's origin and reuse terms easy to verify.

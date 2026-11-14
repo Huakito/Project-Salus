@@ -6,7 +6,8 @@ person through questions, quizzes and games, and a web app on the same computer
 shows how they are doing, with the option to share a summary with their GP.
 Audio, speech recognition (Whisper) and the voice (Piper) all run locally. In
 the voice-chat prototype the transcribed chat text is sent to Gemini to write
-the replies; nothing else leaves the computer.
+the replies. Camera tracking and session storage also run locally; camera
+frames, video and audio never leave the computer.
 
 This repository holds both halves of the project: the robot's firmware and the
 web app.
@@ -46,6 +47,15 @@ Built and tested:
 - Commands are sent one at a time and the board's answer is shown.
 - A face editor with a live preview in the screen's own font.
 - A fake board, so the app can be worked on without the robot.
+- A local camera game, **Hand Signals**, with five close-range gestures sampled
+  from a larger hand-movement library, calm timed transitions, spoken cues,
+  hands-free voice check-ins, robot-face reactions and local result logging.
+  Tracking runs in the browser; camera frames are not saved.
+- A persistent **Victorian greenhouse** with six plant growth stages, forgiving
+  daily care, interactive watering/misting/light/soil/turning activities, a
+  care journal, admin time controls, and robot screen, melody and button input.
+- Optional, structured OpenAI feedback after a saved run, with an automatic
+  local fallback if no key is configured or the request fails.
 
 Not built yet:
 
@@ -95,6 +105,10 @@ python -m salus --fake                 # no robot needed
 ```
 
 Open http://127.0.0.1:8000.
+
+For optional generated feedback, copy `.env.example` to `.env` and put an
+OpenAI API key in `OPENAI_API_KEY`. Keep `.env` private. Without a key, every
+feature still works and the app uses a local response.
 
 | Command                                   | What it does                                        |
 |-------------------------------------------|-----------------------------------------------------|

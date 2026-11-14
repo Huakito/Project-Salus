@@ -930,3 +930,1528 @@ input[type="range"]::-moz-range-thumb {
 .command .result {
   margin-top: 8px;
 }
+
+/* ---- main navigation and camera game ---- */
+
+.main-nav {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  background: rgb(0 0 0 / 0.08);
+}
+
+.nav-tab {
+  padding: 7px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: 600 0.9rem var(--font);
+  cursor: pointer;
+}
+
+.nav-tab.active {
+  background: var(--ink);
+  color: var(--on-accent);
+}
+
+.play-view {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.65fr) minmax(0, 1.35fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.game-intro,
+.game-board,
+.game-summary {
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.game-intro,
+.game-board {
+  padding: clamp(18px, 3vw, 28px);
+}
+
+.eyebrow {
+  margin-bottom: 6px;
+  color: var(--note);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.game-intro h2 {
+  margin-bottom: 10px;
+  font-size: clamp(1.7rem, 4vw, 2.8rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.game-options {
+  display: grid;
+  gap: 8px;
+  margin: 24px 0 16px;
+}
+
+.option-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.option-card:has(input:checked) {
+  border-color: var(--edge);
+  background: var(--hover);
+}
+
+.option-card span,
+.option-card small {
+  display: block;
+}
+
+.option-card small {
+  color: var(--muted);
+}
+
+.game-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.game-start,
+.game-save {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--on-accent);
+}
+
+.voice-toggle {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.privacy-note {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.camera-shell {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--edge);
+  background:
+    linear-gradient(rgb(255 255 255 / 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.025) 1px, transparent 1px),
+    #07110d;
+  background-size: 32px 32px;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+}
+
+.camera-empty span:last-child {
+  color: var(--muted);
+}
+
+.camera-face {
+  color: var(--dot-on);
+  font-size: clamp(2rem, 7vw, 4.5rem);
+}
+
+.camera-status {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 5px 9px;
+  background: rgb(4 14 10 / 0.78);
+  color: #eafff3;
+  font-size: 0.72rem;
+}
+
+.pose-card {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  padding: 12px 14px;
+  background: rgb(4 14 10 / 0.86);
+  color: #f5fff9;
+  backdrop-filter: blur(8px);
+}
+
+.pose-card > span,
+.pose-card > strong {
+  display: block;
+}
+
+#pose-count,
+#pose-cue {
+  color: #b9d6c8;
+  font-size: 0.75rem;
+}
+
+#pose-name {
+  margin: 1px 0 2px;
+  font-size: 1.1rem;
+}
+
+.hold-track {
+  height: 5px;
+  margin-top: 10px;
+  background: rgb(255 255 255 / 0.18);
+}
+
+.hold-track span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #74f7ba;
+  transition: width 80ms linear;
+}
+
+.game-progress {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.progress-dot {
+  width: 100%;
+  height: 6px;
+  background: var(--line);
+}
+
+.progress-dot[data-state="current"] {
+  background: var(--note);
+}
+
+.progress-dot[data-state="done"] {
+  background: var(--dot-on);
+}
+
+.progress-dot[data-state="skipped"] {
+  background: var(--muted);
+}
+
+.game-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.game-summary {
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.game-summary h3 {
+  font-size: 1.35rem;
+}
+
+.game-summary fieldset {
+  margin: 18px 0 12px;
+  padding: 0;
+  border: 0;
+}
+
+.game-summary legend {
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.feeling-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feeling-options label {
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.feeling-options label:has(input:checked) {
+  border-color: var(--edge);
+  background: var(--hover);
+}
+
+@media (max-width: 860px) {
+  .topbar-inner {
+    align-items: flex-start;
+  }
+
+  .main-nav {
+    order: 3;
+    width: 100%;
+  }
+
+  .nav-tab {
+    flex: 1;
+  }
+
+  .play-view {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Keep the camera game in the original green console language. */
+:root {
+  color-scheme: dark;
+  --page: #306e59; --panel: #285d4c; --field: #204e3f; --line: #3f7a66;
+  --edge: #98c3b1; --ink: #f6f3ea; --muted: #dbe6dd; --accent: #f6f3ea;
+  --on-accent: #1f4d3f; --hover: rgb(246 243 234 / .1); --calm-wash: #285d4c;
+  --font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.topbar { border-bottom: 1px solid var(--line); background: var(--panel); }
+.game-intro, .game-board, .game-summary, .command, .console {
+  border-radius: 0; box-shadow: none; background: var(--panel);
+}
+.button, button, textarea, input[type="text"], input[type="number"],
+.main-nav, .nav-tab, .status, .notice, .pose-library span,
+.camera-shell, .camera-status, .pose-card, .hold-track, .progress-dot,
+.feeling-options label { border-radius: 0; }
+.nav-tab.active { background: var(--field); color: var(--ink); box-shadow: none; }
+.checkin-card {
+  position: static; width: auto; max-height: none; overflow: visible; margin-top: 14px;
+  padding: 16px; border: 1px solid var(--edge); border-radius: 0;
+  background: var(--field); color: var(--ink); box-shadow: none; transform: none;
+}
+.checkin-card .eyebrow, .checkin-hint, .checkin-status { color: var(--muted); }
+.checkin-transcript { border-radius: 0; background: var(--panel); color: var(--ink); }
+.checkin-reply { border-top-color: var(--line); }
+
+/* Final garden layout authority: keep the game and its side menu predictable. */
+body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1500px; }
+.page:has(.garden-view:not([hidden])) > .notice { display: none; }
+.garden-view:not([hidden]) { width: 100%; max-width: 1500px; margin-inline: auto; }
+.garden-layout { grid-template-columns: minmax(720px, 1fr) 320px; gap: 16px; }
+.garden-world { border-width: 6px; box-shadow: 0 16px 34px rgb(21 43 32 / .32), inset 0 0 0 2px rgb(255 246 211 / .2); }
+.farm-path { background-size: 64px 64px; }
+.path-horizontal { top: 42%; height: 96px; }
+.path-vertical { left: calc(50% - 48px); width: 96px; }
+.farm-bed { width: 31%; height: 24%; border: 6px solid #6e4a31; }
+.bed-one { left: 13%; top: 15%; }
+.bed-two { right: 13%; top: 15%; }
+.bed-three { left: 13%; top: 59%; }
+.bed-four { right: 13%; top: 59%; }
+.farm-prop.crate { left: 3%; bottom: 4%; }
+.farm-prop.barrel { right: 3%; bottom: 4%; }
+.garden-layout > .plant-panel { display: block; min-width: 0; padding: 16px; overflow-x: hidden; overflow-y: auto; }
+.plant-panel p, .plant-panel h3, .plant-panel summary, .plant-panel .button { overflow-wrap: anywhere; }
+.plant-panel #plant-about { margin-top: 8px; line-height: 1.55; }
+.plant-panel .button { min-height: 42px; padding: 9px 10px; white-space: normal; line-height: 1.25; }
+.plant-panel details { margin-top: 12px; padding: 0; border: 1px solid var(--line); background: var(--field); }
+.plant-panel details > summary { min-height: 44px; padding: 10px 12px; line-height: 1.3; }
+.plant-panel details[open] > summary { border-bottom: 1px solid var(--line); background: var(--hover); }
+.plant-panel details > :not(summary) { margin-inline: 12px; }
+.plant-panel details > :last-child { margin-bottom: 12px; }
+.plant-panel .seed-list { grid-template-columns: 1fr; margin-top: 12px; }
+.plant-panel #seed-form > label { display: flex; align-items: flex-start; flex-direction: column; margin: 10px 0; }
+.plant-panel #seed-form input[type="text"] { width: 100%; }
+.plant-panel .admin-actions { display: grid; grid-template-columns: 1fr; }
+.plant-panel .admin-actions .button { width: 100%; margin: 0; }
+.screen-preview-link { display: block; margin-block: 12px; padding: 10px 12px; border: 1px solid var(--edge); color: var(--ink); text-align: center; text-decoration: none; }
+.screen-preview-link:hover, .screen-preview-link:focus-visible { background: var(--hover); }
+
+@media (max-width: 1080px) {
+  .garden-layout { grid-template-columns: minmax(0, 1fr) 285px; }
+}
+
+@media (max-width: 820px) {
+  body:has(.garden-view:not([hidden])) { overflow: auto; }
+  .page:has(.garden-view:not([hidden])) { height: auto; min-height: calc(100dvh - 79px); overflow: visible; }
+  .garden-view:not([hidden]) { overflow: visible; }
+  .garden-layout { grid-template-columns: 1fr; grid-template-rows: minmax(520px, 68vh) auto; }
+}
+
+/* Movement page uses the same centre-console and side-module language as Workshop. */
+body:has(.play-view:not([hidden])) .topbar-inner,
+.page:has(.play-view:not([hidden])) { max-width: 1380px; }
+.play-view {
+  position: relative;
+  grid-template-columns: minmax(220px, .72fr) minmax(560px, 1.75fr) minmax(220px, .72fr);
+  align-items: start;
+  gap: 28px;
+}
+.game-intro, .game-board, .play-hardware {
+  position: relative;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: none;
+}
+.game-intro::after, .play-hardware::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 44%;
+  width: 30px;
+  height: 2px;
+  background: var(--wire);
+  box-shadow: 0 0 0 4px var(--page), 0 0 0 5px var(--wire);
+}
+.game-intro::after { left: 100%; }
+.play-hardware::before { right: 100%; }
+.game-board { padding: 22px; }
+.play-hardware { padding: 18px; }
+.play-hardware .command-heading { margin-bottom: 12px; }
+.play-hardware .hint { line-height: 1.55; }
+.play-led-grid { display: grid; grid-template-columns: repeat(3, 24px); gap: 6px; width: max-content; margin: 24px auto; padding: 10px; border: 4px solid #15251f; background: #0b1511; }
+.play-led-grid span { width: 24px; height: 24px; background: #55d88e; box-shadow: 0 0 10px rgb(85 216 142 / .6); }
+.play-led-grid span:nth-child(2n) { opacity: .38; }
+.hardware-readout { padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: .72rem; line-height: 1.5; }
+
+/* Extra garden life, from the same Cozy Farm asset pack. */
+.farm-decoration { position: absolute; z-index: 3; pointer-events: none; background-repeat: no-repeat; image-rendering: pixelated; }
+.farm-decoration.oak { width: 88px; height: 132px; background-image: url("assets/cozy-farm/trees/4x/oak.png"); background-size: 88px 132px; }
+.oak-left { left: 1%; top: 1%; }
+.oak-right { right: 1%; top: 1%; }
+.farm-decoration.bush { width: 56px; height: 56px; background-image: url("assets/cozy-farm/props/4x/bush.png"); background-size: contain; }
+.bush-left { left: 5%; top: 47%; }
+.bush-right { right: 5%; top: 47%; }
+.farm-decoration.flowers { width: 46px; height: 46px; background-image: url("assets/cozy-farm/props/4x/flowers.png"); background-size: contain; }
+.flowers-left { left: 7%; top: 28%; }
+.flowers-right { right: 7%; top: 69%; }
+.farm-decoration.rock { left: 47%; top: 8%; width: 52px; height: 52px; background: center / contain no-repeat url("assets/cozy-farm/props/4x/rock.png"); }
+.farm-decoration.hay { right: 6%; bottom: 5%; width: 60px; height: 60px; background: center / contain no-repeat url("assets/cozy-farm/props/4x/hay-bale.png"); }
+.farm-decoration.chicken { left: 6%; top: 57%; width: 48px; height: 64px; background-image: url("assets/cozy-farm/animals/4x/chicken-white.png"); background-size: 192px 320px; animation: chicken-bob 1.2s steps(2, end) infinite; }
+@keyframes chicken-bob { 50% { transform: translateY(-3px); } }
+
+/* Movable miniature screen, visible across every page. */
+.floating-screen {
+  position: fixed;
+  z-index: 100;
+  width: 280px;
+  border: 2px solid var(--edge);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 10px 12px 0 rgb(19 42 33 / .35);
+}
+.floating-screen.dragging { opacity: .9; box-shadow: 14px 16px 0 rgb(19 42 33 / .28); }
+.floating-screen-handle { display: flex; align-items: center; justify-content: space-between; min-height: 38px; padding-left: 10px; border-bottom: 1px solid var(--line); background: var(--field); cursor: move; touch-action: none; user-select: none; }
+.floating-screen-handle strong { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
+.floating-screen-handle button { align-self: stretch; width: 42px; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 1.1rem; }
+.floating-screen-body { padding: 10px; }
+.floating-screen-body canvas { display: block; width: 100%; aspect-ratio: 2 / 1; border: 8px solid #0e1915; background: #000; image-rendering: pixelated; }
+.floating-screen-body span { display: block; margin-top: 6px; color: var(--muted); font-size: .65rem; text-align: right; }
+.floating-screen-handle:focus-visible { outline: 3px solid var(--note); outline-offset: 3px; }
+
+@media (max-width: 1100px) {
+  .play-view { grid-template-columns: minmax(220px, .72fr) minmax(0, 1.6fr); }
+  .play-hardware { grid-column: 1; }
+  .play-hardware::before { display: none; }
+}
+
+@media (max-width: 760px) {
+  .play-view { grid-template-columns: 1fr; }
+  .game-intro::after { display: none; }
+  .floating-screen { width: 230px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .farm-decoration.chicken { animation: none; }
+}
+
+/* Garden game: authoritative layout and accessibility pass. */
+body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1500px; }
+.page:has(.garden-view:not([hidden])) > .notice { display: none; }
+.garden-view:not([hidden]) { width: 100%; max-width: 1500px; margin-inline: auto; }
+.garden-heading { min-height: 64px; padding-inline: 2px; }
+.garden-layout { grid-template-columns: minmax(720px, 1fr) 320px; gap: 16px; }
+.garden-world {
+  isolation: isolate;
+  border: 6px solid #3b2a20;
+  outline: 2px solid #d5aa68;
+  box-shadow: 0 16px 34px rgb(21 43 32 / .32), inset 0 0 0 2px rgb(255 246 211 / .2);
+}
+.farm-path { background-size: 64px 64px; }
+.path-horizontal { top: 42%; height: 96px; }
+.path-vertical { left: calc(50% - 48px); width: 96px; }
+.farm-bed { width: 31%; height: 24%; border: 6px solid #6e4a31; box-shadow: 0 5px 0 rgb(58 40 30 / .45); }
+.bed-one { left: 13%; top: 15%; }
+.bed-two { right: 13%; top: 15%; }
+.bed-three { left: 13%; top: 59%; }
+.bed-four { right: 13%; top: 59%; }
+.farm-prop.crate { left: 3%; bottom: 4%; }
+.farm-prop.barrel { right: 3%; bottom: 4%; }
+.world-plant { min-height: 78px; }
+.world-crop { width: 58px; height: 58px; }
+.world-plant > strong { max-width: 86px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.world-plant:focus-visible { outline: 4px solid #fff1a8; outline-offset: 3px; }
+.game-help { max-width: calc(100% - 20px); white-space: normal; }
+
+.garden-layout > .plant-panel {
+  display: block;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--edge);
+  background: color-mix(in srgb, var(--panel) 92%, #162d24);
+  box-shadow: 0 12px 28px rgb(21 43 32 / .22);
+  scrollbar-width: thin;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.plant-panel > * { min-width: 0; }
+.plant-panel p, .plant-panel h3, .plant-panel summary, .plant-panel .button { overflow-wrap: anywhere; }
+.plant-panel h3 { margin-top: 7px; font-size: 1.05rem; line-height: 1.3; }
+.plant-panel #plant-about { margin-top: 8px; font-size: .75rem; line-height: 1.55; }
+.plant-panel .plant-state { margin-block: 12px; padding: 9px 10px; line-height: 1.45; }
+.plant-panel .button { min-height: 42px; padding: 9px 10px; white-space: normal; line-height: 1.25; }
+.plant-panel .result { min-height: 0; margin-top: 8px; }
+.plant-panel .hardware-hint { margin: 12px 0 2px; line-height: 1.5; }
+.robot-dialogue { margin: 0 0 18px; padding: 15px 50px 15px 15px; box-shadow: 5px 5px 0 rgb(31 24 18 / .38); }
+.robot-dialogue p { margin-top: 5px; line-height: 1.45; }
+.robot-dialogue button { min-width: 34px; min-height: 34px; }
+.plant-panel details { margin-top: 12px; padding: 0; border: 1px solid var(--line); background: var(--field); }
+.plant-panel details > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: .75rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+.plant-panel details > summary::marker { color: var(--edge); }
+.plant-panel details[open] > summary { border-bottom: 1px solid var(--line); background: var(--hover); }
+.plant-panel details > :not(summary) { margin-inline: 12px; }
+.plant-panel details > :last-child { margin-bottom: 12px; }
+.plant-panel .seed-list { grid-template-columns: 1fr; margin-top: 12px; }
+.plant-panel #seed-form > label { display: flex; align-items: flex-start; flex-direction: column; margin: 10px 0; }
+.plant-panel #seed-form input[type="text"] { width: 100%; }
+.plant-panel .admin-actions { display: grid; grid-template-columns: 1fr; }
+.plant-panel .admin-actions .button { width: 100%; margin: 0; }
+.screen-preview-link { display: block; margin-block: 12px; padding: 10px 12px; border: 1px solid var(--edge); color: var(--ink); text-align: center; text-decoration: none; }
+.screen-preview-link:hover, .screen-preview-link:focus-visible { background: var(--hover); }
+.care-game-card { max-height: calc(100dvh - 40px); overflow-y: auto; }
+
+.nav-tab:focus-visible, .plant-panel summary:focus-visible, .screen-preview-link:focus-visible { outline: 3px solid var(--note); outline-offset: 2px; }
+
+@media (max-width: 1080px) {
+  .garden-layout { grid-template-columns: minmax(0, 1fr) 285px; }
+  .world-crop { width: 50px; height: 50px; }
+}
+
+@media (max-width: 820px) {
+  body:has(.garden-view:not([hidden])) { overflow: auto; }
+  .page:has(.garden-view:not([hidden])) { height: auto; min-height: calc(100dvh - 79px); overflow: visible; }
+  .garden-view:not([hidden]) { overflow: visible; }
+  .garden-layout { grid-template-columns: 1fr; grid-template-rows: minmax(520px, 68vh) auto; }
+  .garden-layout > .plant-panel { max-height: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plant-sprite.flowering { animation: none; }
+  .robot-follower { transition: none; }
+}
+.game-board > .pose-card {
+  position: static;
+  margin-top: 14px;
+  border: 1px solid var(--edge);
+  background: var(--field);
+  color: var(--ink);
+  backdrop-filter: none;
+}
+.game-board > .pose-card #pose-count,
+.game-board > .pose-card #pose-cue { color: var(--muted); }
+.game-board > .pose-card .hold-track { background: var(--line); }
+.game-board > .pose-card .hold-track span { background: var(--ink); }
+
+/* ---- garden ---- */
+.garden-view { display: grid; gap: 24px; }
+.garden-heading, .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.garden-heading h2 { margin: 2px 0 6px; font-size: clamp(2rem, 5vw, 4rem); text-transform: uppercase; }
+.garden-heading p { max-width: 680px; }
+.garden-day { min-width: 150px; padding: 12px; border: 1px solid var(--edge); background: var(--panel); }
+.garden-day span, .garden-day strong { display: block; }
+.garden-day span { color: var(--muted); font-size: .72rem; text-transform: uppercase; }
+.garden-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .65fr); gap: 18px; }
+.greenhouse { position: relative; min-height: 510px; overflow: hidden; border: 1px solid #6f9c8a; background: #b8d5c4; }
+.greenhouse-sky { position: absolute; inset: 0 0 38%; overflow: hidden; background: linear-gradient(#8fbcae, #d9e4c7); }
+.greenhouse-sky .sun { position: absolute; top: 34px; right: 13%; width: 68px; height: 68px; border-radius: 50%; background: #f7e7a2; box-shadow: 0 0 55px #fff0a6; }
+.cloud { position: absolute; width: 130px; height: 25px; border-radius: 50%; background: rgb(246 243 234 / .52); filter: blur(2px); }
+.cloud.one { top: 70px; left: 12%; } .cloud.two { top: 135px; right: 28%; transform: scale(.7); }
+.greenhouse-frame { position: absolute; z-index: 2; inset: 0; pointer-events: none; background:
+  linear-gradient(62deg, transparent 49.2%, #234d3e 49.5% 50.5%, transparent 50.8%) 0 0 / 50% 42%,
+  linear-gradient(-62deg, transparent 49.2%, #234d3e 49.5% 50.5%, transparent 50.8%) 100% 0 / 50% 42%,
+  repeating-linear-gradient(90deg, transparent 0 calc(25% - 3px), #234d3e calc(25% - 3px) calc(25% + 3px));
+  background-repeat: no-repeat, no-repeat, repeat; border: 8px solid #234d3e; box-shadow: inset 0 0 0 3px #98c3b1; }
+.garden-plot {
+  position: relative; z-index: 1; min-height: 510px;
+  min-height: 450px; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  align-content: end; gap: 10px; padding: 28px; border: 1px solid var(--line);
+  background: linear-gradient(transparent 49%, rgb(37 83 63 / .28) 49% 54%, transparent 54%),
+    linear-gradient(transparent 63%, #805f45 63% 68%, #b87952 68% 73%, #315c47 73%);
+}
+.garden-plant { min-height: 170px; display: grid; place-items: end center; align-content: end; gap: 6px; padding: 12px; border: 1px solid transparent; background: transparent; color: var(--ink); }
+.garden-plant:hover, .garden-plant.selected { border-color: var(--edge); background: var(--hover); }
+.garden-plant > strong { font-size: .85rem; }
+.garden-plant > span:last-child { color: var(--muted); font-size: .68rem; text-transform: uppercase; }
+.garden-plant.due > span:last-child { color: var(--note); }
+.plant-sprite {
+  --growth: 1; display: block; width: 72px; height: 144px;
+  background-image: url("assets/plants-cc0.png"); background-repeat: no-repeat;
+  background-size: 5616px 144px; background-position: calc(var(--sprite) * -72px) 0;
+  image-rendering: pixelated; transform: scale(var(--growth)); transform-origin: bottom center;
+}
+.plant-sprite.resting { transform: scale(var(--growth)) rotate(3deg); filter: saturate(.72); }
+.plant-sprite.flowering { filter: drop-shadow(0 0 7px rgb(255 235 154 / .8)); animation: plant-breathe 3s ease-in-out infinite; }
+@keyframes plant-breathe { 50% { filter: drop-shadow(0 0 13px rgb(255 235 154 / 1)) brightness(1.08); } }
+.plant-panel, .seed-shelf, .admin-tools { padding: 20px; border: 1px solid var(--line); background: var(--panel); }
+.plant-large { margin: 0 auto 8px; }
+.plant-panel h3 { margin: 8px 0; font-size: 1.25rem; }
+.plant-state { margin: 18px 0; padding: 10px; border-left: 3px solid var(--edge); background: var(--field); }
+.plant-panel .button { width: 100%; margin-top: 8px; }
+.hardware-hint, .asset-credit { margin-top: 16px; color: var(--muted); font-size: .72rem; }
+.seed-shelf h3 { margin: 2px 0 16px; }
+.seed-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-bottom: 16px; }
+.seed-card { position: relative; display: grid; place-items: center; gap: 4px; min-height: 160px; padding: 8px; border: 1px solid var(--line); cursor: pointer; }
+.seed-card:has(input:checked) { border-color: var(--edge); background: var(--hover); }
+.seed-card input { position: absolute; top: 8px; left: 8px; }
+.seed-card .plant-sprite { transform: scale(.72); margin: -20px 0; }
+.seed-card small { color: var(--muted); text-align: center; }
+#seed-form > label { display: inline-flex; align-items: center; gap: 10px; margin: 0 10px 0 0; }
+#seed-form input[type="text"] { padding: 8px; border: 1px solid var(--edge); background: var(--field); color: var(--ink); }
+.admin-tools summary { cursor: pointer; font-weight: 700; }
+.admin-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.care-game { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 20px; background: rgb(7 18 14 / .72); }
+.care-game-card { width: min(580px, 100%); padding: 24px; border: 2px solid var(--edge); background: var(--panel); box-shadow: 12px 12px 0 rgb(7 18 14 / .45); }
+.care-game-card h3 { margin: 4px 0 8px; font-size: 1.45rem; }
+.care-stage { position: relative; min-height: 230px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; margin: 20px 0; padding: 20px; border: 1px solid var(--line); background: var(--field); overflow: hidden; }
+.care-progress { height: 10px; background: var(--line); }
+.care-progress span { display: block; width: 0; height: 100%; background: var(--ink); transition: width 100ms linear; }
+.care-control { border: 1px solid var(--edge); background: var(--panel); color: var(--ink); }
+.watering-can { width: 180px; height: 120px; clip-path: polygon(8% 25%,70% 25%,70% 12%,89% 12%,89% 22%,70% 38%,70% 85%,8% 85%); background: linear-gradient(to top, #6d9eab calc(var(--pour, 0) * 100%), #315c47 0); }
+.mist-target { position: absolute; left: var(--x); top: var(--y); width: 32px; height: 32px; border-radius: 50%; background: #806343; }
+.mist-target.wet { background: #7fc8d4; box-shadow: 0 0 12px #b8f1ef; }
+.turn-pot { width: 130px; height: 145px; border-radius: 8px 8px 35px 35px; background: linear-gradient(90deg,#8e4f35,#cc8054 45%,#8e4f35); border-top: 18px solid #dc9367; transition: transform 80ms; }
+.turn-pot + input { width: 80%; }
+.sun-place { min-height: 100px; flex: 1 1 130px; background: linear-gradient(#9bc5b3 62%, #755842 62%); }
+.sun-place.robot-choice { outline: 4px solid var(--note); outline-offset: -6px; }
+.soil-check { width: 110px; height: 90px; border-radius: 50%; background: #715039; }
+.soil-check[data-done] { background: #594737; color: #f7e7a2; }
+.garden-journal { padding: 18px; border: 1px solid var(--line); background: var(--panel); }
+.garden-journal summary { cursor: pointer; font-weight: 700; }
+#garden-history { display: grid; gap: 6px; margin-top: 12px; }
+#garden-history article { display: grid; grid-template-columns: 1fr auto; padding: 10px; border-left: 3px solid var(--edge); background: var(--field); }
+#garden-history article span { color: var(--muted); font-size: .75rem; }
+#garden-history article p { grid-column: 1 / -1; margin: 4px 0 0; color: var(--muted); font-size: .75rem; }
+@media (max-width: 820px) {
+  .garden-layout { grid-template-columns: 1fr; }
+  .garden-heading { align-items: flex-start; flex-direction: column; }
+  .garden-plot { min-height: 330px; padding: 14px; }
+}
+
+/* ---- fixed-screen top-down garden game ---- */
+body:has(.garden-view:not([hidden])) { overflow: hidden; }
+.page:has(.garden-view:not([hidden])) { width: min(1500px, 100%); max-width: none; height: calc(100dvh - 79px); padding: 0 16px 12px; overflow: hidden; }
+.page:has(.garden-view:not([hidden])) > .notice { position: absolute; z-index: 30; right: 14px; bottom: 10px; width: auto; margin: 0; padding: 6px 10px; opacity: .82; font-size: .68rem; }
+.garden-view:not([hidden]) { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 10px; overflow: hidden; }
+.garden-heading { min-height: 70px; align-items: center; }
+.garden-heading h2 { font-size: clamp(1.7rem, 3vw, 2.8rem); }
+.garden-heading > div:first-child p:last-child { margin: 0; font-size: .76rem; }
+.garden-layout { width: 100%; min-height: 0; margin: 0 auto; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; }
+.garden-world { position: relative; min-height: 0; height: 100%; overflow: hidden; border: 5px solid #4c3428; outline: 2px solid #b98a56; background: #77a84d url("assets/cozy-farm/tiles/4x/tile-grass-1.png") repeat; image-rendering: pixelated; }
+.garden-world:focus-visible { outline: 4px solid var(--note); }
+.garden-world .garden-plot { position: absolute; z-index: 4; inset: 0; min-height: 0; display: block; padding: 0; background: none; }
+.farm-path { position: absolute; z-index: 1; background: url("assets/cozy-farm/tiles/4x/tile-path-c.png") repeat; image-rendering: pixelated; }
+.path-horizontal { left: 0; right: 0; top: 43%; height: 96px; }
+.path-vertical { top: 0; bottom: 0; left: 45%; width: 96px; }
+.farm-bed { position: absolute; z-index: 2; width: 30%; height: 26%; border: 8px solid transparent; background: url("assets/cozy-farm/tiles/4x/tile-soil-c.png") repeat; image-rendering: pixelated; box-shadow: 0 5px 0 rgb(58 40 30 / .4); }
+.bed-one { left: 14%; top: 17%; } .bed-two { right: 12%; top: 17%; }
+.farm-prop { position: absolute; z-index: 3; width: 64px; height: 64px; background-size: 64px; image-rendering: pixelated; }
+.farm-prop.crate { left: 7%; bottom: 12%; background-image: url("assets/cozy-farm/props/4x/crate.png"); }
+.farm-prop.barrel { right: 6%; bottom: 10%; background-image: url("assets/cozy-farm/props/4x/barrel.png"); }
+.world-plant { position: absolute; z-index: 6; width: 84px; min-height: 92px; translate: -50% -50%; align-content: center; place-items: center; padding: 4px; border: 0; text-shadow: 1px 1px #20382a; }
+.world-plant:hover, .world-plant.selected { border: 3px solid #f5d36b; background: rgb(35 58 38 / .38); }
+.world-crop { display: block; width: 64px; height: 64px; background: center / contain no-repeat; image-rendering: pixelated; }
+.world-crop.resting { filter: saturate(.72); transform: rotate(3deg); }
+.world-plant > strong { padding: 2px 5px; background: rgb(24 45 31 / .78); color: #fff8df; font-size: .65rem; }
+.world-plant > span:last-child { display: none; }
+.game-character { position: absolute; z-index: 10; width: 64px; height: 96px; translate: -50% -80%; background: url("assets/cozy-farm/player-farmer/characters/4x/farmer.png") 0 0 / 384px 384px no-repeat; image-rendering: pixelated; pointer-events: none; }
+.robot-follower { position: absolute; z-index: 9; width: 54px; height: 54px; translate: -50% -50%; transition: left 30ms linear, top 30ms linear; pointer-events: none; filter: drop-shadow(0 5px 2px rgb(28 40 31 / .4)); }
+.robot-follower img { width: 100%; image-rendering: pixelated; }
+.robot-dialogue { position: relative; z-index: 1; width: 100%; margin-bottom: 14px; padding: 14px 48px 14px 14px; border: 4px solid #4c3428; background: #fff4d2; color: #34291f; box-shadow: 5px 5px 0 rgb(50 37 28 / .35); }
+.robot-dialogue strong { color: #245a48; text-transform: uppercase; }
+.robot-dialogue p { margin: 3px 0 0; }
+.robot-dialogue button { position: absolute; right: 8px; bottom: 8px; padding: 4px 7px; border: 2px solid #4c3428; background: #e8c36b; color: #34291f; }
+.game-help { position: absolute; z-index: 12; left: 10px; bottom: 8px; padding: 5px 8px; background: rgb(26 52 35 / .82); color: #fff8df; font-size: .65rem; }
+.garden-layout > .plant-panel { min-height: 0; overflow-y: auto; padding: 14px; }
+.plant-panel .plant-large { display: none; }
+.plant-panel h3 { font-size: 1rem; }
+.plant-panel #plant-about { font-size: .72rem; }
+.plant-panel .plant-state { margin: 8px 0; padding: 7px; font-size: .7rem; }
+.plant-panel .button { padding: 7px; font-size: .72rem; }
+.plant-panel .seed-shelf, .plant-panel .admin-tools, .plant-panel .garden-journal { margin-top: 10px; padding: 9px; }
+.plant-panel .seed-shelf > summary, .plant-panel details > summary { cursor: pointer; font-size: .75rem; font-weight: 700; text-transform: uppercase; }
+.plant-panel .seed-shelf .section-heading { display: none; }
+.plant-panel .seed-list { grid-template-columns: repeat(2, 1fr); }
+.plant-panel .seed-card { min-height: 95px; }
+.plant-panel .seed-card .plant-sprite { display: none; }
+.plant-panel .hardware-hint { font-size: .62rem; }
+.asset-credit { display: none; }
+@media (max-width: 900px) {
+  .garden-layout { grid-template-columns: minmax(0, 1fr) 250px; }
+  .garden-day { display: none; }
+}
+
+/* ---- visual refinement: return to the quiet, card-based original ---- */
+
+:root {
+  color-scheme: light dark;
+  --page: #f4f1eb;
+  --panel: #fffdfa;
+  --field: #ffffff;
+  --line: #e1dbcf;
+  --edge: #b9b1a3;
+  --ink: #1f2428;
+  --muted: #626970;
+  --accent: #1a6964;
+  --on-accent: #ffffff;
+  --hover: rgb(26 105 100 / 0.07);
+  --good: #1f7a44;
+  --bad: #b23328;
+  --bad-wash: #fbe9e6;
+  --on-bad-wash: #8c2921;
+  --note: #75520b;
+  --note-wash: #fbf1d6;
+  --calm-wash: #e8edef;
+  --dot-on: #2fa85a;
+  --dot-off: #d9483b;
+  --bezel: #171a1d;
+  --bezel-edge: #2c3136;
+  --wire: #9da8a4;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #131619;
+    --panel: #1b1f23;
+    --field: #14171a;
+    --line: #30363c;
+    --edge: #4b535a;
+    --ink: #e8e5df;
+    --muted: #a0a7ae;
+    --accent: #62c8c0;
+    --on-accent: #0c1a19;
+    --hover: rgb(98 200 192 / 0.09);
+    --good: #74d394;
+    --bad: #f19288;
+    --bad-wash: #3b1f1c;
+    --on-bad-wash: #f5aca4;
+    --note: #ecc96f;
+    --note-wash: #372e16;
+    --calm-wash: #242a2f;
+    --dot-on: #74d394;
+    --dot-off: #f19288;
+    --wire: #65716c;
+  }
+}
+
+body {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.topbar {
+  border: 0;
+  background: transparent;
+}
+
+.topbar-inner,
+.page {
+  max-width: 1060px;
+}
+
+.topbar-inner {
+  min-height: 78px;
+  padding: 14px 20px;
+}
+
+.page {
+  padding: 0 20px 56px;
+}
+
+.brand {
+  gap: 10px;
+}
+
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.brand-sub {
+  font-size: 0.92rem;
+}
+
+.main-nav {
+  gap: 2px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--calm-wash);
+}
+
+.nav-tab {
+  border-radius: 9px;
+  font-family: var(--font);
+}
+
+.nav-tab.active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(20 25 23 / 0.12);
+}
+
+.status {
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgb(20 25 23 / 0.05);
+}
+
+.notice {
+  border-radius: 10px;
+}
+
+.button,
+button,
+textarea,
+input[type="text"],
+input[type="number"] {
+  border-radius: 10px;
+}
+
+.button {
+  font-family: var(--font);
+}
+
+.button.primary,
+.game-start,
+.game-save {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.button.quiet {
+  background: transparent;
+  color: var(--ink);
+}
+
+.play-view {
+  grid-template-columns: minmax(250px, 0.7fr) minmax(0, 1.3fr);
+  gap: 20px;
+}
+
+.game-intro,
+.game-board,
+.game-summary,
+.command,
+.console {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: 0 8px 30px rgb(36 42 39 / 0.05);
+}
+
+.game-intro,
+.game-board {
+  padding: 22px;
+}
+
+.game-intro h2 {
+  margin-bottom: 10px;
+  font-size: clamp(1.8rem, 4vw, 2.45rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+}
+
+.game-options {
+  margin: 22px 0 12px;
+}
+
+.option-card {
+  border-radius: 12px;
+  background: var(--field);
+}
+
+.option-card:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--hover);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.pose-library {
+  margin-top: 22px;
+  margin-bottom: 20px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.pose-library summary {
+  cursor: pointer;
+}
+
+#pose-library-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+#pose-library-list span {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--field);
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.game-actions {
+  align-items: flex-start;
+}
+
+.game-toggles {
+  display: grid;
+  gap: 6px;
+}
+
+.voice-toggle {
+  font-size: 0.86rem;
+}
+
+.camera-shell {
+  border-color: #30363c;
+  border-radius: 16px;
+  background: #121719;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.04);
+}
+
+.camera-face {
+  color: #83d5c9;
+  font-family: var(--mono);
+}
+
+.camera-status {
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 999px;
+  background: rgb(15 20 22 / 0.78);
+  font-family: var(--font);
+}
+
+.pose-card {
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 14px;
+  background: rgb(15 20 22 / 0.82);
+  font-family: var(--font);
+  backdrop-filter: blur(14px);
+}
+
+.hold-track,
+.hold-track span,
+.progress-dot {
+  border-radius: 999px;
+}
+
+.hold-track span {
+  background: #83d5c9;
+}
+
+.progress-dot[data-state="current"] {
+  background: var(--accent);
+}
+
+.progress-dot[data-state="waiting"] {
+  background: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.checkin-card {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  width: min(92%, 520px);
+  max-height: calc(100% - 88px);
+  overflow-y: auto;
+  padding: 20px;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 16px;
+  background: rgb(255 253 250 / 0.96);
+  color: #1f2428;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 0.32);
+  transform: translate(-50%, -50%);
+  backdrop-filter: blur(16px);
+}
+
+.checkin-card h3 {
+  margin-bottom: 8px;
+  font-size: clamp(1.1rem, 3vw, 1.4rem);
+  line-height: 1.25;
+}
+
+.checkin-card .eyebrow {
+  color: #1a6964;
+}
+
+.checkin-hint,
+.checkin-status,
+.checkin-transcript {
+  color: #626970;
+  font-size: 0.84rem;
+}
+
+.checkin-transcript {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f4f1eb;
+  color: #343a3f;
+  font-style: italic;
+}
+
+.checkin-status {
+  min-height: 1.3em;
+  margin-top: 8px;
+}
+
+.checkin-reply {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e1dbcf;
+}
+
+.game-summary {
+  padding: 20px;
+}
+
+.feeling-options label {
+  border-radius: 999px;
+  background: var(--field);
+}
+
+.console {
+  --shell: var(--panel);
+  --shell-edge: var(--line);
+  --ink: var(--ink);
+  --muted: var(--muted);
+  --field: var(--field);
+  --edge: var(--edge);
+  --accent: var(--accent);
+  --on-accent: var(--on-accent);
+}
+
+.brand-face,
+.command-key,
+textarea,
+.readout {
+  font-family: var(--mono);
+}
+
+@media (max-width: 860px) {
+  .topbar-inner {
+    padding-bottom: 8px;
+  }
+
+  .main-nav {
+    margin-top: 6px;
+  }
+
+  .play-view {
+    grid-template-columns: 1fr;
+  }
+
+  .game-intro,
+  .game-board {
+    padding: 18px;
+  }
+}
+
+/* Final theme authority: match the original green, squared-off interface. */
+:root {
+  color-scheme: dark;
+  --page: #306e59; --panel: #285d4c; --field: #204e3f; --line: #3f7a66;
+  --edge: #98c3b1; --ink: #f6f3ea; --muted: #dbe6dd; --accent: #f6f3ea;
+  --on-accent: #1f4d3f; --hover: rgb(246 243 234 / .1); --calm-wash: #285d4c;
+  --font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+.topbar { border-bottom: 1px solid var(--line); background: var(--panel); }
+.game-intro, .game-board, .game-summary, .command, .console { border-radius: 0; box-shadow: none; background: var(--panel); }
+.button, button, textarea, input[type="text"], input[type="number"], .main-nav, .nav-tab,
+.status, .notice, #pose-library-list span, .camera-shell, .camera-status, .pose-card,
+.hold-track, .hold-track span, .progress-dot, .feeling-options label { border-radius: 0; }
+.nav-tab.active { background: var(--field); color: var(--ink); box-shadow: none; }
+.checkin-card {
+  position: static; width: auto; max-height: none; overflow: visible; margin-top: 14px;
+  padding: 16px; border: 1px solid var(--edge); border-radius: 0;
+  background: var(--field); color: var(--ink); box-shadow: none; transform: none; backdrop-filter: none;
+}
+.checkin-card .eyebrow, .checkin-hint, .checkin-status { color: var(--muted); }
+.checkin-transcript { border-radius: 0; background: var(--panel); color: var(--ink); }
+.checkin-reply { border-top-color: var(--line); }
+
+/* Absolute page-layout authority — this must remain after the final theme. */
+body:has(.play-view:not([hidden])) .topbar-inner,
+.page:has(.play-view:not([hidden])) {
+  max-width: 1380px;
+}
+
+.play-view {
+  position: relative;
+  grid-template-columns: minmax(220px, 0.72fr) minmax(560px, 1.75fr) minmax(220px, 0.72fr);
+  align-items: start;
+  gap: 28px;
+}
+
+@media (max-width: 1100px) {
+  .play-view {
+    grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.6fr);
+  }
+
+  .play-hardware {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .play-view {
+    grid-template-columns: 1fr;
+  }
+
+  .play-hardware {
+    grid-column: auto;
+  }
+}
+
+/* Final garden authority: equal side rails keep the actual game in the centre. */
+.garden-view:not([hidden]) {
+  gap: 8px;
+}
+
+.garden-heading {
+  min-height: 56px;
+}
+
+.garden-heading h2 {
+  margin-block: 0 2px;
+  font-size: clamp(1.65rem, 2.2vw, 2.4rem);
+}
+
+.garden-layout {
+  grid-template-columns: 260px minmax(0, 1fr) 260px;
+  grid-template-areas: "guide world tools";
+  gap: 14px;
+}
+
+.garden-world {
+  grid-area: world;
+  min-width: 0;
+}
+
+.garden-layout > .plant-panel {
+  grid-area: guide;
+  min-width: 0;
+  height: 100%;
+}
+
+.garden-tools {
+  grid-area: tools;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.garden-tools .seed-shelf,
+.garden-tools .admin-tools,
+.garden-tools .garden-journal {
+  margin: 0 0 10px;
+  padding: 10px;
+}
+
+.garden-tools .seed-shelf > summary,
+.garden-tools details > summary {
+  min-height: 42px;
+  padding: 9px 10px;
+  cursor: pointer;
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.garden-tools .seed-shelf .section-heading {
+  display: none;
+}
+
+.garden-tools .seed-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin: 10px 0 12px;
+}
+
+.garden-tools .seed-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  justify-items: start;
+  gap: 2px 8px;
+  min-height: 58px;
+  padding: 8px 9px;
+  text-align: left;
+}
+
+.garden-tools .seed-card input {
+  position: static;
+  grid-row: 1 / 3;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
+.garden-tools .seed-card .plant-sprite {
+  display: none;
+}
+
+.garden-tools .seed-card strong,
+.garden-tools .seed-card small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.garden-tools .seed-card strong {
+  font-size: .78rem;
+}
+
+.garden-tools .seed-card small {
+  color: var(--muted);
+  font-size: .65rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.garden-tools #seed-form > label {
+  display: grid;
+  gap: 5px;
+  margin: 0 0 8px;
+  font-size: .7rem;
+}
+
+.garden-tools #seed-form input[type="text"],
+.garden-tools #seed-form .button {
+  width: 100%;
+}
+
+.floating-screen {
+  width: 220px;
+}
+
+.session-facts {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.session-facts div {
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--field);
+}
+
+.session-facts dt {
+  color: var(--muted);
+  font-size: .68rem;
+  text-transform: uppercase;
+}
+
+.session-facts dd {
+  margin: 3px 0 0;
+  font-size: .75rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 1200px) {
+  .garden-layout {
+    grid-template-columns: 220px minmax(0, 1fr) 220px;
+  }
+}
+
+@media (max-width: 920px) {
+  body:has(.garden-view:not([hidden])) {
+    overflow: auto;
+  }
+
+  .page:has(.garden-view:not([hidden])) {
+    height: auto;
+    min-height: calc(100dvh - 79px);
+    overflow: visible;
+  }
+
+  .garden-view:not([hidden]) {
+    overflow: visible;
+  }
+
+  .garden-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas: "world" "guide" "tools";
+  }
+
+  .garden-world {
+    min-height: 560px;
+  }
+
+  .garden-layout > .plant-panel,
+  .garden-tools {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* Tulipmere spring pass: keep the game layout, replace the mixed scenery. */
+.garden-world {
+  background-color: #70ad59;
+  background-image: url("assets/tulipmere-lite/tiles/grass.png");
+  background-size: 64px 64px;
+}
+
+.farm-path {
+  background-image: url("assets/tulipmere-lite/tiles/path_c.png");
+  background-size: 64px 64px;
+  box-shadow: inset 0 4px rgb(255 232 177 / .18), inset 0 -4px rgb(92 63 45 / .12);
+}
+
+.farm-bed {
+  border: 8px solid #8b6042;
+  border-radius: 8px;
+  background-image: url("assets/tulipmere-lite/tiles/soil.png");
+  background-size: 64px 64px;
+  box-shadow: 0 6px 0 rgb(67 45 34 / .42), inset 0 0 0 4px rgb(232 183 115 / .18);
+}
+
+.farm-decoration.oak {
+  width: 112px;
+  height: 112px;
+  background-image: url("assets/tulipmere-lite/objects/cherry_tree.png");
+  background-size: 112px 112px;
+  filter: drop-shadow(0 7px 0 rgb(56 69 42 / .25));
+  transform-origin: 50% 90%;
+  animation: cherry-breathe 4.6s steps(2, end) infinite;
+}
+
+.oak-left { left: 1.5%; top: 1.5%; }
+.oak-right { right: 1.5%; top: 1.5%; animation-delay: -2.2s; }
+.farm-decoration.bush,
+.farm-decoration.flowers,
+.farm-decoration.rock,
+.farm-decoration.hay,
+.farm-decoration.chicken,
+.farm-prop.crate,
+.farm-prop.barrel { display: none; }
+
+.spring-prop {
+  position: absolute;
+  z-index: 3;
+  width: 64px;
+  height: 64px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 64px 64px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.spring-bench {
+  left: 5%;
+  top: 43%;
+  background-image: url("assets/tulipmere-lite/tiles/bench.png");
+}
+
+.spring-pot {
+  right: 5%;
+  bottom: 4%;
+  background-image: url("assets/tulipmere-lite/tiles/flower_pot.png");
+  animation: flower-bob 2.8s steps(2, end) infinite;
+}
+
+.spring-tulips { background-image: url("assets/tulipmere-lite/tiles/tulips_red.png"); }
+.spring-daffodils { background-image: url("assets/tulipmere-lite/tiles/daffodils.png"); }
+.tulips-one { left: 5%; top: 25%; }
+.tulips-two { right: 5%; top: 53%; animation: flower-bob 3.2s steps(2, end) -1.4s infinite; }
+.daffodils-one { right: 5%; top: 25%; }
+.daffodils-two { left: 5%; top: 55%; animation: flower-bob 3.4s steps(2, end) -.7s infinite; }
+
+.spring-pond {
+  position: absolute;
+  z-index: 3;
+  left: 3.5%;
+  bottom: 3.5%;
+  display: grid;
+  grid-template-columns: repeat(2, 48px);
+  width: 96px;
+  height: 96px;
+  filter: drop-shadow(0 5px 0 rgb(51 72 47 / .25));
+  pointer-events: none;
+}
+
+.spring-pond span {
+  width: 48px;
+  height: 48px;
+  background-size: 48px 48px;
+  image-rendering: pixelated;
+  animation: pond-shimmer 2.4s steps(2, end) infinite;
+}
+
+.pond-nw { background-image: url("assets/tulipmere-lite/tiles/water_round_nw.png"); }
+.pond-ne { background-image: url("assets/tulipmere-lite/tiles/water_round_ne.png"); }
+.pond-sw { background-image: url("assets/tulipmere-lite/tiles/water_round_sw.png"); }
+.pond-se { background-image: url("assets/tulipmere-lite/tiles/water_round_se.png"); }
+
+.game-character {
+  width: 64px;
+  height: 96px;
+  background-image: url("assets/tulipmere-lite/characters/gardener_spritesheet.png");
+  background-size: 256px 384px;
+}
+
+@keyframes cherry-breathe {
+  50% { transform: translateY(-2px) rotate(-1deg); }
+}
+
+@keyframes flower-bob {
+  50% { transform: translateY(-2px); filter: brightness(1.08); }
+}
+
+@keyframes pond-shimmer {
+  50% { filter: brightness(1.1) saturate(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .farm-decoration.oak,
+  .spring-pot,
+  .tulips-two,
+  .daffodils-two,
+  .spring-pond span { animation: none; }
+}
+
+/* Vertically centre the garden instead of pinning its lower edge to the viewport. */
+.garden-view:not([hidden]) {
+  grid-template-rows: 48px minmax(0, 1fr);
+}
+
+.garden-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 48px;
+  height: 48px;
+}
+
+.garden-heading > div:first-child {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  gap: 18px;
+}
+
+.garden-heading .eyebrow {
+  display: none;
+}
+
+.garden-heading h2 {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: clamp(1.35rem, 1.8vw, 1.75rem);
+  white-space: nowrap;
+}
+
+.garden-heading > div:first-child p:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.garden-day {
+  min-width: 132px;
+  padding: 7px 10px;
+}
+
+.garden-layout {
+  align-self: start;
+  height: min(720px, calc(100dvh - 190px));
+  max-height: 100%;
+}
+
+@media (max-width: 920px) {
+  .garden-view:not([hidden]) {
+    grid-template-rows: auto auto;
+  }
+
+  .garden-heading {
+    display: flex;
+    align-items: flex-start;
+    height: auto;
+  }
+
+  .garden-heading > div:first-child {
+    display: block;
+  }
+
+  .garden-heading > div:first-child p:last-child {
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .garden-layout {
+    height: auto;
+    max-height: none;
+  }
+}
