@@ -15,6 +15,8 @@ class HistoryStore:
         self.db_path = data_dir / "salus.db"
         self.doc_path = data_dir / "history.md"
         self.library = json.loads(library_path.read_text(encoding="utf-8"))["questions"]
+        demo_path = Path(__file__).with_name("demo_memories.md")
+        self.demo_memories = demo_path.read_text(encoding="utf-8") if demo_path.exists() else ""
         data_dir.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS check_ins (
@@ -59,7 +61,10 @@ class HistoryStore:
             f"- Salus asked: {question}\n  Person said: {answer}\n  Salus replied: {response}"
             for question, answer, response in reversed(recent)
         )
-        return f"Saved notes:\n{summary}\n\nRecent answers:\n{turns or 'None yet.'}"[:5000]
+        return (
+            f"Fictional demo memories:\n{self.demo_memories or 'None.'}\n\n"
+            f"Saved notes:\n{summary}\n\nRecent conversation:\n{turns or 'None yet.'}"
+        )[:5000]
 
     def next_question(self) -> dict[str, str]:
         with self._connect() as db:

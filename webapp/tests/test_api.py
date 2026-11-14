@@ -443,10 +443,10 @@ def test_check_in_has_a_local_fallback_and_accepts_no_audio(client):
     assert response.status_code == 200
     assert response.json() == {
         "ok": True,
-        "response": "I’m listening—that sounds worth staying with for a moment.",
+        "response": "You mentioned “A little slower would be good.” I’d like to stay with that for a moment.",
         "response_source": "local",
         "safety_pause": False,
-        "follow_up": "What made that the first thing that came to mind?",
+        "follow_up": "Is there a part of that you want to tell me more about?",
     }
 
     rejected = client.post(
@@ -455,6 +455,17 @@ def test_check_in_has_a_local_fallback_and_accepts_no_audio(client):
     )
     assert rejected.status_code == 422
     assert "audio" in rejected.json()["detail"]
+
+
+def test_vague_check_in_gets_a_direct_comment_without_a_strange_follow_up(client):
+    response = client.post(
+        "/api/check-in",
+        json={"question": "What would feel comfortable?", "answer": "Anything"},
+    )
+    assert response.json()["response"] == (
+        "Anything works for you—easy choice. I’ll keep the next bit relaxed."
+    )
+    assert response.json()["follow_up"] == ""
 
 
 def test_check_in_uses_a_scripted_pause_for_direct_self_harm_language(client):
