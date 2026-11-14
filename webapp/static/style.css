@@ -1,39 +1,118 @@
-:root {
-  color-scheme: light dark;
-  --page: #f4f1eb;
-  --panel: #fffdfa;
-  --field: #ffffff;
-  --line: #e1dbcf;
-  --ink: #1f2428;
-  --muted: #5f666d;
-  --accent: #1a6964;
-  --on-accent: #ffffff;
-  --good: #1f7a44;
-  --bad: #b23328;
-  --bad-wash: #fbe9e6;
-  --note: #6f4a00;
-  --note-wash: #fbf1d6;
-  --calm-wash: #e8edef;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+/* JetBrains Mono, kept in fonts/ (licence: fonts/OFL.txt) because the app must
+   work with no internet connection. */
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("fonts/JetBrainsMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("fonts/JetBrainsMono-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("fonts/JetBrainsMono-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Calm greens with off-white on top. Both themes are light text on a green
+     surface, so the browser's own controls are asked for their dark versions. */
+  color-scheme: dark;
+  --page: #306e59; /* viridian: the main colour */
+  --panel: #285d4c;
+  --field: #204e3f;
+  --line: #3f7a66; /* quiet dividers */
+  --edge: #98c3b1; /* outlines of things that can be pressed or typed in */
+  --ink: #f6f3ea; /* off-white */
+  --muted: #dbe6dd;
+  --accent: #f6f3ea;
+  --on-accent: #1f4d3f;
+  --hover: rgb(246 243 234 / 0.1);
+  --good: #b9f2cd;
+  --bad: #ffc9bf;
+  --bad-wash: #5b332e;
+  --on-bad-wash: #ffd3ca;
+  --note: #f8e3a8;
+  --note-wash: #4a4726;
+  --calm-wash: #285d4c;
+  --dot-on: #8be9ad;
+  --dot-off: #ffa193;
+  --bezel: #0e1a15;
+  --bezel-edge: #1c2f27;
+  --wire: #a9cdbd; /* the cables between the console and the modules */
+  --font: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+/* The same palette, deeper, for a computer set to its dark appearance. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --page: #131619;
-    --panel: #1b1f23;
-    --field: #14171a;
-    --line: #30363c;
-    --ink: #e8e5df;
-    --muted: #a0a7ae;
-    --accent: #56b9b1;
-    --on-accent: #0c1a19;
-    --good: #74d394;
-    --bad: #f19288;
-    --bad-wash: #3b1f1c;
-    --note: #ecc96f;
-    --note-wash: #372e16;
-    --calm-wash: #242a2f;
+    --page: #183529;
+    --panel: #11271f;
+    --field: #0c1d17;
+    --line: #264537;
+    --edge: #5f8f7c;
+    --ink: #f1eee5;
+    --muted: #a9bdb2;
+    --accent: #f1eee5;
+    --on-accent: #163127;
+    --hover: rgb(241 238 229 / 0.08);
+    --good: #9be6b6;
+    --bad: #ffb3a7;
+    --bad-wash: #40241f;
+    --on-bad-wash: #ffc2b8;
+    --note: #ecd28a;
+    --note-wash: #39361c;
+    --calm-wash: #11271f;
+    --dot-on: #6fdc98;
+    --dot-off: #ff8f80;
+    --bezel: #070e0b;
+    --bezel-edge: #1a2e26;
+    --wire: #6f9c8a;
+  }
+}
+
+/* The console is the one off-white object on the page, so inside it the
+   colours swap round: green on off-white. */
+.console {
+  color-scheme: light;
+  --shell: #f3efe4;
+  --shell-edge: #d5cfbf;
+  --ink: #1f4d3f;
+  --muted: #4a6b5e;
+  --field: #fffdf6;
+  --edge: #5f8a79;
+  --accent: #245a48;
+  --on-accent: #f6f3ea;
+  --good: #1c6a41;
+  --bad: #a3372a;
+  --led-off: #9aa79f;
+}
+
+/* In the dark appearance a large off-white block would glare, so the shell is green too. */
+@media (prefers-color-scheme: dark) {
+  .console {
+    color-scheme: dark;
+    --shell: #2a5a48;
+    --shell-edge: #1b4335;
+    --ink: #f1eee5;
+    --muted: #c3d3c9;
+    --field: #173d30;
+    --edge: #86b3a0;
+    --accent: #f1eee5;
+    --on-accent: #163127;
+    --good: #a6ecbf;
+    --bad: #ffc0b5;
+    --led-off: #6f8a7e;
   }
 }
 
@@ -50,7 +129,7 @@ body {
   margin: 0;
   background: var(--page);
   color: var(--ink);
-  font: 1rem/1.5 var(--sans);
+  font: 0.9375rem/1.55 var(--font);
 }
 
 h1,
@@ -66,9 +145,9 @@ p {
 }
 
 .page {
-  max-width: 1060px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 20px 20px 56px;
+  padding: 24px 20px 56px;
 }
 
 .hint {
@@ -76,21 +155,28 @@ p {
   font-size: 0.9rem;
 }
 
-/* ---- top bar ---- */
+/* ---- header: a band across the top, set apart from the body ---- */
 
 .topbar {
+  border-bottom: 2px solid var(--edge);
+  background: var(--panel);
+}
+
+.topbar-inner {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 24px;
-  margin-bottom: 20px;
+  gap: 0 24px;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
 .brand {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  gap: 14px;
 }
 
 .brand h1 {
@@ -98,9 +184,11 @@ p {
   letter-spacing: -0.01em;
 }
 
-.brand-face {
-  color: var(--accent);
-  font: 600 1.05rem var(--mono);
+/* The logo runs the full height of the header, from its top edge to its line. */
+.brand-logo {
+  display: block;
+  width: 64px; /* 4 screen pixels for each pixel of the drawing */
+  height: 64px;
 }
 
 .brand-sub {
@@ -112,6 +200,7 @@ p {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  padding: 10px 0;
 }
 
 .status {
@@ -120,8 +209,7 @@ p {
   gap: 8px;
   padding: 6px 14px 6px 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--panel);
+  background: var(--field);
   font-weight: 600;
 }
 
@@ -134,17 +222,17 @@ p {
 }
 
 .status[data-state="connected"] .status-dot {
-  background: #2fa85a;
+  background: var(--dot-on);
 }
 
 .status[data-state="searching"] .status-dot {
-  background: #d9483b;
+  background: var(--dot-off);
   animation: pulse 1.4s ease-in-out infinite;
 }
 
 .status-port {
   color: var(--muted);
-  font: 400 0.85rem var(--mono);
+  font: 400 0.85rem var(--font);
 }
 
 .status-port:empty {
@@ -168,7 +256,6 @@ p {
 .notice {
   margin-bottom: 16px;
   padding: 10px 14px;
-  border-radius: 10px;
 }
 
 .notice.fake {
@@ -178,7 +265,7 @@ p {
 
 .notice.trouble {
   background: var(--bad-wash);
-  color: var(--bad);
+  color: var(--on-bad-wash);
 }
 
 /* Letting go of the port on purpose is not trouble. */
@@ -187,48 +274,304 @@ p {
   color: var(--ink);
 }
 
-/* ---- panels ---- */
+/* ---- the stage: console in the middle, a module for each command around it ---- */
 
-main {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: 20px;
+.stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
 }
 
-@media (min-width: 900px) {
-  main {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+.console,
+.command {
+  width: min(100%, 460px);
+}
+
+/* On a narrow screen the modules simply follow the console, one under another. */
+.side {
+  display: contents;
+}
+
+@media (min-width: 1120px) {
+  .stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 440px minmax(0, 1fr);
+    align-items: center;
+    gap: 0 60px;
+    margin-top: 28px;
+  }
+
+  .console,
+  .command {
+    width: auto;
+  }
+
+  .console {
+    grid-area: 1 / 2;
+  }
+
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .side-left {
+    grid-area: 1 / 1;
+  }
+
+  .side-right {
+    grid-area: 1 / 3;
   }
 }
 
-.panel {
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--panel);
+.stage-note {
+  margin-top: 28px;
+  text-align: center;
 }
 
-.panel h2 {
-  font-size: 1.1rem;
+.stage-note:empty {
+  display: none;
 }
 
-/* ---- the screen preview ---- */
+/* ---- cables ---- */
+
+.wires {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.wire path {
+  fill: none;
+  stroke: var(--wire);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.wire circle {
+  fill: var(--wire);
+}
+
+/* The cable of the module being used. */
+.wire.live path {
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+
+.wire.live circle {
+  fill: var(--ink);
+}
+
+.wire.busy path {
+  stroke-dasharray: 7 7;
+  animation: flow 0.5s linear infinite;
+}
+
+@keyframes flow {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wire.busy path {
+    animation: none;
+  }
+}
+
+/* ---- the console ---- */
+
+.console {
+  padding: 18px 24px 30px;
+  background: var(--shell);
+  color: var(--ink);
+  box-shadow:
+    inset 0 -7px 0 var(--shell-edge),
+    0 16px 34px rgb(0 0 0 / 0.22);
+}
+
+.console-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.console-top h2 {
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.console-top .hint {
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+/* The console's light repeats the connection status at the top of the page. */
+.console-led {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--led-off);
+}
+
+.console[data-board="connected"] .console-led {
+  background: #2fa85a;
+  box-shadow: 0 0 6px #2fa85a;
+}
+
+.console[data-board="searching"] .console-led {
+  background: #d9483b;
+  animation: pulse 1.4s ease-in-out infinite;
+}
 
 .lcd {
-  margin: 14px 0 8px;
+  margin: 12px 0 10px;
   padding: 14px;
-  border-radius: 18px;
-  background: #16191c;
-  box-shadow: inset 0 0 0 1px #2c3136;
+  background: var(--bezel);
+  box-shadow: inset 0 0 0 1px var(--bezel-edge);
 }
 
 .lcd canvas {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 5px;
   background: #000;
+}
+
+.readout {
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* The row of keys under the screen. */
+.pad {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.pad-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 64px;
+  min-height: 100px; /* the tallest key plus its label, so the labels line up */
+  justify-content: flex-end;
+}
+
+.pad-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.rocker {
+  display: flex;
+  background: var(--accent);
+  box-shadow: 0 3px 0 rgb(0 0 0 / 0.22);
+}
+
+.rocker button {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--on-accent);
+  cursor: pointer;
+}
+
+.rocker button + button {
+  box-shadow: inset 1px 0 0 rgb(128 128 128 / 0.35);
+}
+
+.rocker button:hover {
+  background: rgb(128 128 128 / 0.25);
+}
+
+.rocker button:focus-visible {
+  outline-offset: -4px;
+  outline-color: var(--on-accent);
+}
+
+.rocker svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.console input[type="color"] {
+  width: 46px;
+  height: 46px;
+  padding: 3px;
+}
+
+.console input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.console input[type="color"]::-webkit-color-swatch {
+  border: 0;
+}
+
+.console input[type="color"]::-moz-color-swatch {
+  border: 0;
+}
+
+.send-key {
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 1rem var(--font);
+  box-shadow: 0 4px 0 rgb(0 0 0 / 0.22);
+  cursor: pointer;
+}
+
+.send-key:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.send-key:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.22);
+}
+
+.send-key:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.console .result {
+  margin-top: 8px;
+}
+
+.grille {
+  width: 84px;
+  height: 20px;
+  margin: 10px auto 0;
+  background: radial-gradient(circle, var(--edge) 1.6px, transparent 2px) 0 0 / 7px 7px;
+  opacity: 0.7;
 }
 
 /* ---- form controls ---- */
@@ -245,11 +588,10 @@ input[type="text"],
 input[type="number"] {
   width: 100%;
   padding: 9px 11px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 1px solid var(--edge);
   background: var(--field);
   color: var(--ink);
-  font: 0.95rem/1.4 var(--mono);
+  font: 0.95rem/1.4 var(--font);
 }
 
 textarea {
@@ -258,11 +600,7 @@ textarea {
 }
 
 input[type="color"] {
-  width: 48px;
-  height: 34px;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid var(--edge);
   background: var(--field);
   cursor: pointer;
 }
@@ -275,59 +613,26 @@ input[type="color"] {
   margin-top: 14px;
 }
 
-.row label {
-  margin: 0;
-}
-
 .row textarea,
 .row input[type="text"],
 .row input[type="number"] {
-  flex: 1 1 180px;
+  flex: 1 1 130px;
   width: auto;
   min-width: 0;
 }
 
-.row .hint,
-.row .result {
-  flex: 1 1 200px;
-}
-
-.presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
-}
-
-.chip {
-  padding: 4px 11px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--ink);
-  font: 0.9rem var(--mono);
-  cursor: pointer;
-}
-
 .button {
   padding: 8px 16px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 1px solid var(--edge);
   background: transparent;
   color: var(--ink);
-  font: 600 0.95rem var(--sans);
+  font: 600 0.95rem var(--font);
   cursor: pointer;
 }
 
-.chip:hover,
 .button:hover:not(:disabled) {
   border-color: var(--accent);
-}
-
-.button.primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--hover);
 }
 
 .button:disabled {
@@ -355,19 +660,12 @@ input[type="color"] {
   color: var(--bad);
 }
 
-/* ---- commands ---- */
+/* ---- command modules ---- */
 
 .command {
-  padding: 16px 0;
-  border-top: 1px solid var(--line);
-}
-
-.command:first-child {
-  margin-top: 14px;
-}
-
-.command:last-child {
-  padding-bottom: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel);
 }
 
 .command-heading {
@@ -378,13 +676,13 @@ input[type="color"] {
   gap: 4px 12px;
 }
 
-.command h3 {
+.command h2 {
   font-size: 1rem;
 }
 
 .command-key {
   color: var(--muted);
-  font: 0.8rem var(--mono);
+  font: 0.8rem var(--font);
 }
 
 .command .result {
