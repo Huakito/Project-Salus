@@ -19,9 +19,9 @@ code:
     #include <freertos/stream_buffer.h>
 
     // ======== EDIT THESE ========
-    const char* WIFI_SSID   = "Hype-Guest";       // 2.4 GHz networks only
-    const char* WIFI_PASS   = "";                 // open network: no password
-    const char* LAPTOP_IP   = "192.168.201.229";    // the laptop running server.py: `ipconfig getifaddr en0` on a Mac, `ip -4 -br addr` on Linux (address only, no port)
+    const char* WIFI_SSID   = "James";       // 2.4 GHz networks only
+    const char* WIFI_PASS   = "abcdefgh";                 // open network: no password
+    const char* LAPTOP_IP   = "172.20.10.9";    // the laptop running server.py: `ipconfig getifaddr en0` on a Mac, `ip -4 -br addr` on Linux (address only, no port)
     const uint16_t LAPTOP_PORT = 9000;              // AUDIO_PORT in server.py
 
     // Level meter thresholds, in the units `atech monitor --key mic_level` prints.

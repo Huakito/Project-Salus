@@ -4,7 +4,9 @@ A small companion robot meant to help people living with depression. It has a
 face on a screen, a speaker, a microphone and buttons. It checks in with its
 person through questions, quizzes and games, and a web app on the same computer
 shows how they are doing, with the option to share a summary with their GP.
-Everything runs locally: nothing is sent to the cloud.
+Audio, speech recognition (Whisper) and the voice (Piper) all run locally. In
+the voice-chat prototype the transcribed chat text is sent to Gemini to write
+the replies; nothing else leaves the computer.
 
 This repository holds both halves of the project: the robot's firmware and the
 web app.
@@ -49,10 +51,30 @@ Not built yet:
 
 - Live button presses on the page (the server already collects them at `/api/events`).
 - Storage, the mood and questionnaire pages, and the summary for a GP.
-- Speech in and out, and the local language model.
+- Speech in and out runs as a prototype (see Voice chat); crisis screening and a fully local language model do not exist yet.
 
 The face, melody, volume and stop commands have been run from the page against
 the real robot over USB, and each was acknowledged by the board.
+
+## Voice chat (prototype)
+
+The robot streams its microphone to `firmware/server.py`, which transcribes it
+with Whisper, asks Gemini for a short reply and speaks it with Piper. Only the
+transcribed text goes to Gemini; the audio stays on this computer.
+
+```bash
+pip install -r firmware/requirements.txt
+cp firmware/.env.example firmware/.env      # then put your GEMINI_API_KEY in it
+python firmware/chat.py --download-voice    # Piper voice into firmware/models/
+python firmware/chat.py "hello" --wav /tmp/reply.wav   # smoke test (calls Gemini)
+python firmware/server.py                   # run the audio server
+```
+
+The audio server needs Python 3.11 or newer (the web app below still works on
+3.10).
+
+Crisis screening is not built yet: it must run on the transcript before Gemini
+is called.
 
 ## Run the web app
 
