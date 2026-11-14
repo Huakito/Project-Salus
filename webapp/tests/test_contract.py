@@ -18,7 +18,7 @@ def write(tmp_path, content):
 
 def test_the_real_commands_json_is_valid():
     contract = load_contract()
-    assert (contract.screen.width, contract.screen.height) == (320, 240)
+    assert (contract.screen.width, contract.screen.height) == (160, 80)  # the robot's st7735 screen
     assert contract.command("face").editor == "face"
     assert contract.command("no_such_command") is None
     # Every example in the file is a value its own command accepts.

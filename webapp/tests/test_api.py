@@ -34,6 +34,7 @@ def test_status(client):
         "port": "fake board",
         "detail": "",
         "waiting": 0,
+        "mic_muted": False,
     }
 
 

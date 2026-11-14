@@ -50,6 +50,8 @@
   --bezel: #0e1a15;
   --bezel-edge: #1c2f27;
   --wire: #a9cdbd; /* the cables between the console and the modules */
+  --alarm: #c0271d; /* red: something the person should notice */
+  --on-alarm: #fff6f2;
   --font: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 }
 
@@ -201,6 +203,16 @@ p {
   align-items: center;
   gap: 10px;
   padding: 10px 0;
+}
+
+/* Red, and only there while the robot's microphone is muted. */
+.mic-note {
+  padding: 6px 12px;
+  border: 1px solid var(--on-alarm); /* keeps its edge clear against the green */
+  background: var(--alarm);
+  color: var(--on-alarm);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .status {

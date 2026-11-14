@@ -17,6 +17,7 @@
           <span class="brand-sub">Robot control</span>
         </div>
         <div class="link">
+          <p class="mic-note" id="mic-note" role="status" hidden></p>
           <p class="status" id="status" role="status" data-state="offline">
             <span class="status-dot" aria-hidden="true"></span>
             <span id="status-text">Starting…</span>
@@ -43,7 +44,7 @@
           </div>
 
           <div class="lcd">
-            <canvas id="preview" width="960" height="720" role="img" aria-label="Preview of the robot's screen"></canvas>
+            <canvas id="preview" width="960" height="480" role="img" aria-label="Preview of the robot's screen"></canvas>
           </div>
           <p class="hint readout" id="face-size"></p>
           <p class="hint readout" id="face-colour-value"></p>

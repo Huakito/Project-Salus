@@ -50,10 +50,9 @@ Not built yet:
 - Live button presses on the page (the server already collects them at `/api/events`).
 - Storage, the mood and questionnaire pages, and the summary for a GP.
 - Speech in and out, and the local language model.
-- The firmware itself: `firmware/` is empty in this repository so far.
 
-The app has so far only run against the fake board and a simulated serial port.
-It has not yet been tried with a real board.
+The face, melody, volume and stop commands have been run from the page against
+the real robot over USB, and each was acknowledged by the board.
 
 ## Run the web app
 
@@ -112,7 +111,7 @@ The API, for scripts and for the next features:
 
 | Endpoint               | What it does                                                      |
 |------------------------|-------------------------------------------------------------------|
-| `GET /api/status`      | `connected`, `searching` or `released`, plus the port and a reason |
+| `GET /api/status`      | `connected`, `searching` or `released`, the port, a reason, and `mic_muted` |
 | `POST /api/connect`    | Start looking for the board again                                 |
 | `POST /api/disconnect` | Let go of the USB port                                            |
 | `GET /api/commands`    | The contents of `commands.json`                                   |
@@ -154,17 +153,19 @@ enforces both:
 - **At most 4096 characters per command** once encoded.
 
 The file is a first draft. Its names assume these instances in
-`firmware/project.yaml`: `face` (Big Screen), `spk` (speaker), `yes_btn` and
-`no_btn` (buttons). If the firmware names them differently, change the file to
-match.
+`firmware/project.yaml`: `screen` (the 160x80 colour screen, which the `face`
+action draws on), `spk` (speaker), `btn` (button), `knob` and `mic`. If the
+firmware names them differently, change the file to match.
 
 ## For the firmware
 
 - `atech describe firmware/` prints the real action and event names for the
   modules. Actions written by hand in `code: loop:` do not appear there, so
   list those in `commands.json` yourself.
-- The Big Screen (`st7789_tft`) is two ports wide: `ports: [1, 2]`, not
-  `port: 1`.
+- The robot's screen is the small one (`st7735_tft`, 160x80), so `screen` in
+  `commands.json` is 160 by 80: a face can be at most 26 characters wide and
+  10 lines tall. If the firmware moves to another screen, change `screen` to
+  match and the page's preview and limits follow.
 - The one hand-written action so far is **`face`**. Its value is JSON:
   `{"text": "(^_^)", "colour": 2016}`.
   - `text` is the ASCII art, with `\n` between lines.
@@ -180,6 +181,10 @@ match.
   - Answer a missing text with `atechFail("text missing")`.
 
   The page's preview assumes exactly these rules.
+
+- The firmware also sends one event of its own, **`mic_muted`** (1 or 0), on
+  every change and every 2 seconds. The robot's screen does not show that the
+  microphone is muted; the page shows a red "Mic muted" notice instead.
 
 ### Flashing while the app is running
 

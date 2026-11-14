@@ -294,7 +294,7 @@ code:
     const uint16_t C_GREEN = 0x07E0, C_YELLOW = 0xFFE0, C_ORANGE = 0xFD20,
                    C_CYAN = 0x07FF, C_WHITE = 0xFFFF, C_GREY = 0x8410;
 
-    enum Scene : uint8_t { SCENE_NO_WIFI, SCENE_NO_LAPTOP, SCENE_LISTEN, SCENE_MUTED,
+    enum Scene : uint8_t { SCENE_NO_WIFI, SCENE_NO_LAPTOP, SCENE_LISTEN,
                            SCENE_THINK, SCENE_SPEAK, SCENE_VOLUME };
 
     String restFace = "(^_^)";     // the listening face; the web app's `face` action changes it
@@ -380,7 +380,6 @@ code:
           break;
         case SCENE_NO_LAPTOP: drawFace(String("(o_o)\nno laptop\n") + LAPTOP_IP, C_ORANGE); break;
         case SCENE_LISTEN:    drawFace(restFace, restColour); break;
-        case SCENE_MUTED:     drawFace("(-_-)\nmic off", C_GREY); break;
         case SCENE_THINK:     drawFace(String("(o.o)\n") + DOTS[frame % 3], C_CYAN); break;
         case SCENE_SPEAK:     drawFace(frame ? "(^o^)" : "(^-^)", restColour); break;
         case SCENE_VOLUME:    drawVolume(); break;
@@ -486,6 +485,18 @@ code:
     }
     knobWasDown = knobDown;
 
+    // ---- tell the web app whether the microphone is muted ----
+    // The screen keeps its face while muted; the web app shows the notice
+    // instead (the knob's ring still turns red). Sent on every change, and
+    // again every 2 s so an app that has only just connected finds out too.
+    static int toldMuted = -1;
+    static uint32_t toldMutedAt = 0;
+    if (toldMuted != (int)micMuted || millis() - toldMutedAt >= 2000) {
+      toldMuted = micMuted;
+      toldMutedAt = millis();
+      Serial.printf("{\"type\":\"event\",\"payload\":{\"event_type\":\"state\",\"key\":\"mic_muted\",\"value\":%d,\"source\":\"salus\"}}\n", toldMuted);
+    }
+
     // ---- who may send mic audio: listening, not muted, no beep playing ----
     static uint32_t quietFrom = 0;
     if (spk.isPlaying()) quietFrom = millis() + 250;
@@ -525,7 +536,6 @@ code:
     else if (!linkUp)                 scene = SCENE_NO_LAPTOP;
     else if (convo == CONVO_THINK)    scene = SCENE_THINK;
     else if (convo == CONVO_SPEAK)    scene = SCENE_SPEAK;
-    else if (micMuted)                scene = SCENE_MUTED;
     else                              scene = SCENE_LISTEN;
     int frame = 0;
     if (scene == SCENE_SPEAK) frame = (millis() / 180) % 2;

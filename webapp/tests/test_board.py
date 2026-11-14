@@ -179,6 +179,7 @@ def test_status_describes_the_connection(rig):
         "port": "fake board",
         "detail": "",
         "waiting": 0,
+        "mic_muted": False,
     }
 
 
@@ -271,3 +272,24 @@ def test_events_from_the_board_are_collected(rig):
             break
         threading.Event().wait(0.01)
     assert collected() == [("button", "yes_btn", 1), ("button", "yes_btn", 0), ("sensor", "mic_level", 412)]
+
+
+def test_status_follows_the_microphone_mute_the_board_reports(rig):
+    def muted_becomes(wanted):
+        for _ in range(200):
+            if rig.manager.status()["mic_muted"] is wanted:
+                return True
+            threading.Event().wait(0.01)
+        return False
+
+    assert rig.manager.status()["mic_muted"] is False  # nothing heard from the board yet
+    rig.board.emit("mic_muted", 1, "state")
+    assert muted_becomes(True)
+    rig.board.emit("mic_muted", 0, "state")
+    assert muted_becomes(False)
+
+    # Once the board is gone, its last word is not repeated as if it were still true.
+    rig.board.emit("mic_muted", 1, "state")
+    assert muted_becomes(True)
+    rig.manager.disconnect()
+    assert rig.manager.status()["mic_muted"] is False

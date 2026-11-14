@@ -1,5 +1,5 @@
 {
-  "screen": { "width": 320, "height": 240 },
+  "screen": { "width": 160, "height": 80 },
 
   "commands": [
     {
@@ -36,7 +36,10 @@
   ],
 
   "events": [
-    { "key": "yes_btn", "type": "button", "description": "1 when pressed, 0 when released." },
-    { "key": "no_btn", "type": "button", "description": "1 when pressed, 0 when released." }
+    { "key": "btn", "type": "button", "description": "The button: 1 when pressed, 0 when released." },
+    { "key": "knob", "type": "sensor", "description": "The knob's position, sent each time it clicks round." },
+    { "key": "knob_btn", "type": "button", "description": "1 each time the knob is pushed." },
+    { "key": "mic_level", "type": "sensor", "description": "How loud the microphone hears the room, 0 to 32767, every 250 ms." },
+    { "key": "mic_muted", "type": "state", "description": "1 while the microphone is muted (knob pushed), 0 while it is on. Sent on change and every 2 s. The page shows a red notice." }
   ]
 }

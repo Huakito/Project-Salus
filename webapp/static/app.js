@@ -4,7 +4,7 @@
 import { checkFace, drawFace, rgb565, rgb565ToCss } from "./face.js";
 
 const POLL_MS = 1500; // how often to ask whether the board is still connected
-const ZOOM = 3; // preview pixels per screen pixel, so small text stays sharp
+const PREVIEW_WIDTH = 960; // about how many pixels wide to draw the preview, so small text stays sharp
 const PORT_GAP = 30; // pixels between the sockets where cables leave the console's side
 const SVG = "http://www.w3.org/2000/svg";
 
@@ -33,7 +33,7 @@ const LINK_BUTTON_TEXT = {
 };
 
 let status = null; // the last answer from /api/status; null while the app cannot be reached
-let lcd = { width: 320, height: 240 }; // the robot's screen; replaced by what commands.json says
+let lcd = { width: 160, height: 80 }; // the robot's screen; replaced by what commands.json says
 
 const el = (id) => document.getElementById(id);
 
@@ -80,6 +80,12 @@ function showStatus() {
   setText(el("status-port"), state === "connected" ? status.port : "");
 
   el("fake-notice").hidden = status?.mode !== "fake";
+
+  // The robot says when its microphone is muted (a push of its knob); the
+  // robot's own screen does not show it, so this notice is the only sign.
+  const muted = state === "connected" && status.mic_muted === true;
+  setText(el("mic-note"), muted ? "Mic muted" : "");
+  el("mic-note").hidden = !muted;
 
   let trouble = "";
   if (!status) {
@@ -418,7 +424,9 @@ refreshFace();
 watchStatus();
 loadCommands().then(() => {
   const preview = el("preview");
-  preview.width = lcd.width * ZOOM;
-  preview.height = lcd.height * ZOOM;
+  // A whole number of preview pixels for each screen pixel, so every font pixel is a clean square.
+  const zoom = Math.max(1, Math.round(PREVIEW_WIDTH / lcd.width));
+  preview.width = lcd.width * zoom;
+  preview.height = lcd.height * zoom;
   refreshFace();
 });
