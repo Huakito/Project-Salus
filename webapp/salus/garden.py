@@ -18,7 +18,7 @@ CATALOG = {
 }
 
 STAGE_NAMES = ("freshly planted", "sprout", "young plant", "growing", "established", "flowering")
-PLOT_SLOT_COUNT = 16
+PLOT_SLOT_COUNT = 24
 
 
 class GardenStore:
@@ -47,6 +47,7 @@ class GardenStore:
             if not db.execute("SELECT 1 FROM garden_plants").fetchone():
                 today = self._day(db)
                 db.execute("INSERT INTO garden_plants(species,nickname,growth,planted_day,plot_slot) VALUES ('daisy','Dot',1,?,0)", (today,))
+            self._upgrade_plot_grid(db)
             self._repair_plot_slots(db)
 
     def _connect(self):
@@ -55,6 +56,17 @@ class GardenStore:
     def _day(self, db) -> str:
         row = db.execute("SELECT value FROM garden_meta WHERE key='day_offset'").fetchone()
         return (date.today() + timedelta(days=int(row[0]) if row else 0)).isoformat()
+
+    def _upgrade_plot_grid(self, db) -> None:
+        """Expand four slots per bed to six without moving plants between beds."""
+        version = db.execute("SELECT value FROM garden_meta WHERE key='plot_grid_version'").fetchone()
+        if version:
+            return
+        for plant_id, old_slot in db.execute("SELECT id,plot_slot FROM garden_plants ORDER BY id").fetchall():
+            if old_slot is not None and 0 <= old_slot < 16:
+                new_slot = (old_slot // 4) * 6 + (old_slot % 4)
+                db.execute("UPDATE garden_plants SET plot_slot=? WHERE id=?", (new_slot, plant_id))
+        db.execute("INSERT INTO garden_meta(key,value) VALUES ('plot_grid_version','2')")
 
     def _repair_plot_slots(self, db) -> None:
         """Give old saves stable, non-overlapping bed positions."""

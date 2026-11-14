@@ -6,10 +6,10 @@ let careStarted = 0;
 let careCleanup = () => {};
 const EARLY_STAGE_SPRITES = [0, 8, 13];
 const PLANT_SPOTS = [
-  [25,18], [39,18], [25,32], [39,32],
-  [69,18], [84,18], [69,32], [84,32],
-  [25,68], [39,68], [25,82], [39,82],
-  [69,68], [84,68], [69,82], [84,82],
+  [22,15.5], [32,15.5], [42,15.5], [22,28.5], [32,28.5], [42,28.5],
+  [67,15.5], [77,15.5], [87,15.5], [67,28.5], [77,28.5], [87,28.5],
+  [22,71.5], [32,71.5], [42,71.5], [22,84.5], [32,84.5], [42,84.5],
+  [67,71.5], [77,71.5], [87,71.5], [67,84.5], [77,84.5], [87,84.5],
 ];
 const player = {x:50, y:82, direction:0, frame:0};
 const robot = {x:46, y:86};
@@ -134,7 +134,7 @@ function render() {
 }
 
 function slotName(index) {
-  return `Bed ${Math.floor(index / 4) + 1} · position ${(index % 4) + 1}`;
+  return `Bed ${Math.floor(index / 6) + 1} · position ${(index % 6) + 1}`;
 }
 
 function renderPlacementGrid() {

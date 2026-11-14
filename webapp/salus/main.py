@@ -33,7 +33,7 @@ from .contract import DEFAULT_PATH, Contract, ContractError, load_contract
 from .face import FaceError, check_face, rgb565
 from .feedback import FeedbackService
 from .memory import HistoryStore
-from .garden import GardenStore
+from .garden import GardenStore, PLOT_SLOT_COUNT
 
 log = logging.getLogger("salus")
 
@@ -105,12 +105,12 @@ class AddPlantRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     species: str = Field(min_length=1, max_length=40)
     nickname: str = Field(default="", max_length=30)
-    plot_slot: int | None = Field(default=None, ge=0, lt=16)
+    plot_slot: int | None = Field(default=None, ge=0, lt=PLOT_SLOT_COUNT)
 
 
 class MovePlantRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    plot_slot: int = Field(ge=0, lt=16)
+    plot_slot: int = Field(ge=0, lt=PLOT_SLOT_COUNT)
 
 
 class GardenAdminRequest(BaseModel):
