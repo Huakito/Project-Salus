@@ -2254,3 +2254,78 @@ body:has(.play-view:not([hidden])) .topbar-inner,
     overflow: visible;
   }
 }
+
+/* Vertically centre the garden instead of pinning its lower edge to the viewport. */
+.garden-view:not([hidden]) {
+  grid-template-rows: 48px minmax(0, 1fr);
+}
+
+.garden-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 48px;
+  height: 48px;
+}
+
+.garden-heading > div:first-child {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  gap: 18px;
+}
+
+.garden-heading .eyebrow {
+  display: none;
+}
+
+.garden-heading h2 {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: clamp(1.35rem, 1.8vw, 1.75rem);
+  white-space: nowrap;
+}
+
+.garden-heading > div:first-child p:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.garden-day {
+  min-width: 132px;
+  padding: 7px 10px;
+}
+
+.garden-layout {
+  align-self: start;
+  height: min(720px, calc(100dvh - 190px));
+  max-height: 100%;
+}
+
+@media (max-width: 920px) {
+  .garden-view:not([hidden]) {
+    grid-template-rows: auto auto;
+  }
+
+  .garden-heading {
+    display: flex;
+    align-items: flex-start;
+    height: auto;
+  }
+
+  .garden-heading > div:first-child {
+    display: block;
+  }
+
+  .garden-heading > div:first-child p:last-child {
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .garden-layout {
+    height: auto;
+    max-height: none;
+  }
+}
