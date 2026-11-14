@@ -109,8 +109,15 @@ class AddPlantRequest(BaseModel):
 
 class GardenAdminRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    action: Literal["advance_day", "grow_all", "make_due"]
+    action: Literal["advance_day", "grow_all", "make_due", "flower_all"]
     days: int = Field(default=1, ge=1, le=30)
+
+
+class GardenCareRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    activity: Literal["water", "mist", "turn", "sun", "check"]
+    duration_seconds: int = Field(default=0, ge=0, le=600)
+    score: float = Field(default=1, ge=0, le=1)
 
 
 class _HideStatusPolls(logging.Filter):
@@ -118,7 +125,7 @@ class _HideStatusPolls(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         args = record.args
-        return not (isinstance(args, tuple) and len(args) == 5 and args[2] == "/api/status" and args[4] == 200)
+        return not (isinstance(args, tuple) and len(args) == 5 and args[2] in ("/api/status", "/api/events") and args[4] == 200)
 
 
 def _log_to_terminal() -> None:
@@ -322,9 +329,9 @@ def create_app(
             return JSONResponse({"detail": str(exc)}, status_code=422)
 
     @app.post("/api/garden/plants/{plant_id}/care")
-    def care_for_garden_plant(plant_id: int) -> dict:
+    def care_for_garden_plant(plant_id: int, request: GardenCareRequest) -> dict:
         try:
-            plant, changed = garden.care(plant_id)
+            plant, changed = garden.care(plant_id, request.activity, request.duration_seconds, request.score)
             return {"ok": True, "changed": changed, "plant": plant}
         except ValueError as exc:
             return JSONResponse({"detail": str(exc)}, status_code=404)

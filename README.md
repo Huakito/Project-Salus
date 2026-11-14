@@ -50,6 +50,9 @@ Built and tested:
   from a larger hand-movement library, calm timed transitions, spoken cues,
   hands-free voice check-ins, robot-face reactions and local result logging.
   Tracking runs in the browser; camera frames are not saved.
+- A persistent **Victorian greenhouse** with six plant growth stages, forgiving
+  daily care, interactive watering/misting/light/soil/turning activities, a
+  care journal, admin time controls, and robot screen, melody and button input.
 - Optional, structured OpenAI feedback after a saved run, with an automatic
   local fallback if no key is configured or the request fails.
 

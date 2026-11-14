@@ -122,7 +122,11 @@
         </header>
 
         <section class="garden-layout">
-          <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
+          <div class="greenhouse">
+            <div class="greenhouse-sky" aria-hidden="true"><span class="sun"></span><span class="cloud one"></span><span class="cloud two"></span></div>
+            <div class="greenhouse-frame" aria-hidden="true"></div>
+            <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
+          </div>
           <aside class="plant-panel" id="plant-panel">
             <p class="eyebrow">Plant guide</p>
             <div id="plant-empty">Choose a plant to see what it needs.</div>
@@ -137,6 +141,18 @@
               <p class="hardware-hint">Robot: Yes cares for this plant · No chooses the next one</p>
             </div>
           </aside>
+        </section>
+
+        <section class="care-game" id="care-game" hidden aria-labelledby="care-game-title">
+          <div class="care-game-card">
+            <p class="eyebrow" id="care-game-type">Daily care</p>
+            <h3 id="care-game-title">Care activity</h3>
+            <p id="care-game-copy"></p>
+            <div class="care-stage" id="care-stage"></div>
+            <div class="care-progress" aria-hidden="true"><span id="care-progress"></span></div>
+            <p id="care-game-status" role="status"></p>
+            <button class="button quiet" id="care-cancel" type="button">Not now</button>
+          </div>
         </section>
 
         <section class="seed-shelf">
@@ -155,7 +171,12 @@
             <button class="button" type="button" data-admin="advance_day">Advance one day</button>
             <button class="button" type="button" data-admin="grow_all">Grow everything</button>
             <button class="button" type="button" data-admin="make_due">Make all care due</button>
+            <button class="button" type="button" data-admin="flower_all">Flower everything</button>
           </div>
+        </details>
+        <details class="garden-journal" open>
+          <summary>Garden journal</summary>
+          <div id="garden-history"></div>
         </details>
         <p class="asset-credit">Plant sprites: SpiderDave, CC0 via OpenGameArt.</p>
       </main>

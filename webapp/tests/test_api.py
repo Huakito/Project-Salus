@@ -214,7 +214,9 @@ def test_garden_persists_and_never_kills_a_missed_plant(contract_file, data_dir)
         initial = garden_client.get("/api/garden").json()
         assert initial["plants"][0]["needs_care"] is True
         added = garden_client.post("/api/garden/plants", json={"species": "sunflower", "nickname": "Sunny"}).json()["plant"]
-        cared = garden_client.post(f"/api/garden/plants/{added['id']}/care", json={}).json()
+        cared = garden_client.post(f"/api/garden/plants/{added['id']}/care", json={
+            "activity": "water", "duration_seconds": 12, "score": 1
+        }).json()
         assert cared["changed"] is True
         assert cared["plant"]["growth"] == 1
         garden_client.post("/api/garden/admin", json={"action": "advance_day", "days": 10})
@@ -223,6 +225,8 @@ def test_garden_persists_and_never_kills_a_missed_plant(contract_file, data_dir)
         assert sunny["needs_care"] is True
         assert sunny["growth"] == 1
         assert "dead" not in sunny
+        assert later["history"][0]["activity"] == "water"
+        assert later["history"][0]["duration_seconds"] == 12
 
 
 def test_openai_feedback_receives_only_derived_session_data():
