@@ -51,6 +51,7 @@
   --bezel-edge: #1c2f27;
   --wire: #a9cdbd; /* the cables between the console and the modules */
   --alarm: #c0271d; /* red: something the person should notice */
+  --alarm-edge: #7a1510;
   --on-alarm: #fff6f2;
   --font: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 }
@@ -208,7 +209,7 @@ p {
 /* Red, and only there while the robot's microphone is muted. */
 .mic-note {
   padding: 6px 12px;
-  border: 1px solid var(--on-alarm); /* keeps its edge clear against the green */
+  border: 2px solid var(--alarm-edge);
   background: var(--alarm);
   color: var(--on-alarm);
   font-size: 0.85rem;
@@ -673,6 +674,95 @@ input[type="color"] {
 }
 
 /* ---- command modules ---- */
+
+/* The modules built from commands.json sit in the side column like the others. */
+.command-list {
+  display: contents;
+}
+
+/* A small copy of the robot's screen inside a module. */
+.lcd.small {
+  margin: 12px 0;
+  padding: 8px;
+}
+
+input[type="range"] {
+  display: block;
+  width: 100%;
+  height: 30px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input[type="range"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 10px;
+  border: 1px solid var(--edge);
+  background: transparent; /* the module's own green shows through */
+}
+
+input[type="range"]::-moz-range-track {
+  height: 8px;
+  border: 1px solid var(--edge);
+  background: transparent; /* the module's own green shows through */
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  width: 16px;
+  height: 28px;
+  margin-top: -10px; /* centres the thumb on the track */
+  border: 0;
+  background: var(--ink);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 28px;
+  border: 0;
+  border-radius: 0;
+  background: var(--ink);
+}
+
+/* The page's copy of the robot's nine lights, beside the colour picker. */
+.led-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.led-pick label {
+  margin: 0 0 0 6px;
+}
+
+.led-pick input[type="color"] {
+  width: 48px;
+  height: 34px;
+  padding: 2px;
+}
+
+.led-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 18px);
+  gap: 4px;
+  padding: 8px;
+  background: var(--bezel);
+}
+
+.led-grid span {
+  width: 18px;
+  height: 18px;
+  background: #000;
+}
 
 .command {
   padding: 18px;

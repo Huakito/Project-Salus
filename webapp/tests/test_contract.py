@@ -105,3 +105,10 @@ def test_a_json_command_needs_an_object_or_a_list():
     assert command("json").check([1, 2]) == [1, 2]
     with pytest.raises(ValueError, match="JSON object or list"):
         command("json").check("{}")
+
+
+def test_a_command_can_be_kept_off_the_page(tmp_path):
+    content = {**MINIMAL, "commands": [{"key": "beep", "label": "Beep"}, {"key": "hush", "label": "Hush", "show": False}]}
+    contract = load_contract(write(tmp_path, content))
+    assert [command.show for command in contract.commands] == [True, False]
+    assert contract.command("hush") is not None  # still a command the app may send

@@ -180,6 +180,7 @@ def test_status_describes_the_connection(rig):
         "detail": "",
         "waiting": 0,
         "mic_muted": False,
+        "volume": None,
     }
 
 
@@ -293,3 +294,20 @@ def test_status_follows_the_microphone_mute_the_board_reports(rig):
     assert muted_becomes(True)
     rig.manager.disconnect()
     assert rig.manager.status()["mic_muted"] is False
+
+
+def test_status_follows_the_volume_the_board_reports(rig):
+    def volume_becomes(wanted):
+        for _ in range(200):
+            if rig.manager.status()["volume"] == wanted:
+                return True
+            threading.Event().wait(0.01)
+        return False
+
+    assert rig.manager.status()["volume"] is None  # not known until the board says
+    rig.board.emit("volume", 65, "state")
+    assert volume_becomes(65)
+    rig.board.emit("volume", 250, "state")  # nonsense is kept inside 0 to 100
+    assert volume_becomes(100)
+    rig.manager.disconnect()
+    assert rig.manager.status()["volume"] is None

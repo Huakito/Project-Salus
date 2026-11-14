@@ -8,7 +8,7 @@ modules:
   - {id: rotary_encoder, instance: knob,   ports: [1, 2]}    # turn = volume, push = mute the mic
   - {id: microphone,     instance: mic,    ports: [3, 4]}
   - {id: speaker,        instance: spk,    ports: [5, 6]}
-  - {id: neopixel,       instance: led,    port: 7}          # 3x3 grid: voice level meter
+  - {id: neopixel,       instance: led,    port: 7}          # 3x3 grid: voice level meter, or a colour from the web app
   - {id: st7735_tft,     instance: screen, ports: [10, 11]}  # 160x80 colour screen
   - {id: button,         instance: btn,    port: 13}         # turns the level meter on and off
 
@@ -400,6 +400,45 @@ code:
       led.show();
     }
 
+    // ---- the web app can take the grid over: one colour, or a short animation ----
+    // (commands.json: led_colour, led_animation, led_meter). The button on the
+    // robot, or led_meter, gives it back to the level meter.
+    enum LedMode : uint8_t { LED_METER, LED_COLOUR, LED_ANIMATION };
+    LedMode ledMode = LED_METER;
+    LedMode ledAfterAnimation = LED_METER;   // what the grid goes back to when the animation ends
+    uint8_t ledR = 0, ledG = 160, ledB = 255;   // the colour the web app last chose
+    uint32_t ledAnimationAt = 0;
+    bool ledRedraw = false;                  // draw the grid afresh on the next pass
+
+    void fillGrid(float brightness) {
+      for (int i = 0; i < 9; i++) {
+        led.setPixel(i, (uint8_t)(ledR * brightness), (uint8_t)(ledG * brightness), (uint8_t)(ledB * brightness));
+      }
+      led.show();
+    }
+
+    // Draws the animation as it looks `t` ms after it started. False once it is over.
+    // A dot with a fading tail runs three laps round the edge, then the whole
+    // grid breathes in and out twice.
+    bool animateGrid(uint32_t t) {
+      static const uint8_t EDGE[8] = {0, 1, 2, 5, 8, 7, 6, 3};   // clockwise from the top left
+      static const uint8_t TAIL[3] = {255, 90, 25};
+      if (t < 1920) {   // 3 laps of 8 steps, 80 ms a step
+        int head = (t / 80) % 8;
+        for (int i = 0; i < 9; i++) led.setPixel(i, 0, 0, 0);
+        for (int k = 0; k < 3; k++) {
+          led.setPixel(EDGE[(head - k + 8) % 8], ledR * TAIL[k] / 255, ledG * TAIL[k] / 255, ledB * TAIL[k] / 255);
+        }
+        led.show();
+        return true;
+      }
+      if (t < 3120) {   // two breaths of 600 ms
+        fillGrid(0.5f - 0.5f * cosf((t - 1920) / 600.0f * 2 * PI));
+        return true;
+      }
+      return false;
+    }
+
     // The knob's ring shows the volume as a needle: 12 o'clock is silent, and it
     // moves the way the knob turns as the volume goes up.
     float ringFor(int step) { return step * 11.0f / VOLUME_STEPS; }
@@ -443,10 +482,48 @@ code:
       atechDone();
     }
 
-    // ---- button: level meter on/off ----
-    if (btn.wasPressed()) {
-      meterOn = !meterOn;
+    // ---- the web app's LED actions (commands.json) ----
+    // Reads {"r": .., "g": .., "b": ..} from an action's value; a missing part keeps its old value.
+    auto readLedColour = [](const String& value) {
+      ledR = (uint8_t)constrain(atechNum(value, "r", ledR), 0L, 255L);
+      ledG = (uint8_t)constrain(atechNum(value, "g", ledG), 0L, 255L);
+      ledB = (uint8_t)constrain(atechNum(value, "b", ledB), 0L, 255L);
+    };
+    if (atech_action == "led_colour") {          // hold the whole grid at one colour
+      readLedColour(atech_value);
+      ledMode = LED_COLOUR;
+      ledRedraw = true;
+      btn.off();                                 // the button lights only while the meter is on
+      atechDone();
+    }
+    if (atech_action == "led_animation") {       // play the animation in this colour, then carry on as before
+      readLedColour(atech_value);
+      if (ledMode != LED_ANIMATION) ledAfterAnimation = ledMode;
+      ledMode = LED_ANIMATION;
+      ledAnimationAt = millis();
+      atechDone();
+    }
+    if (atech_action == "led_meter") {           // give the grid back to the level meter
+      ledMode = LED_METER;
+      ledAfterAnimation = LED_METER;
+      meterOn = true;
       meterOnAt = millis();
+      ledRedraw = true;
+      btn.setColor(0, 255, 0);
+      atechDone();
+    }
+
+    // ---- button: level meter on/off (or back to the meter from the web app's colour) ----
+    if (btn.wasPressed()) {
+      if (ledMode != LED_METER) {
+        ledMode = LED_METER;
+        ledAfterAnimation = LED_METER;
+        meterOn = true;
+      } else {
+        meterOn = !meterOn;
+      }
+      meterOnAt = millis();
+      ledRedraw = true;
       if (meterOn) btn.setColor(0, 255, 0); else btn.off();
     }
 
@@ -456,6 +533,7 @@ code:
     if (heardStep != volumeStep) {
       volumeStep = heardStep;
       knob.setRingPosition(ringFor(volumeStep));
+      volumeShownAt = millis();   // show the volume bar on the screen, as a turn of the knob does
     }
     static int32_t lastKnob = knob.getPosition();
     static bool blipDue = false;
@@ -497,34 +575,55 @@ code:
       Serial.printf("{\"type\":\"event\",\"payload\":{\"event_type\":\"state\",\"key\":\"mic_muted\",\"value\":%d,\"source\":\"salus\"}}\n", toldMuted);
     }
 
+    // ---- tell the web app the volume, so its slider follows the knob ----
+    // As a percentage. On every change, and again every 2 s like the mute state.
+    static int toldVolume = -1;
+    static uint32_t toldVolumeAt = 0;
+    if (toldVolume != volumeStep || millis() - toldVolumeAt >= 2000) {
+      toldVolume = volumeStep;
+      toldVolumeAt = millis();
+      Serial.printf("{\"type\":\"event\",\"payload\":{\"event_type\":\"state\",\"key\":\"volume\",\"value\":%d,\"source\":\"salus\"}}\n", toldVolume * 100 / VOLUME_STEPS);
+    }
+
     // ---- who may send mic audio: listening, not muted, no beep playing ----
     static uint32_t quietFrom = 0;
     if (spk.isPlaying()) quietFrom = millis() + 250;
     micOpen = linkUp && !micMuted && convo == CONVO_LISTEN && (int32_t)(millis() - quietFrom) >= 0;
 
-    // ---- level meter, every 30 ms ----
+    // ---- the LED grid, every 30 ms: the animation, the web app's colour, or the level meter ----
     static uint32_t meterAt = 0;
     static float meterLevel = 0;
     static int meterLit = -1;
     if (millis() - meterAt >= 30) {
       meterAt = millis();
-      int lit = 0;
-      if (meterOn && millis() - meterOnAt < 450) {
-        lit = 3 * ((millis() - meterOnAt) / 150 + 1);   // just switched on: sweep up once
-      } else if (meterOn) {
-        bool hearing = !micMuted && convo != CONVO_SPEAK && !spk.isPlaying();
-        int level = hearing ? mic.getSoundLevel() : 0;
-        float target = 0;
-        if (level >= METER_QUIET) {
-          target = 1 + 8 * logf((float)level / METER_QUIET) / logf((float)METER_LOUD / METER_QUIET);
-        }
-        target = constrain(target, 0.0f, 9.0f);
-        meterLevel = (target >= meterLevel) ? target : max(target, meterLevel - 0.6f);   // fast up, slow down
-        lit = (int)meterLevel;
+      if (ledMode == LED_ANIMATION && !animateGrid(millis() - ledAnimationAt)) {
+        ledMode = ledAfterAnimation;
+        ledRedraw = true;
       }
-      if (lit != meterLit) {
-        meterLit = lit;
-        showMeter(lit);
+      if (ledMode == LED_COLOUR && ledRedraw) {
+        ledRedraw = false;
+        fillGrid(1.0f);
+      }
+      if (ledMode == LED_METER) {
+        int lit = 0;
+        if (meterOn && millis() - meterOnAt < 450) {
+          lit = 3 * ((millis() - meterOnAt) / 150 + 1);   // just switched on: sweep up once
+        } else if (meterOn) {
+          bool hearing = !micMuted && convo != CONVO_SPEAK && !spk.isPlaying();
+          int level = hearing ? mic.getSoundLevel() : 0;
+          float target = 0;
+          if (level >= METER_QUIET) {
+            target = 1 + 8 * logf((float)level / METER_QUIET) / logf((float)METER_LOUD / METER_QUIET);
+          }
+          target = constrain(target, 0.0f, 9.0f);
+          meterLevel = (target >= meterLevel) ? target : max(target, meterLevel - 0.6f);   // fast up, slow down
+          lit = (int)meterLevel;
+        }
+        if (lit != meterLit || ledRedraw) {
+          ledRedraw = false;
+          meterLit = lit;
+          showMeter(lit);
+        }
       }
     }
 

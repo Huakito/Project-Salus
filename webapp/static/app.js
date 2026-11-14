@@ -1,7 +1,7 @@
 // The page: shows whether the board is connected, sends it commands, and edits
 // the face on its screen. Everything goes through the server's /api endpoints.
 
-import { checkFace, drawFace, rgb565, rgb565ToCss } from "./face.js";
+import { checkFace, drawFace, drawVolume, rgb565, rgb565ToCss } from "./face.js";
 
 const POLL_MS = 1500; // how often to ask whether the board is still connected
 const PREVIEW_WIDTH = 960; // about how many pixels wide to draw the preview, so small text stays sharp
@@ -86,6 +86,8 @@ function showStatus() {
   const muted = state === "connected" && status.mic_muted === true;
   setText(el("mic-note"), muted ? "Mic muted" : "");
   el("mic-note").hidden = !muted;
+
+  followRobotVolume();
 
   let trouble = "";
   if (!status) {
@@ -258,19 +260,154 @@ async function loadCommands() {
     return;
   }
   lcd = contract.screen;
-  // A command with its own editor (the face) is the console itself, not a module.
-  const cards = contract.commands.filter((command) => !command.editor).map(commandCard);
-  // The first half goes to the left of the console and the rest to the right,
-  // so reading order still follows commands.json.
-  const half = Math.ceil(cards.length / 2);
-  el("side-left").replaceChildren(...cards.slice(0, half));
-  el("side-right").replaceChildren(...cards.slice(half));
+  // Plain commands each get a module built from the file. A command with its
+  // own editor (the face, the volume slider, the lights) has a module of its
+  // own in index.html, shown only if the file still lists that command.
+  const listed = (key) => contract.commands.some((command) => command.key === key);
+  const cards = contract.commands.filter((command) => !command.editor && command.show !== false).map(commandCard);
+  el("command-list").replaceChildren(...cards);
+  el("volume-module").hidden = !listed("spk_set_volume");
+  el("lights-module").hidden = !listed("led_colour");
   note.className = "hint stage-note";
-  note.textContent = cards.length
-    ? "Each module wired to the console is one command in commands.json."
-    : "commands.json lists no commands yet.";
+  note.textContent = "Each module wired to the console sends commands listed in commands.json.";
   for (const card of cards) sizes.observe(card);
   scheduleWires();
+}
+
+// ---- volume: a slider that looks like, and follows, the robot's volume screen ----
+
+const VOLUME_SETTLE_MS = 2500; // after the slider is moved, ignore what the robot reports for this long
+
+let volumeTouchedAt = 0; // when the slider was last moved here
+let volumeSending = false;
+let volumeWanted = null; // the newest position not yet sent
+
+function showVolume() {
+  const percent = Number(el("volume-slider").value);
+  drawVolume(el("volume-screen"), lcd, percent);
+  el("volume-slider").setAttribute("aria-valuetext", `${percent}%`);
+}
+
+// Send the slider's position. While one send is on its way further movement
+// only updates what is wanted, so a drag sends a few positions, not hundreds,
+// and always ends on the last one.
+async function sendVolume() {
+  if (volumeSending) return;
+  const result = el("volume-result");
+  volumeSending = true;
+  result.dataset.busy = ""; // lights this module's cable
+  scheduleWires();
+  try {
+    while (volumeWanted !== null) {
+      const percent = volumeWanted;
+      volumeWanted = null;
+      await api("/api/command", { key: "spk_set_volume", value: percent / 100 });
+      show(result, "ok", `Set to ${percent}%.`);
+    }
+  } catch (error) {
+    volumeWanted = null;
+    show(result, "error", error.message);
+  }
+  volumeSending = false;
+  delete result.dataset.busy;
+  scheduleWires();
+}
+
+el("volume-slider").addEventListener("input", () => {
+  volumeTouchedAt = Date.now();
+  volumeWanted = Number(el("volume-slider").value);
+  showVolume();
+  sendVolume();
+});
+
+// The robot reports its volume, so turning its knob moves the slider too. Not
+// while the slider is being used here: the report could be a moment out of date.
+function followRobotVolume() {
+  const heard = status?.state === "connected" ? status.volume : null;
+  if (typeof heard !== "number" || volumeSending || Date.now() - volumeTouchedAt < VOLUME_SETTLE_MS) return;
+  const slider = el("volume-slider");
+  if (Number(slider.value) === heard) return;
+  slider.value = heard;
+  show(el("volume-result"), "", "");
+  showVolume();
+}
+
+// ---- lights: the robot's 3x3 grid ----
+
+const EDGE = [0, 1, 2, 5, 8, 7, 6, 3]; // clockwise round the grid from the top left
+const TAIL = [1, 90 / 255, 25 / 255]; // how bright the dot and the two lights behind it are
+let gridRun = 0; // goes up each time the grid is repainted from scratch, which ends an animation
+
+function ledColour() {
+  const hex = el("led-colour").value;
+  return { r: parseInt(hex.slice(1, 3), 16), g: parseInt(hex.slice(3, 5), 16), b: parseInt(hex.slice(5, 7), 16) };
+}
+
+// Colour the page's copy of the grid: `levels` is how bright each of the nine lights is, 0 to 1.
+function paintGrid(levels) {
+  const { r, g, b } = ledColour();
+  [...el("led-grid").children].forEach((light, i) => {
+    const level = levels[i];
+    light.style.backgroundColor = `rgb(${Math.round(r * level)}, ${Math.round(g * level)}, ${Math.round(b * level)})`;
+  });
+}
+
+function showGridColour() {
+  gridRun++;
+  paintGrid(new Array(9).fill(1));
+}
+
+// The robot's animation, played here at the same time: the same timings as
+// animateGrid() in firmware/project.yaml.
+function playGridAnimation() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const run = ++gridRun;
+  const started = performance.now();
+  const frame = (now) => {
+    if (run !== gridRun) return; // something else has repainted the grid
+    const t = now - started;
+    const levels = new Array(9).fill(0);
+    if (t < 1920) {
+      const head = Math.floor(t / 80) % 8;
+      TAIL.forEach((level, behind) => (levels[EDGE[(head - behind + 8) % 8]] = level));
+    } else if (t < 3120) {
+      levels.fill(0.5 - 0.5 * Math.cos(((t - 1920) / 600) * 2 * Math.PI));
+    } else {
+      showGridColour();
+      return;
+    }
+    paintGrid(levels);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+el("led-colour").addEventListener("input", () => {
+  show(el("led-result"), "", "");
+  showGridColour();
+});
+
+el("lights-module").addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (el("led-set").disabled) return;
+  send(el("led-set"), el("led-result"), () => api("/api/command", { key: "led_colour", value: ledColour() }));
+});
+
+el("led-play").addEventListener("click", () => {
+  send(el("led-play"), el("led-result"), async () => {
+    await api("/api/command", { key: "led_animation", value: ledColour() });
+    playGridAnimation();
+  });
+});
+
+el("led-meter").addEventListener("click", () => {
+  send(el("led-meter"), el("led-result"), () => api("/api/command", { key: "led_meter", value: null }));
+});
+
+for (const module of [el("volume-module"), el("lights-module")]) {
+  for (const type of ["mouseenter", "mouseleave", "focusin", "focusout"]) {
+    module.addEventListener(type, scheduleWires);
+  }
 }
 
 // ---- the cables between the console and the modules ----
@@ -294,6 +431,7 @@ function drawWires() {
   };
   const hub = box(el("console"));
   const modules = [...stage.querySelectorAll(".command")]
+    .filter((card) => !card.hidden)
     .map((card) => ({ card, at: box(card) }))
     .sort((a, b) => a.at.top - b.at.top);
 
@@ -350,6 +488,8 @@ function scheduleWires() {
 const sizes = new ResizeObserver(scheduleWires);
 sizes.observe(el("stage"));
 sizes.observe(el("console"));
+sizes.observe(el("volume-module"));
+sizes.observe(el("lights-module"));
 
 // ---- the face editor ----
 
@@ -421,12 +561,17 @@ el("face-form").addEventListener("submit", (event) => {
 // ---- start ----
 
 refreshFace();
+showVolume();
+showGridColour();
 watchStatus();
 loadCommands().then(() => {
-  const preview = el("preview");
-  // A whole number of preview pixels for each screen pixel, so every font pixel is a clean square.
+  // Both pictures of the robot's screen take its real shape. A whole number of
+  // canvas pixels for each screen pixel, so every font pixel is a clean square.
   const zoom = Math.max(1, Math.round(PREVIEW_WIDTH / lcd.width));
-  preview.width = lcd.width * zoom;
-  preview.height = lcd.height * zoom;
+  for (const canvas of [el("preview"), el("volume-screen")]) {
+    canvas.width = lcd.width * zoom;
+    canvas.height = lcd.height * zoom;
+  }
   refreshFace();
+  showVolume();
 });

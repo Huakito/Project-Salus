@@ -207,7 +207,15 @@ class BoardManager:
                 "waiting": self._jobs.qsize(),
                 # The firmware reports this itself (see mic_muted in commands.json).
                 "mic_muted": self._latest.get("mic_muted") in (1, "1"),
+                # Speaker volume as a percentage, or None until the board has said.
+                "volume": self._volume(),
             }
+
+    def _volume(self) -> int | None:
+        heard = self._latest.get("volume")
+        if isinstance(heard, bool) or not isinstance(heard, (int, float)):
+            return None
+        return max(0, min(100, round(heard)))
 
     def wait_for(self, state: str, timeout: float) -> bool:
         """Wait until the board is in ``state``. False if that did not happen in time."""

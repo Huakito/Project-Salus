@@ -67,35 +67,64 @@ export function rgb565ToCss(colour) {
   return `rgb(${red}, ${green}, ${blue})`;
 }
 
-// Draw the face as the firmware will: black background, the block of text
-// centred, every font pixel a square `size` screen pixels wide.
-export function drawFace(canvas, face, screen, cssColour) {
+// Start drawing on a canvas that stands for the screen: black, and scaled so
+// that one unit is one screen pixel.
+function blankScreen(canvas, screen) {
   const ctx = canvas.getContext("2d");
   const zoom = canvas.width / screen.width; // the canvas has several pixels per screen pixel
   ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, screen.width, screen.height);
+  return ctx;
+}
+
+// One line of text in the screen's font, its top left corner at (left, top),
+// every font pixel a square `size` screen pixels wide.
+function drawLine(ctx, line, left, top, size) {
+  for (let col = 0; col < line.length; col++) {
+    const glyph = (line.charCodeAt(col) - 0x20) * 5;
+    for (let x = 0; x < 5; x++) {
+      for (let y = 0; y < 8; y++) {
+        if (GLYPHS[glyph + x] & (1 << y)) {
+          ctx.fillRect(left + (col * CELL_WIDTH + x) * size, top + y * size, size, size);
+        }
+      }
+    }
+  }
+}
+
+// Draw the face as the firmware will: black background, the block of text
+// centred.
+export function drawFace(canvas, face, screen, cssColour) {
+  const ctx = blankScreen(canvas, screen);
   if (face.empty || face.problem) return;
 
   const { lines, cols, rows, size } = face;
   const left = Math.floor((screen.width - cols * CELL_WIDTH * size) / 2);
   const top = Math.floor((screen.height - rows * CELL_HEIGHT * size) / 2);
   ctx.fillStyle = cssColour;
-  lines.forEach((line, row) => {
-    for (let col = 0; col < line.length; col++) {
-      const glyph = (line.charCodeAt(col) - 0x20) * 5;
-      for (let x = 0; x < 5; x++) {
-        for (let y = 0; y < 8; y++) {
-          if (GLYPHS[glyph + x] & (1 << y)) {
-            ctx.fillRect(
-              left + (col * CELL_WIDTH + x) * size,
-              top + (row * CELL_HEIGHT + y) * size,
-              size,
-              size,
-            );
-          }
-        }
-      }
-    }
-  });
+  lines.forEach((line, row) => drawLine(ctx, line, left, top + row * CELL_HEIGHT * size, size));
+}
+
+// Draw the volume screen the robot shows when its volume changes: the same
+// sums as drawVolume() in firmware/project.yaml. `percent` is 0 to 100.
+export function drawVolume(canvas, screen, percent) {
+  const ctx = blankScreen(canvas, screen);
+  const { width, height } = screen;
+  const size = Math.max(1, Math.min(Math.floor(width / 80), Math.floor(height / 40)));
+  const label = `Volume ${percent}%`;
+  ctx.fillStyle = "#fff";
+  drawLine(ctx, label, Math.floor((width - label.length * CELL_WIDTH * size) / 2), Math.floor(height / 10), size);
+
+  // The outline of the bar, one screen pixel thick, then its cyan filling.
+  const x = Math.floor(width / 16);
+  const y = Math.floor(height / 2);
+  const barWidth = width - 2 * x;
+  const barHeight = Math.floor(height / 3);
+  ctx.fillRect(x, y, barWidth, 1);
+  ctx.fillRect(x, y + barHeight - 1, barWidth, 1);
+  ctx.fillRect(x, y, 1, barHeight);
+  ctx.fillRect(x + barWidth - 1, y, 1, barHeight);
+  ctx.fillStyle = "rgb(0, 255, 255)";
+  ctx.fillRect(x + 2, y + 2, Math.floor(((barWidth - 4) * percent) / 100), barHeight - 4);
 }

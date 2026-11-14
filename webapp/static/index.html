@@ -83,9 +83,49 @@
           <div class="grille" aria-hidden="true"></div>
         </section>
 
-        <!-- One module per command in commands.json, put here by app.js. -->
-        <div class="side side-left" id="side-left"></div>
-        <div class="side side-right" id="side-right"></div>
+        <div class="side side-left" id="side-left">
+          <!-- One module for each plain command in commands.json, put here by app.js. -->
+          <div class="command-list" id="command-list"></div>
+
+          <section class="command" id="volume-module" aria-labelledby="volume-title" hidden>
+            <div class="command-heading">
+              <h2 id="volume-title">Volume</h2>
+              <code class="command-key">spk_set_volume</code>
+            </div>
+            <p class="hint">Drag to set the speaker's volume. The robot's screen shows this same bar, and the slider follows the robot's knob.</p>
+            <div class="lcd small">
+              <canvas id="volume-screen" width="960" height="480" role="img" aria-label="The volume bar as the robot's screen shows it"></canvas>
+            </div>
+            <input id="volume-slider" type="range" min="0" max="100" step="5" value="40" aria-label="Speaker volume"
+              data-needs-board disabled>
+            <p class="result" id="volume-result" role="status"></p>
+          </section>
+        </div>
+
+        <div class="side side-right" id="side-right">
+          <form class="command" id="lights-module" aria-labelledby="lights-title" hidden>
+            <div class="command-heading">
+              <h2 id="lights-title">Lights</h2>
+              <code class="command-key">led_colour</code>
+            </div>
+            <p class="hint">The 3x3 light grid on the robot. It is the sound meter until you set a colour here.</p>
+            <div class="led-pick">
+              <div class="led-grid" id="led-grid" aria-hidden="true">
+                <span></span><span></span><span></span>
+                <span></span><span></span><span></span>
+                <span></span><span></span><span></span>
+              </div>
+              <label for="led-colour">Colour</label>
+              <input id="led-colour" type="color" value="#00a0ff">
+            </div>
+            <div class="row">
+              <button class="button" id="led-set" type="submit" data-needs-board disabled>Set colour</button>
+              <button class="button" id="led-play" type="button" data-needs-board disabled>Play animation</button>
+              <button class="button" id="led-meter" type="button" data-needs-board disabled>Back to sound meter</button>
+            </div>
+            <p class="result" id="led-result" role="status"></p>
+          </form>
+        </div>
 
         <!-- The cables from the console to each module, drawn by app.js. -->
         <svg class="wires" id="wires" aria-hidden="true"></svg>

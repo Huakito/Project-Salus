@@ -111,7 +111,7 @@ The API, for scripts and for the next features:
 
 | Endpoint               | What it does                                                      |
 |------------------------|-------------------------------------------------------------------|
-| `GET /api/status`      | `connected`, `searching` or `released`, the port, a reason, and `mic_muted` |
+| `GET /api/status`      | `connected`, `searching` or `released`, the port, a reason, `mic_muted` and `volume` |
 | `POST /api/connect`    | Start looking for the board again                                 |
 | `POST /api/disconnect` | Let go of the USB port                                            |
 | `GET /api/commands`    | The contents of `commands.json`                                   |
@@ -140,7 +140,10 @@ Both sides edit this file. A command looks like this:
 - `key` is the action's name in the firmware. `value` is `none`, `text`,
   `number` or `json`.
 - The page makes one control per command, so adding a command here adds a
-  button there.
+  button there. Two optional fields change that: `"show": false` keeps a
+  command off the page (it can still be sent through the API), and `"editor"`
+  names a purpose-built module in `static/index.html` that replaces the plain
+  control (`face`, `volume`, `lights`).
 - The app will not send a command that is not in the file.
 - `screen` is the size of the robot's screen in pixels, as the firmware has it
   rotated.
@@ -182,9 +185,16 @@ firmware names them differently, change the file to match.
 
   The page's preview assumes exactly these rules.
 
-- The firmware also sends one event of its own, **`mic_muted`** (1 or 0), on
-  every change and every 2 seconds. The robot's screen does not show that the
-  microphone is muted; the page shows a red "Mic muted" notice instead.
+- The firmware also sends two events of its own, on every change and every 2
+  seconds: **`mic_muted`** (1 or 0) and **`volume`** (0 to 100). The robot's
+  screen does not show that the microphone is muted; the page shows a red
+  "Mic muted" notice instead. The page's volume slider follows `volume`, so it
+  moves when the robot's knob is turned.
+- Three more hand-written actions drive the 3x3 light grid: **`led_colour`**
+  and **`led_animation`** take `{"r": 0, "g": 160, "b": 255}`, and
+  **`led_meter`** gives the grid back to the sound level meter (the robot's
+  button does the same). The animation's timings are repeated in
+  `static/app.js` for the page's copy of the grid.
 
 ### Flashing while the app is running
 
