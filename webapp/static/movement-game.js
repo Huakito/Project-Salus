@@ -40,6 +40,7 @@ let flowToken = 0;
 let waveSamples = [];
 let recognitionAttempts = 0;
 let recognitionHandled = false;
+let speechFaceTimer = null;
 
 function delay(ms) { return new Promise((resolve) => window.setTimeout(resolve, ms)); }
 
@@ -83,7 +84,24 @@ function robotSuccessCue(face = "(^o^)") {
   ]);
 }
 
-function speak(text, force = false) {
+function stopSpeechFace(restFace = "(^_^)") {
+  if (speechFaceTimer) window.clearInterval(speechFaceTimer);
+  speechFaceTimer = null;
+  setRobotFace(restFace);
+}
+
+function startSpeechFace() {
+  if (speechFaceTimer) window.clearInterval(speechFaceTimer);
+  let mouthOpen = false;
+  const draw = () => {
+    mouthOpen = !mouthOpen;
+    setRobotFace(mouthOpen ? "(^o^)" : "(^-^)", "#58e39a");
+  };
+  draw();
+  speechFaceTimer = window.setInterval(draw, 520);
+}
+
+function speak(text, force = false, restFace = "(^_^)") {
   return new Promise((resolve) => {
     if ((!force && !el("game-voice").checked) || !("speechSynthesis" in window)) {
       resolve();
@@ -93,8 +111,9 @@ function speak(text, force = false) {
     const message = new SpeechSynthesisUtterance(text);
     message.rate = 0.9;
     message.pitch = 1;
-    message.onend = resolve;
-    message.onerror = resolve;
+    message.onstart = startSpeechFace;
+    message.onend = () => { stopSpeechFace(restFace); resolve(); };
+    message.onerror = () => { stopSpeechFace(restFace); resolve(); };
     speechSynthesis.speak(message);
   });
 }
@@ -278,7 +297,7 @@ async function beginCheckIn(pose) {
   el("checkin-card").hidden = false;
   el("camera-status").textContent = `${pose.name} complete`;
   setRobotFace("(o_o)");
-  await speak(activeQuestion, true);
+  await speak(activeQuestion, true, "(o_o)");
   if (running && phase === "checkin") listenForCheckIn();
 }
 
@@ -446,6 +465,7 @@ function stopCamera() {
   stream = null;
   stopRecognition();
   speechSynthesis?.cancel();
+  stopSpeechFace("(^_^)");
   el("game-start").disabled = false;
   el("game-skip").disabled = true;
   el("game-stop").disabled = true;

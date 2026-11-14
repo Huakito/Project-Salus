@@ -11,6 +11,7 @@ const robot = {x:46, y:86};
 const heldKeys = new Set();
 let lastWalkFrame = 0;
 let lastKnobValue = null;
+let speechFaceTimer = null;
 
 async function request(path, body) {
   const response = await fetch(path, body === undefined ? {} : {
@@ -47,6 +48,30 @@ function gardenHardwareCue({face, colour = "#00ff00", melody = null, lights = nu
   if (melody) jobs.push(robotCommand("spk_play_rtttl", melody));
   if (lights) jobs.push(robotCommand("led_animation", lights));
   return Promise.allSettled(jobs);
+}
+
+function stopSpeechFace(restFace = "(^_^)") {
+  if (speechFaceTimer) window.clearInterval(speechFaceTimer);
+  speechFaceTimer = null;
+  gardenHardwareCue({face:restFace});
+}
+
+function speakAsRobot(text, restFace = "(^_^)") {
+  speechSynthesis?.cancel();
+  if (!("speechSynthesis" in window)) return;
+  if (speechFaceTimer) window.clearInterval(speechFaceTimer);
+  let mouthOpen = false;
+  const draw = () => {
+    mouthOpen = !mouthOpen;
+    gardenHardwareCue({face:mouthOpen ? "(^o^)" : "(^-^)", colour:"#58e39a"});
+  };
+  draw();
+  speechFaceTimer = window.setInterval(draw, 520);
+  const line = new SpeechSynthesisUtterance(text);
+  line.rate = .92;
+  line.onend = () => stopSpeechFace(restFace);
+  line.onerror = () => stopSpeechFace(restFace);
+  speechSynthesis.speak(line);
 }
 
 function render() {
@@ -118,11 +143,8 @@ function distanceTo(spot) { return Math.hypot(player.x - spot[0], player.y - spo
 function sayAsRobot(text) {
   el("robot-dialogue-text").textContent = text;
   el("robot-dialogue").hidden = false;
-  speechSynthesis?.cancel();
-  if ("speechSynthesis" in window) {
-    const line = new SpeechSynthesisUtterance(text); line.rate = .92; speechSynthesis.speak(line);
-  }
-  gardenHardwareCue({face:"(o_o)\nlistening", lights:{r:48,g:170,b:126}});
+  speakAsRobot(text);
+  robotCommand("led_animation", {r:48,g:170,b:126});
 }
 
 function approachPlant(id, spot) {
@@ -306,14 +328,12 @@ function buildCheck(stage) {
 function tellAboutSelected() {
   const plant = selectedPlant();
   if (!plant) return;
-  speechSynthesis?.cancel();
-  if ("speechSynthesis" in window) speechSynthesis.speak(new SpeechSynthesisUtterance(`${plant.name}. ${plant.about}`));
-  gardenHardwareCue({face:`${plant.name}\n${plant.care_label}`});
+  speakAsRobot(`${plant.name}. ${plant.about}`, `${plant.name}\n${plant.care_label}`);
 }
 
 el("plant-care").addEventListener("click", startCareGame);
 el("care-cancel").addEventListener("click", () => { careCleanup(); el("care-game").hidden = true; });
-el("dialogue-close").addEventListener("click", () => { el("robot-dialogue").hidden = true; speechSynthesis?.cancel(); });
+el("dialogue-close").addEventListener("click", () => { el("robot-dialogue").hidden = true; speechSynthesis?.cancel(); stopSpeechFace(); });
 window.addEventListener("keydown", (event) => {
   if (el("garden-view").hidden || !["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","w","a","s","d"].includes(event.key)) return;
   event.preventDefault(); heldKeys.add(event.key);
