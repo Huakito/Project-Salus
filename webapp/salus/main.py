@@ -29,6 +29,7 @@ from .board import (
     fake_board,
     real_board,
 )
+from .calendar import DemoCalendar
 from .contract import DEFAULT_PATH, Contract, ContractError, load_contract
 from .face import FaceError, check_face, rgb565
 from .feedback import FeedbackService
@@ -162,6 +163,7 @@ def create_app(
             return ElevenLabsVoice.from_environment()
         return voice_service
     history = HistoryStore(session_dir, Path(__file__).with_name("conversation_library.json"))
+    calendar = DemoCalendar(session_dir)
     screen_lock = threading.Lock()
     screen_state: dict[str, Any] = {
         "kind": "face",
@@ -325,7 +327,11 @@ def create_app(
 
     @app.get("/api/check-in/question")
     def next_check_in_question() -> dict:
-        return history.next_question()
+        return history.next_question(calendar.question())
+
+    @app.get("/api/calendar/events")
+    def calendar_events() -> dict:
+        return {"connected": True, "source": "demo", "events": calendar.upcoming()}
 
     @app.get("/api/voice/status")
     def voice_status() -> dict:

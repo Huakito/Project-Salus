@@ -450,6 +450,20 @@ def test_questions_start_light_and_deepen_with_conversation_history(
         assert staged_client.get("/api/check-in/question").json()["level"] == "reflective"
 
 
+def test_demo_calendar_exposes_events_and_can_prompt_about_one(client, tmp_path):
+    calendar = client.get("/api/calendar/events")
+    assert calendar.status_code == 200
+    assert calendar.json()["source"] == "demo"
+    assert len(calendar.json()["events"]) == 3
+
+    from salus.calendar import DemoCalendar
+
+    question = DemoCalendar(tmp_path).question()
+    assert question is not None
+    assert question["topic"] == "calendar"
+    assert "Salus prototype" in question["text"]
+
+
 def test_check_in_uses_a_scripted_pause_for_direct_self_harm_language(client):
     response = client.post(
         "/api/check-in",

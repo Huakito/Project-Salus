@@ -2538,3 +2538,17 @@ body:has(.play-view:not([hidden])) .topbar-inner,
 @media (max-width: 760px) {
   .floating-screen { width: 200px; }
 }
+.calendar-preview {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.calendar-preview-heading, .calendar-event {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+}
+.calendar-preview-heading > span { color: #78dca2; font-size: .8rem; }
+.calendar-event { padding: .55rem 0; border-bottom: 1px solid var(--line); }
+.calendar-event time { color: var(--muted); white-space: nowrap; }
+.calendar-event span { text-align: right; }

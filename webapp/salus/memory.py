@@ -76,7 +76,7 @@ class HistoryStore:
             f"Saved notes:\n{summary}\n\nRecent conversation:\n{turns or 'None yet.'}"
         )[:5000]
 
-    def next_question(self) -> dict[str, str]:
+    def next_question(self, calendar_question: dict[str, str] | None = None) -> dict[str, str]:
         with self._connect() as db:
             used = {row[0] for row in db.execute(
                 "SELECT question_id FROM check_ins WHERE question_id IS NOT NULL ORDER BY id DESC LIMIT 4"
@@ -93,6 +93,10 @@ class HistoryStore:
             allowed_levels = {"light", "familiar"}
         else:
             allowed_levels = {"light", "familiar", "reflective"}
+        # Calendar context should feel occasional, not like the robot is reading
+        # the person's diary every time it speaks.
+        if calendar_question and calendar_question["id"] not in used and conversation_count % 3 == 1:
+            return calendar_question
         level_choices = [item for item in self.library if item.get("level", "light") in allowed_levels]
         choices = [item for item in level_choices if item["id"] not in used] or level_choices
         return random.choice(choices)
