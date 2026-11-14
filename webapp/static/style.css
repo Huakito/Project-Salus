@@ -1294,6 +1294,93 @@ body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1500px; }
   .garden-layout { grid-template-columns: 1fr; grid-template-rows: minmax(520px, 68vh) auto; }
 }
 
+/* Movement page uses the same centre-console and side-module language as Workshop. */
+body:has(.play-view:not([hidden])) .topbar-inner,
+.page:has(.play-view:not([hidden])) { max-width: 1380px; }
+.play-view {
+  position: relative;
+  grid-template-columns: minmax(220px, .72fr) minmax(560px, 1.75fr) minmax(220px, .72fr);
+  align-items: start;
+  gap: 28px;
+}
+.game-intro, .game-board, .play-hardware {
+  position: relative;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: none;
+}
+.game-intro::after, .play-hardware::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 44%;
+  width: 30px;
+  height: 2px;
+  background: var(--wire);
+  box-shadow: 0 0 0 4px var(--page), 0 0 0 5px var(--wire);
+}
+.game-intro::after { left: 100%; }
+.play-hardware::before { right: 100%; }
+.game-board { padding: 22px; }
+.play-hardware { padding: 18px; }
+.play-hardware .command-heading { margin-bottom: 12px; }
+.play-hardware .hint { line-height: 1.55; }
+.play-led-grid { display: grid; grid-template-columns: repeat(3, 24px); gap: 6px; width: max-content; margin: 24px auto; padding: 10px; border: 4px solid #15251f; background: #0b1511; }
+.play-led-grid span { width: 24px; height: 24px; background: #55d88e; box-shadow: 0 0 10px rgb(85 216 142 / .6); }
+.play-led-grid span:nth-child(2n) { opacity: .38; }
+.hardware-readout { padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: .72rem; line-height: 1.5; }
+
+/* Extra garden life, from the same Cozy Farm asset pack. */
+.farm-decoration { position: absolute; z-index: 3; pointer-events: none; background-repeat: no-repeat; image-rendering: pixelated; }
+.farm-decoration.oak { width: 88px; height: 132px; background-image: url("assets/cozy-farm/trees/4x/oak.png"); background-size: 88px 132px; }
+.oak-left { left: 1%; top: 1%; }
+.oak-right { right: 1%; top: 1%; }
+.farm-decoration.bush { width: 56px; height: 56px; background-image: url("assets/cozy-farm/props/4x/bush.png"); background-size: contain; }
+.bush-left { left: 5%; top: 47%; }
+.bush-right { right: 5%; top: 47%; }
+.farm-decoration.flowers { width: 46px; height: 46px; background-image: url("assets/cozy-farm/props/4x/flowers.png"); background-size: contain; }
+.flowers-left { left: 7%; top: 28%; }
+.flowers-right { right: 7%; top: 69%; }
+.farm-decoration.rock { left: 47%; top: 8%; width: 52px; height: 52px; background: center / contain no-repeat url("assets/cozy-farm/props/4x/rock.png"); }
+.farm-decoration.hay { right: 6%; bottom: 5%; width: 60px; height: 60px; background: center / contain no-repeat url("assets/cozy-farm/props/4x/hay-bale.png"); }
+.farm-decoration.chicken { left: 6%; top: 57%; width: 48px; height: 64px; background-image: url("assets/cozy-farm/animals/4x/chicken-white.png"); background-size: 192px 320px; animation: chicken-bob 1.2s steps(2, end) infinite; }
+@keyframes chicken-bob { 50% { transform: translateY(-3px); } }
+
+/* Movable miniature screen, visible across every page. */
+.floating-screen {
+  position: fixed;
+  z-index: 100;
+  width: 280px;
+  border: 2px solid var(--edge);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 10px 12px 0 rgb(19 42 33 / .35);
+}
+.floating-screen.dragging { opacity: .9; box-shadow: 14px 16px 0 rgb(19 42 33 / .28); }
+.floating-screen-handle { display: flex; align-items: center; justify-content: space-between; min-height: 38px; padding-left: 10px; border-bottom: 1px solid var(--line); background: var(--field); cursor: move; touch-action: none; user-select: none; }
+.floating-screen-handle strong { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
+.floating-screen-handle button { align-self: stretch; width: 42px; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 1.1rem; }
+.floating-screen-body { padding: 10px; }
+.floating-screen-body canvas { display: block; width: 100%; aspect-ratio: 2 / 1; border: 8px solid #0e1915; background: #000; image-rendering: pixelated; }
+.floating-screen-body span { display: block; margin-top: 6px; color: var(--muted); font-size: .65rem; text-align: right; }
+.floating-screen-handle:focus-visible { outline: 3px solid var(--note); outline-offset: 3px; }
+
+@media (max-width: 1100px) {
+  .play-view { grid-template-columns: minmax(220px, .72fr) minmax(0, 1.6fr); }
+  .play-hardware { grid-column: 1; }
+  .play-hardware::before { display: none; }
+}
+
+@media (max-width: 760px) {
+  .play-view { grid-template-columns: 1fr; }
+  .game-intro::after { display: none; }
+  .floating-screen { width: 230px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .farm-decoration.chicken { animation: none; }
+}
+
 /* Garden game: authoritative layout and accessibility pass. */
 body:has(.garden-view:not([hidden])) .topbar-inner { max-width: 1500px; }
 .page:has(.garden-view:not([hidden])) > .notice { display: none; }
@@ -1946,3 +2033,36 @@ textarea,
 .checkin-card .eyebrow, .checkin-hint, .checkin-status { color: var(--muted); }
 .checkin-transcript { border-radius: 0; background: var(--panel); color: var(--ink); }
 .checkin-reply { border-top-color: var(--line); }
+
+/* Absolute page-layout authority — this must remain after the final theme. */
+body:has(.play-view:not([hidden])) .topbar-inner,
+.page:has(.play-view:not([hidden])) {
+  max-width: 1380px;
+}
+
+.play-view {
+  position: relative;
+  grid-template-columns: minmax(220px, 0.72fr) minmax(560px, 1.75fr) minmax(220px, 0.72fr);
+  align-items: start;
+  gap: 28px;
+}
+
+@media (max-width: 1100px) {
+  .play-view {
+    grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.6fr);
+  }
+
+  .play-hardware {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .play-view {
+    grid-template-columns: 1fr;
+  }
+
+  .play-hardware {
+    grid-column: auto;
+  }
+}

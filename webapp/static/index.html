@@ -17,7 +17,7 @@
           <span class="brand-sub">Handheld helper</span>
         </div>
         <nav class="main-nav" aria-label="Main sections" role="tablist">
-          <button class="nav-tab active" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="true">Play</button>
+          <button class="nav-tab active" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="true">Movement</button>
           <button class="nav-tab" id="garden-tab" type="button" role="tab" data-view="garden" aria-controls="garden-view" aria-selected="false" tabindex="-1">Garden</button>
           <button class="nav-tab" id="workshop-tab" type="button" role="tab" data-view="workshop" aria-controls="stage" aria-selected="false" tabindex="-1">Workshop</button>
         </nav>
@@ -110,6 +110,20 @@
             <p class="result" id="game-save-result" role="status"></p>
           </section>
         </section>
+
+        <aside class="play-hardware command" aria-labelledby="play-hardware-title">
+          <div class="command-heading">
+            <h2 id="play-hardware-title">Robot feedback</h2>
+            <code class="command-key">live</code>
+          </div>
+          <p class="hint">Salus mirrors each signal on its face, flashes the light grid and plays a short success sound.</p>
+          <div class="play-led-grid" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+          </div>
+          <p class="hardware-readout">Camera stays local · results are saved without video</p>
+        </aside>
       </main>
 
       <main class="garden-view" id="garden-view" role="tabpanel" aria-labelledby="garden-tab" hidden>
@@ -132,6 +146,15 @@
             <div class="farm-bed bed-four" aria-hidden="true"></div>
             <div class="farm-prop crate" aria-hidden="true"></div>
             <div class="farm-prop barrel" aria-hidden="true"></div>
+            <div class="farm-decoration oak oak-left" aria-hidden="true"></div>
+            <div class="farm-decoration oak oak-right" aria-hidden="true"></div>
+            <div class="farm-decoration bush bush-left" aria-hidden="true"></div>
+            <div class="farm-decoration bush bush-right" aria-hidden="true"></div>
+            <div class="farm-decoration flowers flowers-left" aria-hidden="true"></div>
+            <div class="farm-decoration flowers flowers-right" aria-hidden="true"></div>
+            <div class="farm-decoration rock" aria-hidden="true"></div>
+            <div class="farm-decoration hay" aria-hidden="true"></div>
+            <div class="farm-decoration chicken" aria-hidden="true"></div>
             <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
             <div class="game-character" id="game-character" aria-hidden="true"></div>
             <div class="robot-follower" id="robot-follower" aria-label="Salus follows you"><img src="favicon.svg" alt=""></div>
@@ -350,5 +373,16 @@
 
       <p class="hint stage-note" id="commands-note" hidden></p>
     </div>
+
+    <aside class="floating-screen" id="floating-screen" aria-label="Movable live robot screen">
+      <header class="floating-screen-handle" id="floating-screen-handle" tabindex="0" aria-label="Move robot face window with pointer or arrow keys">
+        <strong>Salus face</strong>
+        <button type="button" id="floating-screen-toggle" aria-label="Minimise robot face window">−</button>
+      </header>
+      <div class="floating-screen-body" id="floating-screen-body">
+        <canvas id="floating-screen-canvas" width="480" height="240" role="img" aria-label="Live robot face"></canvas>
+        <span id="floating-screen-status" role="status" aria-live="polite">Live</span>
+      </div>
+    </aside>
   </body>
 </html>
