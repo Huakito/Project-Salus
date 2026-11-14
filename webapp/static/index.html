@@ -9,10 +9,10 @@
     <script type="module" src="app.js"></script>
   </head>
   <body>
-    <div class="page">
-      <header class="topbar">
+    <header class="topbar">
+      <div class="topbar-inner">
         <div class="brand">
-          <span class="brand-face" aria-hidden="true">(^_^)</span>
+          <img class="brand-logo" src="favicon.svg" alt="" width="64" height="64">
           <h1>Salus</h1>
           <span class="brand-sub">Robot control</span>
         </div>
@@ -22,53 +22,75 @@
             <span id="status-text">Starting…</span>
             <span class="status-port" id="status-port"></span>
           </p>
-          <button class="button quiet" id="link-button" type="button" hidden>Disconnect</button>
+          <button class="button" id="link-button" type="button" hidden>Disconnect</button>
         </div>
-      </header>
+      </div>
+    </header>
 
+    <div class="page">
       <p class="notice fake" id="fake-notice" hidden>
         <strong>Fake board.</strong>
         No robot is attached: commands go to a stand-in that accepts whatever commands.json lists.
       </p>
       <p class="notice trouble" id="notice" role="status" hidden></p>
 
-      <main>
-        <section class="panel" aria-labelledby="face-title">
-          <h2 id="face-title">Face</h2>
-          <p class="hint">What the robot shows on its screen, drawn here in the screen's own font.</p>
+      <main class="stage" id="stage">
+        <section class="console" id="console" aria-labelledby="face-title" data-board="offline">
+          <div class="console-top">
+            <span class="console-led" aria-hidden="true"></span>
+            <h2 id="face-title">Face</h2>
+            <span class="hint">What the robot's screen shows</span>
+          </div>
 
           <div class="lcd">
             <canvas id="preview" width="960" height="720" role="img" aria-label="Preview of the robot's screen"></canvas>
           </div>
-          <p class="hint" id="face-size"></p>
+          <p class="hint readout" id="face-size"></p>
+          <p class="hint readout" id="face-colour-value"></p>
 
           <form id="face-form">
+            <div class="pad">
+              <div class="pad-group">
+                <div class="rocker" role="group" aria-label="Ready-made faces">
+                  <button id="face-prev" type="button" aria-label="Previous ready-made face">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>
+                  </button>
+                  <button id="face-next" type="button" aria-label="Next ready-made face">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg>
+                  </button>
+                </div>
+                <span class="pad-label" id="face-name" role="status"></span>
+              </div>
+              <div class="pad-group">
+                <input id="face-colour" type="color" value="#00ff00">
+                <label class="pad-label" for="face-colour">Colour</label>
+              </div>
+              <div class="pad-group">
+                <button class="send-key" id="face-send" type="submit" aria-describedby="face-send-label"
+                  data-needs-board disabled>Send</button>
+                <span class="pad-label" id="face-send-label">to robot</span>
+              </div>
+            </div>
+
             <label for="face-text">ASCII art</label>
-            <textarea id="face-text" rows="5" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off"
+            <textarea id="face-text" rows="4" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off"
               aria-describedby="face-problem">(^_^)</textarea>
             <p class="problem" id="face-problem" role="alert" hidden></p>
-
-            <div class="presets" id="presets" role="group" aria-label="Ready-made faces"></div>
-
-            <div class="row">
-              <label for="face-colour">Colour</label>
-              <input id="face-colour" type="color" value="#00ff00">
-              <span class="hint" id="face-colour-value"></span>
-            </div>
-
-            <div class="row">
-              <button class="button primary" id="face-send" type="submit" data-needs-board disabled>Send to robot</button>
-              <p class="result" id="face-result" role="status"></p>
-            </div>
+            <p class="result" id="face-result" role="status"></p>
           </form>
+
+          <div class="grille" aria-hidden="true"></div>
         </section>
 
-        <section class="panel" aria-labelledby="commands-title">
-          <h2 id="commands-title">Commands</h2>
-          <p class="hint">One control for each command in commands.json.</p>
-          <div id="commands"></div>
-        </section>
+        <!-- One module per command in commands.json, put here by app.js. -->
+        <div class="side side-left" id="side-left"></div>
+        <div class="side side-right" id="side-right"></div>
+
+        <!-- The cables from the console to each module, drawn by app.js. -->
+        <svg class="wires" id="wires" aria-hidden="true"></svg>
       </main>
+
+      <p class="hint stage-note" id="commands-note"></p>
     </div>
   </body>
 </html>
