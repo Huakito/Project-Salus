@@ -18,7 +18,7 @@ def write(tmp_path, content):
 
 def test_the_real_commands_json_is_valid():
     contract = load_contract()
-    assert (contract.screen.width, contract.screen.height) == (320, 240)
+    assert (contract.screen.width, contract.screen.height) == (160, 80)  # the robot's st7735 screen
     assert contract.command("face").editor == "face"
     assert contract.command("no_such_command") is None
     # Every example in the file is a value its own command accepts.
@@ -105,3 +105,10 @@ def test_a_json_command_needs_an_object_or_a_list():
     assert command("json").check([1, 2]) == [1, 2]
     with pytest.raises(ValueError, match="JSON object or list"):
         command("json").check("{}")
+
+
+def test_a_command_can_be_kept_off_the_page(tmp_path):
+    content = {**MINIMAL, "commands": [{"key": "beep", "label": "Beep"}, {"key": "hush", "label": "Hush", "show": False}]}
+    contract = load_contract(write(tmp_path, content))
+    assert [command.show for command in contract.commands] == [True, False]
+    assert contract.command("hush") is not None  # still a command the app may send

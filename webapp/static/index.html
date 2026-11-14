@@ -14,14 +14,15 @@
         <div class="brand">
           <img class="brand-logo" src="favicon.svg" alt="" width="64" height="64">
           <h1>Salus</h1>
-          <span class="brand-sub">Your small sidekick</span>
+          <span class="brand-sub">Handheld helper</span>
         </div>
-        <nav class="main-nav" aria-label="Main sections">
-          <button class="nav-tab active" type="button" data-view="play" aria-pressed="true">Play</button>
-          <button class="nav-tab" type="button" data-view="garden" aria-pressed="false">Garden</button>
-          <button class="nav-tab" type="button" data-view="workshop" aria-pressed="false">Workshop</button>
+        <nav class="main-nav" aria-label="Main sections" role="tablist">
+          <button class="nav-tab active" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="true">Play</button>
+          <button class="nav-tab" id="garden-tab" type="button" role="tab" data-view="garden" aria-controls="garden-view" aria-selected="false" tabindex="-1">Garden</button>
+          <button class="nav-tab" id="workshop-tab" type="button" role="tab" data-view="workshop" aria-controls="stage" aria-selected="false" tabindex="-1">Workshop</button>
         </nav>
         <div class="link">
+          <p class="mic-note" id="mic-note" role="status" hidden></p>
           <p class="status" id="status" role="status" data-state="offline">
             <span class="status-dot" aria-hidden="true"></span>
             <span id="status-text">Starting…</span>
@@ -39,7 +40,7 @@
       </p>
       <p class="notice trouble" id="notice" role="status" hidden></p>
 
-      <main class="play-view" id="play-view">
+      <main class="play-view" id="play-view" role="tabpanel" aria-labelledby="play-tab">
         <section class="game-intro" aria-labelledby="game-title">
           <p class="eyebrow">Camera demo</p>
           <h2 id="game-title">Hand Signals</h2>
@@ -111,7 +112,7 @@
         </section>
       </main>
 
-      <main class="garden-view" id="garden-view" hidden>
+      <main class="garden-view" id="garden-view" role="tabpanel" aria-labelledby="garden-tab" hidden>
         <header class="garden-heading">
           <div>
             <p class="eyebrow">A quiet place to return to</p>
@@ -127,6 +128,8 @@
             <div class="farm-path path-vertical" aria-hidden="true"></div>
             <div class="farm-bed bed-one" aria-hidden="true"></div>
             <div class="farm-bed bed-two" aria-hidden="true"></div>
+            <div class="farm-bed bed-three" aria-hidden="true"></div>
+            <div class="farm-bed bed-four" aria-hidden="true"></div>
             <div class="farm-prop crate" aria-hidden="true"></div>
             <div class="farm-prop barrel" aria-hidden="true"></div>
             <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
@@ -134,8 +137,8 @@
             <div class="robot-follower" id="robot-follower" aria-label="Salus follows you"><img src="favicon.svg" alt=""></div>
             <div class="game-help">WASD / arrows to move · click nearby plants</div>
           </div>
-          <aside class="plant-panel" id="plant-panel">
-            <div class="robot-dialogue" id="robot-dialogue" hidden>
+          <aside class="plant-panel" id="plant-panel" aria-label="Garden information and controls">
+            <div class="robot-dialogue" id="robot-dialogue" role="status" aria-live="polite" hidden>
               <strong>Salus</strong><p id="robot-dialogue-text"></p><button type="button" id="dialogue-close">OK</button>
             </div>
             <p class="eyebrow">Plant guide</p>
@@ -148,7 +151,7 @@
               <button class="button primary" id="plant-care" type="button"></button>
               <button class="button quiet" id="plant-tell" type="button">Tell me about it</button>
               <p class="result" id="garden-result" role="status"></p>
-              <p class="hardware-hint">Robot: Yes cares for this plant · No chooses the next one</p>
+              <p class="hardware-hint">Robot: turn the knob to choose a plant · press the main button or knob to care for it</p>
             </div>
           </aside>
         </section>
@@ -176,8 +179,9 @@
         </details>
 
         <details class="admin-tools" id="admin-tools">
-          <summary>Prototype admin tools</summary>
-          <p>Use these to test progress without waiting for real days.</p>
+          <summary>Developer options</summary>
+          <p>Test progress without waiting for real days.</p>
+          <a class="screen-preview-link" href="screen.html" target="_blank" rel="noopener">Open live robot screen</a>
           <div class="admin-actions">
             <button class="button" type="button" data-admin="advance_day">Advance one day</button>
             <button class="button" type="button" data-admin="grow_all">Grow everything</button>
@@ -192,7 +196,7 @@
         <p class="asset-credit">Game art: Cozy Farm Lite by Spaceyyy. Additional plants: SpiderDave, CC0.</p>
       </main>
 
-      <main class="stage" id="stage" hidden>
+      <main class="stage" id="stage" role="tabpanel" aria-labelledby="workshop-tab" hidden>
         <section class="console" id="console" aria-labelledby="face-title" data-board="offline">
           <div class="console-top">
             <span class="console-led" aria-hidden="true"></span>
@@ -201,7 +205,7 @@
           </div>
 
           <div class="lcd">
-            <canvas id="preview" width="960" height="720" role="img" aria-label="Preview of the robot's screen"></canvas>
+            <canvas id="preview" width="960" height="480" role="img" aria-label="Preview of the robot's screen"></canvas>
           </div>
           <p class="hint readout" id="face-size"></p>
           <p class="hint readout" id="face-colour-value"></p>
@@ -240,9 +244,105 @@
           <div class="grille" aria-hidden="true"></div>
         </section>
 
-        <!-- One module per command in commands.json, put here by app.js. -->
-        <div class="side side-left" id="side-left"></div>
-        <div class="side side-right" id="side-right"></div>
+        <div class="side side-left" id="side-left">
+          <!-- One module for each plain command in commands.json, put here by app.js. -->
+          <div class="command-list" id="command-list"></div>
+
+          <form class="command" id="melody-module" aria-labelledby="melody-title" hidden>
+            <div class="command-heading">
+              <h2 id="melody-title">Play melody</h2>
+              <code class="command-key">spk_play_rtttl</code>
+            </div>
+            <p class="hint">Pick a tune, tap one out on the keys, or type it.</p>
+            <div class="pad">
+              <div class="pad-group">
+                <div class="rocker" role="group" aria-label="Ready-made tunes">
+                  <button id="tune-prev" type="button" aria-label="Previous ready-made tune">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>
+                  </button>
+                  <button id="tune-next" type="button" aria-label="Next ready-made tune">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg>
+                  </button>
+                </div>
+                <span class="pad-label" id="tune-name" role="status"></span>
+              </div>
+              <div class="pad-group">
+                <button class="send-key" id="tune-send" type="submit" aria-describedby="tune-send-label"
+                  data-needs-board disabled>Play</button>
+                <span class="pad-label" id="tune-send-label">on robot</span>
+              </div>
+            </div>
+            <div class="note-keys" id="note-keys" role="group" aria-label="Add a note to the tune"></div>
+            <div class="row">
+              <button class="button small" id="tune-undo" type="button">Undo note</button>
+              <button class="button small" id="tune-clear" type="button">Clear</button>
+            </div>
+            <label for="tune-text">Tune (RTTTL)</label>
+            <textarea id="tune-text" rows="3" spellcheck="false" autocapitalize="off" autocomplete="off"
+              aria-describedby="tune-problem"></textarea>
+            <p class="problem" id="tune-problem" role="alert" hidden></p>
+            <p class="result" id="tune-result" role="status"></p>
+          </form>
+
+          <section class="command" id="volume-module" aria-labelledby="volume-title" hidden>
+            <div class="command-heading">
+              <h2 id="volume-title">Volume</h2>
+              <code class="command-key">spk_set_volume</code>
+            </div>
+            <p class="hint">Drag to set the speaker's volume. The robot's screen shows this same bar, and the slider follows the robot's knob.</p>
+            <div class="lcd small">
+              <canvas id="volume-screen" width="960" height="480" role="img" aria-label="The volume bar as the robot's screen shows it"></canvas>
+            </div>
+            <input id="volume-slider" type="range" min="0" max="100" step="5" value="40" aria-label="Speaker volume"
+              data-needs-board disabled>
+            <p class="result" id="volume-result" role="status"></p>
+          </section>
+        </div>
+
+        <div class="side side-right" id="side-right">
+          <form class="command" id="lights-module" aria-labelledby="lights-title" hidden>
+            <div class="command-heading">
+              <h2 id="lights-title">Lights</h2>
+              <code class="command-key">led_colour</code>
+            </div>
+            <p class="hint">The 3x3 light grid on the robot. It is the sound meter until you set a colour here.</p>
+            <div class="led-pick">
+              <div class="led-grid" id="led-grid" aria-hidden="true">
+                <span></span><span></span><span></span>
+                <span></span><span></span><span></span>
+                <span></span><span></span><span></span>
+              </div>
+              <label for="led-colour">Colour</label>
+              <input id="led-colour" type="color" value="#00a0ff">
+            </div>
+            <div class="row">
+              <button class="button" id="led-set" type="submit" data-needs-board disabled>Set colour</button>
+              <button class="button" id="led-play" type="button" data-needs-board disabled>Play animation</button>
+              <button class="button" id="led-meter" type="button" data-needs-board disabled>Back to sound meter</button>
+            </div>
+            <p class="result" id="led-result" role="status"></p>
+          </form>
+
+          <section class="command" id="knob-module" aria-labelledby="knob-title" hidden>
+            <div class="command-heading">
+              <h2 id="knob-title">Turnstile</h2>
+              <code class="command-key">knob</code>
+            </div>
+            <p class="hint">A game on the robot's turnstile. Turn it to line your light up with the gate, then push it to go through. Six gates, against the clock.</p>
+            <div class="knob-row">
+              <svg class="dial" id="dial" viewBox="0 0 100 100" role="img" aria-label="The turnstile's ring of lights"></svg>
+              <div class="turnstile">
+                <p class="turnstile-goal" id="knob-goal" role="status"></p>
+                <div class="gates" id="knob-gates" aria-hidden="true"></div>
+                <p class="hint" id="knob-time"></p>
+              </div>
+            </div>
+            <div class="row">
+              <button class="button" id="knob-start" type="button" data-needs-board disabled>Start</button>
+              <p class="result" id="knob-result" role="status"></p>
+            </div>
+          </section>
+        </div>
 
         <!-- The cables from the console to each module, drawn by app.js. -->
         <svg class="wires" id="wires" aria-hidden="true"></svg>

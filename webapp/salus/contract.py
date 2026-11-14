@@ -48,6 +48,9 @@ class Command(_Strict):
     # Set when the page has a purpose-built editor for this command ("face"),
     # so it is left out of the generic list of controls.
     editor: str | None = None
+    # False keeps the command off the page. It stays in the contract, so the
+    # app can still send it.
+    show: bool = True
 
     def check(self, value: Any) -> Any:
         """Return ``value`` ready to send, or raise ValueError saying what is wrong with it."""

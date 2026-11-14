@@ -40,6 +40,9 @@ def test_status(client):
         "port": "fake board",
         "detail": "",
         "waiting": 0,
+        "mic_muted": False,
+        "volume": None,
+        "knob": None,
     }
 
 
@@ -135,6 +138,22 @@ def test_a_face_is_tidied_and_its_colour_converted(client):
 def test_a_face_of_several_lines_keeps_its_line_breaks(client):
     response = client.post("/api/face", json={"text": " /\\_/\\\n( o.o )", "colour": "#ffffff"})
     assert response.json() == {"ok": True, "text": " /\\_/\\\n( o.o )", "colour": 65535}
+
+
+def test_live_screen_tracks_faces_and_volume(client):
+    initial = client.get("/api/screen-state").json()
+    assert initial["kind"] == "face"
+
+    client.post("/api/face", json={"text": "(o_o)", "colour": "#12ab34"})
+    face = client.get("/api/screen-state").json()
+    assert face["kind"] == "face"
+    assert face["text"] == "(o_o)"
+    assert face["colour"] == "#12ab34"
+
+    client.post("/api/command", json={"key": "spk_set_volume", "value": 0.65})
+    volume = client.get("/api/screen-state").json()
+    assert volume["kind"] == "volume"
+    assert volume["volume"] == 65
 
 
 @pytest.mark.parametrize(

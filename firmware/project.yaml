@@ -1,0 +1,661 @@
+name: Salus
+board: 14port
+
+# Where each module sits. Run `atech view .` to see the board in 3D and compare.
+# The instance names `spk` and the `face` action match ../commands.json, so the
+# web app's controls work on this firmware.
+modules:
+  - {id: rotary_encoder, instance: knob,   ports: [1, 2]}    # turn = volume, push = mute the mic
+  - {id: microphone,     instance: mic,    ports: [3, 4]}
+  - {id: speaker,        instance: spk,    ports: [5, 6]}
+  - {id: neopixel,       instance: led,    port: 7}          # 3x3 grid: voice level meter, or a colour from the web app
+  - {id: st7735_tft,     instance: screen, ports: [10, 11]}  # 160x80 colour screen
+  - {id: button,         instance: btn,    port: 13}         # turns the level meter on and off
+
+code:
+  globals: |
+    #include <WiFi.h>
+    #include <lwip/sockets.h>
+    #include <freertos/stream_buffer.h>
+
+    // ======== EDIT THESE ========
+    const char* WIFI_SSID   = "James";       // 2.4 GHz networks only
+    const char* WIFI_PASS   = "abcdefgh";                 // open network: no password
+    const char* LAPTOP_IP   = "172.20.10.9";    // the laptop running server.py: `ipconfig getifaddr en0` on a Mac, `ip -4 -br addr` on Linux (address only, no port)
+    const uint16_t LAPTOP_PORT = 9000;              // AUDIO_PORT in server.py
+
+    // Level meter thresholds, in the units `atech monitor --key mic_level` prints.
+    // Watch it while speaking softly and loudly, then set these to match.
+    const int METER_QUIET = 250;             // the first green LED lights at this level (a quiet room reads ~150)
+    const int METER_LOUD  = 2500;            // the last red LED lights at this level
+    const bool METER_UPSIDE_DOWN = false;    // true if green fills from the top on your board
+
+    const int VOLUME_STEPS = 20;             // one knob click = 5% volume
+    // ============================
+
+    // ---------------------------------------------------------------------------
+    // WiFi link to the laptop (server.py). The robot connects to LAPTOP_IP:LAPTOP_PORT
+    // over TCP and keeps the connection open. Both directions carry frames:
+    //
+    //   type (1 byte) | payload length (2 bytes, little-endian) | payload
+    //
+    //   robot -> laptop   'A'  mic audio    16 kHz, 16-bit signed little-endian, mono
+    //                     'M'  mic muted    payload 1 = muted, 0 = on; on connect and on change
+    //                     'D'  done         the reply finished playing; listening again
+    //   laptop -> robot   'T'  thinking     stop sending audio, show the thinking face
+    //                     'A'  reply audio  same format as the mic, split anywhere
+    //                     'E'  end          play out the reply, then listen again
+    //                     'S'  stop         drop the reply now and listen again
+    //
+    // Mic audio flows only while the robot listens: not while the laptop thinks and
+    // not while the robot talks, so it never hears its own voice.
+    // ---------------------------------------------------------------------------
+
+    enum Convo : uint8_t { CONVO_LISTEN, CONVO_THINK, CONVO_SPEAK };
+
+    // Shared between loop(), netTask, playTask and the mic callback.
+    volatile Convo convo = CONVO_LISTEN;
+    volatile bool linkUp = false;          // connected to server.py
+    volatile bool micOpen = false;         // set by loop(); onMic and netTask obey it
+    volatile bool micMuted = false;        // knob push
+    volatile bool replyEnded = false;      // 'E' came: finish when the reply runs out
+    volatile bool stopReply = false;       // drop the reply and listen again
+    volatile bool doneToSend = false;      // tell the laptop we are listening again
+    volatile uint32_t thinkSince = 0;
+    volatile uint32_t lastReplyAudioAt = 0;
+
+    StreamBufferHandle_t micBuf;   // mic -> netTask, 0.5 s
+    StreamBufferHandle_t spkBuf;   // netTask -> playTask, 1 s
+
+    const size_t PREBUFFER_BYTES = 16000 * 2 / 4;   // 250 ms of reply before playing starts
+    const uint32_t THINK_TIMEOUT_MS = 45000;        // 'T' and then nothing: give up
+    const uint32_t REPLY_GAP_TIMEOUT_MS = 10000;    // reply audio stopped with no 'E': give up
+    const uint32_t ECHO_TAIL_MS = 300;              // after the last word, wait before listening
+
+    static inline size_t smaller(size_t a, size_t b) { return a < b ? a : b; }
+
+    // Runs on the mic's capture task (core 0) for every 32 ms block: copy and return.
+    // Whole blocks only, so the stream never loses its 16-bit alignment.
+    void onMic(const int16_t* samples, int count, void* ctx) {
+      size_t bytes = count * sizeof(int16_t);
+      if (micOpen && xStreamBufferSpacesAvailable(micBuf) >= bytes) {
+        xStreamBufferSend(micBuf, samples, bytes, 0);
+      }
+    }
+
+    // Empties a stream buffer. Call it only from the task that reads that buffer.
+    void drainBuffer(StreamBufferHandle_t buf) {
+      uint8_t junk[256];
+      while (xStreamBufferReceive(buf, junk, sizeof(junk), 0) > 0) {}
+    }
+
+    // `frame` starts with 3 free bytes for the header, then `len` bytes of payload,
+    // so header and payload leave in one write.
+    void sendFrame(WiFiClient& client, char type, uint8_t* frame, size_t len) {
+      frame[0] = (uint8_t)type;
+      frame[1] = len & 0xFF;
+      frame[2] = (len >> 8) & 0xFF;
+      client.write(frame, len + 3);
+    }
+
+    // WiFiClient::connected() stays true after the laptop closes the connection.
+    bool peerClosed(WiFiClient& client) {
+      if (client.available() > 0) return false;
+      uint8_t b;
+      return recv(client.fd(), &b, 1, MSG_DONTWAIT | MSG_PEEK) == 0;
+    }
+
+    // Notice a laptop that vanished (sleep, WiFi drop) within about 10 s.
+    void keepAlive(int fd) {
+      int on = 1;
+      setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
+    #ifdef TCP_KEEPIDLE
+      int idle = 4, interval = 2, count = 3;
+      setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle));
+      setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+      setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
+    #endif
+    }
+
+    // Owns the connection: connects, sends mic audio and status, and unpacks the
+    // laptop's frames. Reply audio goes to spkBuf; when spkBuf is full it stops
+    // reading, so TCP makes the laptop wait until the speaker catches up.
+    void netTask(void* arg) {
+      WiFiClient client;
+      static uint8_t tx[3 + 1024];
+      static uint8_t rx[1 + 1024];
+      uint8_t head[3];
+      int headGot = 0;           // header bytes read so far
+      uint8_t type = 0;
+      uint32_t left = 0;         // payload bytes of this frame still to read
+      bool odd = false;          // half a reply sample, waiting for its other byte
+      uint8_t oddByte = 0;
+      int sentMute = -1;
+      uint32_t lastTry = 0;
+
+      for (;;) {
+        if (linkUp && (!client.connected() || peerClosed(client))) {
+          client.stop();
+          linkUp = false;
+          stopReply = true;
+        }
+        if (!linkUp) {
+          if (WiFi.status() != WL_CONNECTED || millis() - lastTry < 2000) {
+            vTaskDelay(pdMS_TO_TICKS(50));
+            continue;
+          }
+          lastTry = millis();
+          // 5 s: on a busy network one lost packet makes the handshake take seconds.
+          if (!client.connect(LAPTOP_IP, LAPTOP_PORT, 5000)) continue;
+          client.setNoDelay(true);
+          keepAlive(client.fd());
+          headGot = 0;
+          left = 0;
+          odd = false;
+          sentMute = -1;
+          doneToSend = false;
+          drainBuffer(micBuf);
+          linkUp = true;
+        }
+
+        bool busy = false;
+
+        if (sentMute != (int)micMuted) {
+          sentMute = micMuted;
+          uint8_t f[4] = {0, 0, 0, (uint8_t)sentMute};
+          sendFrame(client, 'M', f, 1);
+        }
+        if (doneToSend) {
+          doneToSend = false;
+          uint8_t f[3];
+          sendFrame(client, 'D', f, 0);
+        }
+
+        if (micOpen) {
+          size_t n = xStreamBufferReceive(micBuf, tx + 3, sizeof(tx) - 3, 0);
+          if (n > 0) {
+            sendFrame(client, 'A', tx, n);
+            busy = true;
+          }
+        } else {
+          drainBuffer(micBuf);
+        }
+
+        for (int pass = 0; pass < 16 && client.available() > 0; pass++) {
+          if (headGot < 3) {
+            int r = client.read(head + headGot, 3 - headGot);
+            if (r <= 0) break;
+            headGot += r;
+            busy = true;
+            if (headGot < 3) continue;
+            type = head[0];
+            left = head[1] | (head[2] << 8);
+            if (left == 0) {
+              if (type == 'T' && convo == CONVO_LISTEN) {
+                thinkSince = millis();
+                convo = CONVO_THINK;
+              } else if (type == 'E') {
+                replyEnded = true;
+                odd = false;
+              } else if (type == 'S') {
+                stopReply = true;
+                odd = false;
+              }
+              headGot = 0;
+            }
+            continue;
+          }
+
+          int r;
+          if (type == 'A') {
+            size_t space = xStreamBufferSpacesAvailable(spkBuf);
+            if (space < 256) break;   // full: leave the rest in TCP for now
+            size_t have = 0;
+            if (odd) rx[have++] = oddByte;
+            r = client.read(rx + have, smaller(left, smaller(space, sizeof(rx)) - 1));
+            if (r <= 0) break;
+            have += r;
+            size_t even = have & ~(size_t)1;
+            if (even > 0) {
+              xStreamBufferSend(spkBuf, rx, even, 0);
+              lastReplyAudioAt = millis();
+              convo = CONVO_SPEAK;
+            }
+            odd = (have & 1) != 0;
+            if (odd) oddByte = rx[have - 1];
+          } else {
+            r = client.read(rx, smaller(left, sizeof(rx)));   // a frame this firmware has no use for
+            if (r <= 0) break;
+          }
+          left -= r;
+          busy = true;
+          if (left == 0) headGot = 0;
+        }
+
+        if (convo == CONVO_THINK && millis() - thinkSince > THINK_TIMEOUT_MS) {
+          thinkSince = millis();   // once, not on every pass
+          stopReply = true;
+        }
+
+        if (!busy) vTaskDelay(pdMS_TO_TICKS(4));
+      }
+    }
+
+    void finishReply() {
+      vTaskDelay(pdMS_TO_TICKS(ECHO_TAIL_MS));   // the last words leave the speaker and the room
+      replyEnded = false;
+      convo = CONVO_LISTEN;
+      doneToSend = true;
+    }
+
+    // Plays reply audio from spkBuf. writeSamples() blocks for as long as the
+    // sound lasts, which is why this has its own task.
+    void playTask(void* arg) {
+      static int16_t pcm[256];
+      bool playing = false;
+      for (;;) {
+        if (stopReply) {
+          stopReply = false;
+          drainBuffer(spkBuf);
+          playing = false;
+          if (convo != CONVO_LISTEN || replyEnded) finishReply();
+          continue;
+        }
+        size_t queued = xStreamBufferBytesAvailable(spkBuf);
+        if (!playing) {
+          if (queued >= PREBUFFER_BYTES || (queued > 0 && replyEnded)) {
+            playing = true;
+          } else {
+            if (queued == 0 && replyEnded) {
+              finishReply();
+            } else if (queued == 0 && convo == CONVO_SPEAK &&
+                       millis() - lastReplyAudioAt > REPLY_GAP_TIMEOUT_MS) {
+              finishReply();
+            }
+            vTaskDelay(pdMS_TO_TICKS(10));
+            continue;
+          }
+        }
+        size_t n = xStreamBufferReceive(spkBuf, pcm, sizeof(pcm), 0);
+        if (n >= 2) {
+          spk.writeSamples(pcm, n / 2);
+        } else {
+          playing = false;   // ran dry: buffer up again, or finish if 'E' came
+        }
+      }
+    }
+
+    // ---------------------------------------------------------------------------
+    // The screen. Every scene is ASCII art drawn the way the web app previews a
+    // face (webapp/static/face.js): built-in font, 6x8 pixels per character times
+    // the text size, the biggest size at which the block fits, centred, every
+    // line starting at the same x.
+    // ---------------------------------------------------------------------------
+    const uint16_t C_GREEN = 0x07E0, C_YELLOW = 0xFFE0, C_ORANGE = 0xFD20,
+                   C_CYAN = 0x07FF, C_WHITE = 0xFFFF, C_GREY = 0x8410;
+
+    enum Scene : uint8_t { SCENE_NO_WIFI, SCENE_NO_LAPTOP, SCENE_LISTEN,
+                           SCENE_THINK, SCENE_SPEAK, SCENE_VOLUME };
+
+    String restFace = "(^_^)";     // the listening face; the web app's `face` action changes it
+    uint16_t restColour = C_GREEN;
+    uint16_t restVersion = 0;
+    int volumeStep = 8;            // 40%, what the speaker starts at
+    uint32_t volumeShownAt = 0;    // when the knob last turned (0 = never)
+
+    const int FACE_MAX_ROWS = 30;
+    String faceRow[FACE_MAX_ROWS];
+    int faceRows = 0, faceCols = 0;
+
+    // Splits art into lines as the web app does: CR, LF and CRLF end a line;
+    // spaces at line ends and blank lines above and below are dropped.
+    bool splitFace(const String& text) {
+      faceRows = 0;
+      faceCols = 0;
+      int blanks = 0;   // blank lines since the last line with something on it
+      int len = text.length();
+      for (int i = 0; i <= len;) {
+        int j = i;
+        while (j < len && text[j] != '\n' && text[j] != '\r') j++;
+        int end = j;
+        while (end > i && text[end - 1] == ' ') end--;
+        if (end == i) {
+          if (faceRows > 0) blanks++;
+        } else {
+          if (faceRows + blanks >= FACE_MAX_ROWS) return false;
+          while (blanks > 0) { faceRow[faceRows++] = ""; blanks--; }
+          faceRow[faceRows++] = text.substring(i, end);
+          if (end - i > faceCols) faceCols = end - i;
+        }
+        if (j < len && text[j] == '\r' && j + 1 < len && text[j + 1] == '\n') j++;
+        i = j + 1;
+      }
+      return true;
+    }
+
+    // Why the art cannot be shown, or nullptr if it can. Leaves it split in faceRow.
+    const char* faceProblem(const String& text) {
+      if (!splitFace(text)) return "too tall for the screen";
+      if (faceRows == 0) return "text missing";
+      for (int r = 0; r < faceRows; r++) {
+        for (unsigned int c = 0; c < faceRow[r].length(); c++) {
+          char ch = faceRow[r][c];
+          if (ch < ' ' || ch > '~') return "plain keyboard characters only";
+        }
+      }
+      if (faceCols > screen.width() / 6) return "too wide for the screen";
+      if (faceRows > screen.height() / 8) return "too tall for the screen";
+      return nullptr;
+    }
+
+    bool drawFace(const String& text, uint16_t colour) {
+      if (faceProblem(text)) return false;
+      int size = min(screen.width() / (6 * faceCols), screen.height() / (8 * faceRows));
+      int left = (screen.width() - faceCols * 6 * size) / 2;
+      int top = (screen.height() - faceRows * 8 * size) / 2;
+      for (int r = 0; r < faceRows; r++) {
+        screen.displayText(faceRow[r], left, top + r * 8 * size, size, colour);
+      }
+      return true;
+    }
+
+    void drawVolume() {
+      int w = screen.width(), h = screen.height();
+      int size = max(1, min(w / 80, h / 40));
+      char label[16];
+      snprintf(label, sizeof(label), "Volume %d%%", volumeStep * 100 / VOLUME_STEPS);
+      int textWidth = strlen(label) * 6 * size;
+      screen.displayText(label, (w - textWidth) / 2, h / 10, size, C_WHITE);
+      int x = w / 16, y = h / 2, bw = w - 2 * x, bh = h / 3;
+      screen.drawRect(x, y, bw, bh, C_WHITE);
+      screen.fillRect(x + 2, y + 2, (bw - 4) * volumeStep / VOLUME_STEPS, bh - 4, C_CYAN);
+    }
+
+    void drawScene(Scene scene, int frame) {
+      static const char* DOTS[] = {".", "..", "..."};
+      screen.clear();
+      switch (scene) {
+        case SCENE_NO_WIFI:
+          if (!drawFace(String("(-_-)\nwifi...\n") + WIFI_SSID, C_YELLOW)) drawFace("(-_-)\nwifi...", C_YELLOW);
+          break;
+        case SCENE_NO_LAPTOP: drawFace(String("(o_o)\nno laptop\n") + LAPTOP_IP, C_ORANGE); break;
+        case SCENE_LISTEN:    drawFace(restFace, restColour); break;
+        case SCENE_THINK:     drawFace(String("(o.o)\n") + DOTS[frame % 3], C_CYAN); break;
+        case SCENE_SPEAK:     drawFace(frame ? "(^o^)" : "(^-^)", restColour); break;
+        case SCENE_VOLUME:    drawVolume(); break;
+      }
+      screen.display();
+    }
+
+    // ---- level meter on the 3x3 grid: bottom row green, middle yellow, top red ----
+    void showMeter(int lit) {
+      static const uint8_t ORDER[9] = {6, 7, 8, 3, 4, 5, 0, 1, 2};   // bottom row first
+      for (int i = 0; i < 9; i++) {
+        int idx = METER_UPSIDE_DOWN ? 8 - ORDER[i] : ORDER[i];
+        if (i >= lit)   led.setPixel(idx, 0, 0, 0);
+        else if (i < 3) led.setPixel(idx, 0, 255, 0);     // quiet
+        else if (i < 6) led.setPixel(idx, 255, 170, 0);   // louder
+        else            led.setPixel(idx, 255, 0, 0);     // loud
+      }
+      led.show();
+    }
+
+    // ---- the web app can take the grid over: one colour, or a short animation ----
+    // (commands.json: led_colour, led_animation, led_meter). The button on the
+    // robot, or led_meter, gives it back to the level meter.
+    enum LedMode : uint8_t { LED_METER, LED_COLOUR, LED_ANIMATION };
+    LedMode ledMode = LED_METER;
+    LedMode ledAfterAnimation = LED_METER;   // what the grid goes back to when the animation ends
+    uint8_t ledR = 0, ledG = 160, ledB = 255;   // the colour the web app last chose
+    uint32_t ledAnimationAt = 0;
+    bool ledRedraw = false;                  // draw the grid afresh on the next pass
+
+    void fillGrid(float brightness) {
+      for (int i = 0; i < 9; i++) {
+        led.setPixel(i, (uint8_t)(ledR * brightness), (uint8_t)(ledG * brightness), (uint8_t)(ledB * brightness));
+      }
+      led.show();
+    }
+
+    // Draws the animation as it looks `t` ms after it started. False once it is over.
+    // A dot with a fading tail runs three laps round the edge, then the whole
+    // grid breathes in and out twice.
+    bool animateGrid(uint32_t t) {
+      static const uint8_t EDGE[8] = {0, 1, 2, 5, 8, 7, 6, 3};   // clockwise from the top left
+      static const uint8_t TAIL[3] = {255, 90, 25};
+      if (t < 1920) {   // 3 laps of 8 steps, 80 ms a step
+        int head = (t / 80) % 8;
+        for (int i = 0; i < 9; i++) led.setPixel(i, 0, 0, 0);
+        for (int k = 0; k < 3; k++) {
+          led.setPixel(EDGE[(head - k + 8) % 8], ledR * TAIL[k] / 255, ledG * TAIL[k] / 255, ledB * TAIL[k] / 255);
+        }
+        led.show();
+        return true;
+      }
+      if (t < 3120) {   // two breaths of 600 ms
+        fillGrid(0.5f - 0.5f * cosf((t - 1920) / 600.0f * 2 * PI));
+        return true;
+      }
+      return false;
+    }
+
+    // The knob's ring shows the volume as a needle: 12 o'clock is silent, and it
+    // moves the way the knob turns as the volume goes up.
+    float ringFor(int step) { return step * 11.0f / VOLUME_STEPS; }
+
+  setup: |
+    micBuf = xStreamBufferCreate(16 * 1024, 1);
+    spkBuf = xStreamBufferCreate(32 * 1024, 2);
+    mic.onAudio(onMic, nullptr);
+
+    WiFi.setHostname("salus-robot");
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_SSID, WIFI_PASS);   // returns at once; netTask waits for it
+    WiFi.setSleep(false);               // WiFi power saving adds delays and gaps to audio
+
+    xTaskCreatePinnedToCore(netTask, "salusNet", 6144, nullptr, 2, nullptr, 1);
+    xTaskCreatePinnedToCore(playTask, "salusPlay", 4096, nullptr, 3, nullptr, 1);
+
+    knob.setAcceleration(false);        // one click is always one volume step
+    knob.setRingColor(0, 160, 255);
+    knob.setRingPosition(ringFor(volumeStep));
+    spk.setVolume(volumeStep / (float)VOLUME_STEPS);
+    btn.setColor(0, 255, 0);            // V2.0 buttons light up while the meter is on
+    showMeter(0);
+    drawScene(SCENE_NO_WIFI, 0);
+
+  loop: |
+    static bool meterOn = true;
+    static uint32_t meterOnAt = 0;
+
+    // ---- the web app's `face` action (commands.json): the listening face ----
+    if (atech_action == "face") {
+      String text = atechJsonString(atech_value, "text");
+      const char* why = faceProblem(text);
+      if (why) {
+        atechFail(why);
+      } else {
+        restFace = text;
+        restColour = (uint16_t)atechNum(atech_value, "colour", 0xFFFF);
+        restVersion++;
+      }
+      atechDone();
+    }
+
+    // ---- the web app's LED actions (commands.json) ----
+    // Reads {"r": .., "g": .., "b": ..} from an action's value; a missing part keeps its old value.
+    auto readLedColour = [](const String& value) {
+      ledR = (uint8_t)constrain(atechNum(value, "r", ledR), 0L, 255L);
+      ledG = (uint8_t)constrain(atechNum(value, "g", ledG), 0L, 255L);
+      ledB = (uint8_t)constrain(atechNum(value, "b", ledB), 0L, 255L);
+    };
+    if (atech_action == "led_colour") {          // hold the whole grid at one colour
+      readLedColour(atech_value);
+      ledMode = LED_COLOUR;
+      ledRedraw = true;
+      btn.off();                                 // the button lights only while the meter is on
+      atechDone();
+    }
+    if (atech_action == "led_animation") {       // play the animation in this colour, then carry on as before
+      readLedColour(atech_value);
+      if (ledMode != LED_ANIMATION) ledAfterAnimation = ledMode;
+      ledMode = LED_ANIMATION;
+      ledAnimationAt = millis();
+      atechDone();
+    }
+    if (atech_action == "led_meter") {           // give the grid back to the level meter
+      ledMode = LED_METER;
+      ledAfterAnimation = LED_METER;
+      meterOn = true;
+      meterOnAt = millis();
+      ledRedraw = true;
+      btn.setColor(0, 255, 0);
+      atechDone();
+    }
+
+    // ---- button: level meter on/off (or back to the meter from the web app's colour) ----
+    if (btn.wasPressed()) {
+      if (ledMode != LED_METER) {
+        ledMode = LED_METER;
+        ledAfterAnimation = LED_METER;
+        meterOn = true;
+      } else {
+        meterOn = !meterOn;
+      }
+      meterOnAt = millis();
+      ledRedraw = true;
+      if (meterOn) btn.setColor(0, 255, 0); else btn.off();
+    }
+
+    // ---- knob: turn for volume ----
+    // The web app's spk_set_volume changes it too: follow it so the knob carries on from there.
+    int heardStep = (int)lroundf(spk.getVolume() * VOLUME_STEPS);
+    if (heardStep != volumeStep) {
+      volumeStep = heardStep;
+      knob.setRingPosition(ringFor(volumeStep));
+      volumeShownAt = millis();   // show the volume bar on the screen, as a turn of the knob does
+    }
+    static int32_t lastKnob = knob.getPosition();
+    static bool blipDue = false;
+    int32_t knobPos = knob.getPosition();
+    if (knobPos != lastKnob) {
+      volumeStep = constrain(volumeStep + (int)(knobPos - lastKnob), 0, VOLUME_STEPS);
+      lastKnob = knobPos;
+      spk.setVolume(volumeStep / (float)VOLUME_STEPS);
+      knob.setRingPosition(ringFor(volumeStep));
+      volumeShownAt = millis();
+      blipDue = true;
+    }
+    // When the knob stops, a short beep at the new volume (not over the robot's voice).
+    if (blipDue && millis() - volumeShownAt > 250) {
+      blipDue = false;
+      if (convo != CONVO_SPEAK && volumeStep > 0) spk.playTone(NOTE_E5, 60);
+    }
+
+    // ---- knob: push to mute or unmute the microphone ----
+    static atech::Debouncer knobPush;
+    static bool knobWasDown = false;
+    bool knobDown = knobPush.update(knob.isPressed(), 30);
+    if (knobDown && !knobWasDown) {
+      micMuted = !micMuted;
+      if (micMuted) knob.setRingColor(255, 0, 0); else knob.setRingColor(0, 160, 255);
+      Serial.println(micMuted ? "[salus] microphone muted" : "[salus] microphone on");
+    }
+    knobWasDown = knobDown;
+
+    // ---- tell the web app whether the microphone is muted ----
+    // The screen keeps its face while muted; the web app shows the notice
+    // instead (the knob's ring still turns red). Sent on every change, and
+    // again every 2 s so an app that has only just connected finds out too.
+    static int toldMuted = -1;
+    static uint32_t toldMutedAt = 0;
+    if (toldMuted != (int)micMuted || millis() - toldMutedAt >= 2000) {
+      toldMuted = micMuted;
+      toldMutedAt = millis();
+      Serial.printf("{\"type\":\"event\",\"payload\":{\"event_type\":\"state\",\"key\":\"mic_muted\",\"value\":%d,\"source\":\"salus\"}}\n", toldMuted);
+    }
+
+    // ---- tell the web app the volume, so its slider follows the knob ----
+    // As a percentage. On every change, and again every 2 s like the mute state.
+    static int toldVolume = -1;
+    static uint32_t toldVolumeAt = 0;
+    if (toldVolume != volumeStep || millis() - toldVolumeAt >= 2000) {
+      toldVolume = volumeStep;
+      toldVolumeAt = millis();
+      Serial.printf("{\"type\":\"event\",\"payload\":{\"event_type\":\"state\",\"key\":\"volume\",\"value\":%d,\"source\":\"salus\"}}\n", toldVolume * 100 / VOLUME_STEPS);
+    }
+
+    // ---- who may send mic audio: listening, not muted, no beep playing ----
+    static uint32_t quietFrom = 0;
+    if (spk.isPlaying()) quietFrom = millis() + 250;
+    micOpen = linkUp && !micMuted && convo == CONVO_LISTEN && (int32_t)(millis() - quietFrom) >= 0;
+
+    // ---- the LED grid, every 30 ms: the animation, the web app's colour, or the level meter ----
+    static uint32_t meterAt = 0;
+    static float meterLevel = 0;
+    static int meterLit = -1;
+    if (millis() - meterAt >= 30) {
+      meterAt = millis();
+      if (ledMode == LED_ANIMATION && !animateGrid(millis() - ledAnimationAt)) {
+        ledMode = ledAfterAnimation;
+        ledRedraw = true;
+      }
+      if (ledMode == LED_COLOUR && ledRedraw) {
+        ledRedraw = false;
+        fillGrid(1.0f);
+      }
+      if (ledMode == LED_METER) {
+        int lit = 0;
+        if (meterOn && millis() - meterOnAt < 450) {
+          lit = 3 * ((millis() - meterOnAt) / 150 + 1);   // just switched on: sweep up once
+        } else if (meterOn) {
+          bool hearing = !micMuted && convo != CONVO_SPEAK && !spk.isPlaying();
+          int level = hearing ? mic.getSoundLevel() : 0;
+          float target = 0;
+          if (level >= METER_QUIET) {
+            target = 1 + 8 * logf((float)level / METER_QUIET) / logf((float)METER_LOUD / METER_QUIET);
+          }
+          target = constrain(target, 0.0f, 9.0f);
+          meterLevel = (target >= meterLevel) ? target : max(target, meterLevel - 0.6f);   // fast up, slow down
+          lit = (int)meterLevel;
+        }
+        if (lit != meterLit || ledRedraw) {
+          ledRedraw = false;
+          meterLit = lit;
+          showMeter(lit);
+        }
+      }
+    }
+
+    // ---- screen: redraw only when what it shows changes ----
+    bool wifiUp = WiFi.status() == WL_CONNECTED;
+    Scene scene;
+    if (volumeShownAt != 0 && millis() - volumeShownAt < 1500) scene = SCENE_VOLUME;
+    else if (!wifiUp)                 scene = SCENE_NO_WIFI;
+    else if (!linkUp)                 scene = SCENE_NO_LAPTOP;
+    else if (convo == CONVO_THINK)    scene = SCENE_THINK;
+    else if (convo == CONVO_SPEAK)    scene = SCENE_SPEAK;
+    else                              scene = SCENE_LISTEN;
+    int frame = 0;
+    if (scene == SCENE_SPEAK) frame = (millis() / 180) % 2;
+    if (scene == SCENE_THINK) frame = (millis() / 400) % 3;
+    static uint32_t shownKey = 0xFFFFFFFF;
+    uint32_t key = scene | (frame << 4) | (volumeStep << 8) | ((uint32_t)restVersion << 16);
+    if (key != shownKey) {
+      shownKey = key;
+      drawScene(scene, frame);
+    }
+
+    // ---- log changes over USB (`atech monitor` shows them) ----
+    static bool loggedWifi = false, loggedLink = false;
+    if (wifiUp != loggedWifi) {
+      loggedWifi = wifiUp;
+      if (wifiUp) Serial.printf("[salus] wifi up, robot at %s\n", WiFi.localIP().toString().c_str());
+      else Serial.println("[salus] wifi down");
+    }
+    if (linkUp != loggedLink) {
+      loggedLink = linkUp;
+      Serial.println(loggedLink ? "[salus] laptop connected" : "[salus] laptop not reachable");
+    }
+
+    vTaskDelay(1);

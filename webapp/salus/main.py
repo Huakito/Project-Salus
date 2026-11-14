@@ -167,6 +167,18 @@ def create_app(
     feedback_service = feedback_service or FeedbackService.from_environment()
     history = HistoryStore(session_dir, Path(__file__).with_name("conversation_library.json"))
     garden = GardenStore(session_dir)
+    screen_lock = threading.Lock()
+    screen_state: dict[str, Any] = {
+        "kind": "face",
+        "text": "(^_^)",
+        "colour": "#00ff00",
+        "volume": 40,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    def update_screen(**changes: Any) -> None:
+        with screen_lock:
+            screen_state.update(changes, updated_at=datetime.now(timezone.utc).isoformat())
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -250,6 +262,8 @@ def create_app(
         except ValueError as exc:
             raise InvalidCommand(str(exc)) from None
         manager.send(spec.key, value)
+        if spec.key == "spk_set_volume" and isinstance(value, (int, float)):
+            update_screen(kind="volume", volume=round(float(value) * 100))
         return {"ok": True}
 
     @app.post("/api/face")
@@ -263,7 +277,14 @@ def create_app(
             raise InvalidCommand(str(exc)) from None
         value = {"text": "\n".join(lines), "colour": rgb565(request.colour)}
         manager.send("face", value)
+        update_screen(kind="face", text=value["text"], colour=request.colour)
         return {"ok": True, **value}
+
+    @app.get("/api/screen-state")
+    def get_screen_state() -> dict:
+        """The most recent screen scene requested through this app, for the detached preview."""
+        with screen_lock:
+            return dict(screen_state)
 
     @app.get("/api/events")
     def events() -> list[dict]:

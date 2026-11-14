@@ -5,11 +5,12 @@ let seenEvents = 0;
 let careStarted = 0;
 let careCleanup = () => {};
 const EARLY_STAGE_SPRITES = [0, 8, 13];
-const PLANT_SPOTS = [[24,27],[42,27],[60,27],[78,27],[24,62],[42,62],[60,62],[78,62]];
+const PLANT_SPOTS = [[22,28],[35,28],[62,28],[75,28],[22,69],[35,69],[62,69],[75,69]];
 const player = {x:50, y:82, direction:0, frame:0};
 const robot = {x:46, y:86};
 const heldKeys = new Set();
 let lastWalkFrame = 0;
+let lastKnobValue = null;
 
 async function request(path, body) {
   const response = await fetch(path, body === undefined ? {} : {
@@ -31,6 +32,21 @@ function stageSprite(plant) {
 
 function selectedPlant() {
   return state?.plants.find((plant) => plant.id === selectedId) ?? null;
+}
+
+function screenText(text) {
+  return String(text).replace(/[^\x20-\x7e\n]/g, "").split("\n").map((line) => line.slice(0, 26)).slice(0, 10).join("\n");
+}
+
+async function robotCommand(key, value = null) {
+  try { await request("/api/command", {key, value}); } catch { /* The garden also works without the robot. */ }
+}
+
+function gardenHardwareCue({face, colour = "#00ff00", melody = null, lights = null}) {
+  const jobs = [request("/api/face", {text: screenText(face), colour}).catch(() => {})];
+  if (melody) jobs.push(robotCommand("spk_play_rtttl", melody));
+  if (lights) jobs.push(robotCommand("led_animation", lights));
+  return Promise.allSettled(jobs);
 }
 
 function render() {
@@ -94,7 +110,7 @@ async function selectPlant(id) {
   selectedId = Number(id);
   render();
   const plant = selectedPlant();
-  if (plant) request("/api/face", {text: `${plant.nickname}\n${plant.needs_care ? plant.care_label : "settled today"}`, colour: "#00ff00"}).catch(() => {});
+  if (plant) gardenHardwareCue({face: `${plant.nickname}\n${plant.needs_care ? plant.care_label : "settled today"}`});
 }
 
 function distanceTo(spot) { return Math.hypot(player.x - spot[0], player.y - spot[1]); }
@@ -106,7 +122,7 @@ function sayAsRobot(text) {
   if ("speechSynthesis" in window) {
     const line = new SpeechSynthesisUtterance(text); line.rate = .92; speechSynthesis.speak(line);
   }
-  request("/api/face", {text:"(o_o)\nlistening", colour:"#00ff00"}).catch(() => {});
+  gardenHardwareCue({face:"(o_o)\nlistening", lights:{r:48,g:170,b:126}});
 }
 
 function approachPlant(id, spot) {
@@ -173,10 +189,11 @@ async function completeCare(activity, score = 1) {
       activity, duration_seconds: Math.max(1, Math.round((Date.now() - careStarted) / 1000)), score,
     });
     el("garden-result").textContent = result.changed ? `${plant.nickname} grew a little.` : `${plant.nickname} is already settled.`;
-    await Promise.allSettled([
-      request("/api/face", {text: `${plant.nickname}\n(^_^)\nthank you`, colour: "#00ff00"}),
-      request("/api/command", {key:"spk_play_rtttl", value:"grow:d=8,o=5,b=150:c,e,g,4c6"}),
-    ]);
+    await gardenHardwareCue({
+      face:`${plant.nickname}\n(^_^)\nthank you`,
+      melody:"grow:d=8,o=5,b=150:c,e,g,4c6",
+      lights:{r:90,g:220,b:130},
+    });
     await loadGarden();
   } catch (error) { el("garden-result").textContent = error.message; }
 }
@@ -291,7 +308,7 @@ function tellAboutSelected() {
   if (!plant) return;
   speechSynthesis?.cancel();
   if ("speechSynthesis" in window) speechSynthesis.speak(new SpeechSynthesisUtterance(`${plant.name}. ${plant.about}`));
-  request("/api/face", {text:`${plant.name}\n${plant.care_label}`, colour:"#00ff00"}).catch(() => {});
+  gardenHardwareCue({face:`${plant.name}\n${plant.care_label}`});
 }
 
 el("plant-care").addEventListener("click", startCareGame);
@@ -322,8 +339,18 @@ window.setInterval(async () => {
     const events = await request("/api/events");
     if (events.length < seenEvents) seenEvents = 0;
     for (const event of events.slice(seenEvents)) {
+      if (event.key === "knob" && Number.isFinite(Number(event.value))) {
+        const next = Number(event.value);
+        if (lastKnobValue !== null && next !== lastKnobValue && state.plants.length) {
+          const step = next > lastKnobValue ? 1 : -1;
+          const index = state.plants.findIndex((plant) => plant.id === selectedId);
+          selectPlant(state.plants[(index + step + state.plants.length) % state.plants.length].id);
+        }
+        lastKnobValue = next;
+        continue;
+      }
       if (event.type !== "button" || event.value !== 1) continue;
-      if (event.key === "yes_btn") robotYes();
+      if (["btn", "knob_btn", "yes_btn"].includes(event.key)) robotYes();
       if (event.key === "no_btn") robotNo();
     }
     seenEvents = events.length;

@@ -8,8 +8,8 @@ const CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10
 
 const POSES = [
   {key:"Open_Palm", name:"Open palm", cue:"Show one open hand to the camera", face:"(^_^)/"},
-  {key:"Closed_Fist", name:"Make a fist", cue:"Close one hand into a comfortable fist", face:"(•_•)"},
-  {key:"Pointing_Up", name:"Point up", cue:"Hold up one index finger", face:"(o_o)☝"},
+  {key:"Closed_Fist", name:"Make a fist", cue:"Close one hand into a comfortable fist", face:"(._.)"},
+  {key:"Pointing_Up", name:"Point up", cue:"Hold up one index finger", face:"(o_o)^"},
   {key:"Thumb_Up", name:"Thumbs up", cue:"Show one thumbs-up", face:"(^_^)b"},
   {key:"Victory", name:"Two fingers", cue:"Show a two-finger victory sign", face:"(^_^)v"},
   {key:"ILoveYou", name:"Three-finger sign", cue:"Show thumb, index finger and little finger", face:"\\m/(^_^)"},
@@ -69,6 +69,18 @@ async function getJson(path) {
 
 async function setRobotFace(text, colour = "#1a6964") {
   try { await api("/api/face", { text, colour }); } catch { /* The game also works without the robot. */ }
+}
+
+async function robotCommand(key, value = null) {
+  try { await api("/api/command", {key, value}); } catch { /* Optional physical feedback. */ }
+}
+
+function robotSuccessCue(face = "(^o^)") {
+  return Promise.allSettled([
+    setRobotFace(face, "#58e39a"),
+    robotCommand("spk_play_rtttl", "ok:d=16,o=6,b=170:c,e,g"),
+    robotCommand("led_animation", {r:72,g:220,b:142}),
+  ]);
 }
 
 function speak(text, force = false) {
@@ -239,7 +251,7 @@ function completePose() {
   holdStarted = null;
   renderProgress();
   say("Got it. Take a moment.");
-  setRobotFace("(^o^)");
+  robotSuccessCue();
   if (checkInAfter === finishedIndex) window.setTimeout(() => beginCheckIn(pose), 1100);
   else window.setTimeout(() => transitionToNextPose(), 900);
 }
@@ -452,7 +464,7 @@ function finishGame() {
   el("game-summary").dataset.duration = duration;
   el("game-summary").hidden = false;
   say(`Run complete. ${completed.length} ${signalNoun} completed.`);
-  setRobotFace("(^_^)");
+  robotSuccessCue("(^_^)");
 }
 
 function skipPose() {
@@ -490,19 +502,33 @@ async function saveSession() {
   }
 }
 
-for (const tab of document.querySelectorAll("[data-view]")) {
-  tab.addEventListener("click", () => {
-    const view = tab.dataset.view;
-    el("play-view").hidden = view !== "play";
-    el("garden-view").hidden = view !== "garden";
-    el("stage").hidden = view !== "workshop";
-    el("commands-note").hidden = view !== "workshop";
-    for (const item of document.querySelectorAll("[data-view]")) {
-      const active = item === tab;
-      item.classList.toggle("active", active);
-      item.setAttribute("aria-pressed", String(active));
-    }
-    if (view !== "play" && running) stopCamera();
+const viewTabs = [...document.querySelectorAll("[data-view]")];
+
+function activateView(tab, moveFocus = false) {
+  const view = tab.dataset.view;
+  el("play-view").hidden = view !== "play";
+  el("garden-view").hidden = view !== "garden";
+  el("stage").hidden = view !== "workshop";
+  el("commands-note").hidden = view !== "workshop";
+  for (const item of viewTabs) {
+    const active = item === tab;
+    item.classList.toggle("active", active);
+    item.setAttribute("aria-selected", String(active));
+    item.tabIndex = active ? 0 : -1;
+  }
+  if (moveFocus) tab.focus();
+  if (view === "garden") el("garden-world").focus({preventScroll:true});
+  if (view !== "play" && running) stopCamera();
+}
+
+for (const [index, tab] of viewTabs.entries()) {
+  tab.addEventListener("click", () => activateView(tab));
+  tab.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === "Home" ? 0 : event.key === "End" ? viewTabs.length - 1
+      : (index + (event.key === "ArrowRight" ? 1 : -1) + viewTabs.length) % viewTabs.length;
+    activateView(viewTabs[next], true);
   });
 }
 

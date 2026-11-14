@@ -176,6 +176,7 @@ class BoardManager:
         self._detail = "Looking for the board…"
         self._wanted = True  # False after disconnect(): leave the port alone
         self._events: deque[Event] = deque(maxlen=200)
+        self._latest: dict[str, Any] = {}  # the last value the board sent for each event key
 
         self._jobs: queue.Queue[_Job] = queue.Queue(maxsize=MAX_WAITING)
         self._wake = threading.Event()  # cuts the worker's wait short when something has changed
@@ -204,7 +205,23 @@ class BoardManager:
                 "port": self._port,
                 "detail": self._detail,
                 "waiting": self._jobs.qsize(),
+                # The firmware reports this itself (see mic_muted in commands.json).
+                "mic_muted": self._latest.get("mic_muted") in (1, "1"),
+                # Speaker volume as a percentage, or None until the board has said.
+                "volume": self._volume(),
+                # The knob's running count of clicks, or None until it has been turned.
+                "knob": self._knob(),
             }
+
+    def _volume(self) -> int | None:
+        heard = self._latest.get("volume")
+        if isinstance(heard, bool) or not isinstance(heard, (int, float)):
+            return None
+        return max(0, min(100, round(heard)))
+
+    def _knob(self) -> int | None:
+        heard = self._latest.get("knob")
+        return heard if isinstance(heard, int) and not isinstance(heard, bool) else None
 
     def wait_for(self, state: str, timeout: float) -> bool:
         """Wait until the board is in ``state``. False if that did not happen in time."""
@@ -328,6 +345,7 @@ class BoardManager:
                 break
             with self._changed:
                 self._events.append(event)
+                self._latest[event.key] = event.value
         return link
 
     def _carry_out(self, link: Link, job: _Job) -> bool:
@@ -372,6 +390,8 @@ class BoardManager:
             if (state, port, detail) == (self._state, self._port, self._detail):
                 return
             self._state, self._port, self._detail = state, port, detail
+            if state != CONNECTED:
+                self._latest.clear()  # what the board last said is not known to be true any more
             self._changed.notify_all()
         log.info("board %s%s%s", state, f" on {port}" if port else "", f": {detail}" if detail else "")
 

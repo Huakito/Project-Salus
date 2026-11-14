@@ -4,9 +4,10 @@ A small companion robot meant to help people living with depression. It has a
 face on a screen, a speaker, a microphone and buttons. It checks in with its
 person through questions, quizzes and games, and a web app on the same computer
 shows how they are doing, with the option to share a summary with their GP.
-Camera tracking and session storage run locally. If the optional OpenAI key is
-configured, only the derived game summary is sent to OpenAI to produce a short
-response; camera frames, video and audio are never sent.
+Audio, speech recognition (Whisper) and the voice (Piper) all run locally. In
+the voice-chat prototype the transcribed chat text is sent to Gemini to write
+the replies. Camera tracking and session storage also run locally; camera
+frames, video and audio never leave the computer.
 
 This repository holds both halves of the project: the robot's firmware and the
 web app.
@@ -60,11 +61,30 @@ Not built yet:
 
 - Live button presses on the page (the server already collects them at `/api/events`).
 - Storage, the mood and questionnaire pages, and the summary for a GP.
-- Speech recognition and a full conversational model.
-- The firmware itself: `firmware/` is empty in this repository so far.
+- Speech in and out runs as a prototype (see Voice chat); crisis screening and a fully local language model do not exist yet.
 
-The app has so far only run against the fake board and a simulated serial port.
-It has not yet been tried with a real board.
+The face, melody, volume and stop commands have been run from the page against
+the real robot over USB, and each was acknowledged by the board.
+
+## Voice chat (prototype)
+
+The robot streams its microphone to `firmware/server.py`, which transcribes it
+with Whisper, asks Gemini for a short reply and speaks it with Piper. Only the
+transcribed text goes to Gemini; the audio stays on this computer.
+
+```bash
+pip install -r firmware/requirements.txt
+cp firmware/.env.example firmware/.env      # then put your GEMINI_API_KEY in it
+python firmware/chat.py --download-voice    # Piper voice into firmware/models/
+python firmware/chat.py "hello" --wav /tmp/reply.wav   # smoke test (calls Gemini)
+python firmware/server.py                   # run the audio server
+```
+
+The audio server needs Python 3.11 or newer (the web app below still works on
+3.10).
+
+Crisis screening is not built yet: it must run on the transcript before Gemini
+is called.
 
 ## Run the web app
 
@@ -127,7 +147,7 @@ The API, for scripts and for the next features:
 
 | Endpoint               | What it does                                                      |
 |------------------------|-------------------------------------------------------------------|
-| `GET /api/status`      | `connected`, `searching` or `released`, plus the port and a reason |
+| `GET /api/status`      | `connected`, `searching` or `released`, the port, a reason, `mic_muted` and `volume` |
 | `POST /api/connect`    | Start looking for the board again                                 |
 | `POST /api/disconnect` | Let go of the USB port                                            |
 | `GET /api/commands`    | The contents of `commands.json`                                   |
@@ -156,7 +176,10 @@ Both sides edit this file. A command looks like this:
 - `key` is the action's name in the firmware. `value` is `none`, `text`,
   `number` or `json`.
 - The page makes one control per command, so adding a command here adds a
-  button there.
+  button there. Two optional fields change that: `"show": false` keeps a
+  command off the page (it can still be sent through the API), and `"editor"`
+  names a purpose-built module in `static/index.html` that replaces the plain
+  control (`face`, `volume`, `lights`).
 - The app will not send a command that is not in the file.
 - `screen` is the size of the robot's screen in pixels, as the firmware has it
   rotated.
@@ -169,17 +192,19 @@ enforces both:
 - **At most 4096 characters per command** once encoded.
 
 The file is a first draft. Its names assume these instances in
-`firmware/project.yaml`: `face` (Big Screen), `spk` (speaker), `yes_btn` and
-`no_btn` (buttons). If the firmware names them differently, change the file to
-match.
+`firmware/project.yaml`: `screen` (the 160x80 colour screen, which the `face`
+action draws on), `spk` (speaker), `btn` (button), `knob` and `mic`. If the
+firmware names them differently, change the file to match.
 
 ## For the firmware
 
 - `atech describe firmware/` prints the real action and event names for the
   modules. Actions written by hand in `code: loop:` do not appear there, so
   list those in `commands.json` yourself.
-- The Big Screen (`st7789_tft`) is two ports wide: `ports: [1, 2]`, not
-  `port: 1`.
+- The robot's screen is the small one (`st7735_tft`, 160x80), so `screen` in
+  `commands.json` is 160 by 80: a face can be at most 26 characters wide and
+  10 lines tall. If the firmware moves to another screen, change `screen` to
+  match and the page's preview and limits follow.
 - The one hand-written action so far is **`face`**. Its value is JSON:
   `{"text": "(^_^)", "colour": 2016}`.
   - `text` is the ASCII art, with `\n` between lines.
@@ -195,6 +220,17 @@ match.
   - Answer a missing text with `atechFail("text missing")`.
 
   The page's preview assumes exactly these rules.
+
+- The firmware also sends two events of its own, on every change and every 2
+  seconds: **`mic_muted`** (1 or 0) and **`volume`** (0 to 100). The robot's
+  screen does not show that the microphone is muted; the page shows a red
+  "Mic muted" notice instead. The page's volume slider follows `volume`, so it
+  moves when the robot's knob is turned.
+- Three more hand-written actions drive the 3x3 light grid: **`led_colour`**
+  and **`led_animation`** take `{"r": 0, "g": 160, "b": 255}`, and
+  **`led_meter`** gives the grid back to the sound level meter (the robot's
+  button does the same). The animation's timings are repeated in
+  `static/app.js` for the page's copy of the grid.
 
 ### Flashing while the app is running
 

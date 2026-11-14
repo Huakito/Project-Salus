@@ -1,5 +1,5 @@
 {
-  "screen": { "width": 320, "height": 240 },
+  "screen": { "width": 160, "height": 80 },
 
   "commands": [
     {
@@ -15,28 +15,58 @@
       "label": "Play melody",
       "description": "Play a ringtone-style (RTTTL) melody through the speaker.",
       "value": "text",
-      "example": "hello:d=8,o=5,b=160:c,e,g,4c6"
+      "example": "hello:d=8,o=5,b=160:c,e,g,4c6",
+      "editor": "melody"
     },
     {
       "key": "spk_set_volume",
-      "label": "Set volume",
-      "description": "Speaker volume from 0 (silent) to 1 (loudest). 0.3 to 0.5 is comfortable; 1 distorts.",
+      "label": "Volume",
+      "description": "Speaker volume from 0 (silent) to 1 (loudest). 0.3 to 0.5 is comfortable; 1 distorts. The robot's screen shows the volume bar when it changes.",
       "value": "number",
       "min": 0,
       "max": 1,
       "step": 0.05,
-      "example": 0.4
+      "example": 0.4,
+      "editor": "volume"
     },
     {
       "key": "spk_stop",
       "label": "Stop sound",
       "description": "Stop any sound immediately.",
-      "value": "none"
+      "value": "none",
+      "show": false
+    },
+    {
+      "key": "led_colour",
+      "label": "Lights",
+      "description": "Hold the 3x3 light grid at one colour. Each of r, g and b is 0 to 255. The grid stops being the sound meter until led_meter, or the robot's button.",
+      "value": "json",
+      "example": { "r": 0, "g": 160, "b": 255 },
+      "editor": "lights"
+    },
+    {
+      "key": "led_animation",
+      "label": "Play light animation",
+      "description": "Play a three-second animation on the light grid in this colour, then go back to what the grid was showing.",
+      "value": "json",
+      "example": { "r": 0, "g": 160, "b": 255 },
+      "editor": "lights"
+    },
+    {
+      "key": "led_meter",
+      "label": "Lights back to sound meter",
+      "description": "Give the light grid back to the sound level meter.",
+      "value": "none",
+      "editor": "lights"
     }
   ],
 
   "events": [
-    { "key": "yes_btn", "type": "button", "description": "1 when pressed, 0 when released." },
-    { "key": "no_btn", "type": "button", "description": "1 when pressed, 0 when released." }
+    { "key": "btn", "type": "button", "description": "The button: 1 when pressed, 0 when released." },
+    { "key": "knob", "type": "sensor", "description": "The knob's position, sent each time it clicks round." },
+    { "key": "knob_btn", "type": "button", "description": "1 each time the knob is pushed." },
+    { "key": "mic_level", "type": "sensor", "description": "How loud the microphone hears the room, 0 to 32767, every 250 ms." },
+    { "key": "mic_muted", "type": "state", "description": "1 while the microphone is muted (knob pushed), 0 while it is on. Sent on change and every 2 s. The page shows a red notice." },
+    { "key": "volume", "type": "state", "description": "Speaker volume as a percentage, 0 to 100. Sent on change and every 2 s, so the page's slider follows the knob." }
   ]
 }

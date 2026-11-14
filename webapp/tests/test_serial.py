@@ -152,6 +152,9 @@ def test_it_connects_to_the_port_it_was_given(manager, firmware):
         "port": firmware.port,
         "detail": "",
         "waiting": 0,
+        "mic_muted": False,
+        "volume": None,
+        "knob": None,
     }
 
 
