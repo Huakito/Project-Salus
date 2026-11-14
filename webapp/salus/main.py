@@ -347,6 +347,7 @@ def create_app(
             "response": reply.message,
             "response_source": reply.source,
             "safety_pause": reply.safety_pause,
+            "follow_up": reply.follow_up,
         }
 
     @app.get("/api/check-in/question")

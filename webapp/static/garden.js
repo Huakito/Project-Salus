@@ -161,10 +161,12 @@ function render() {
     : `Settled for today · ${plant.stage_name} · stage ${plant.visual_stage + 1} / ${plant.stage_count}`;
   el("plant-care").textContent = plant.needs_care ? plant.care_label : "Already cared for today";
   el("plant-care").disabled = !plant.needs_care;
-  el("plant-move").textContent = movingPlant ? "Cancel moving" : "Move on bed";
-  el("plant-delete").textContent = deleteConfirmId === plant.id ? "Confirm remove" : "Remove plant";
-  el("plant-delete").classList.toggle("confirming", deleteConfirmId === plant.id);
-  el("placement-hint").hidden = !movingPlant;
+  if (el("plant-move")) el("plant-move").textContent = movingPlant ? "Cancel moving" : "Move on bed";
+  if (el("plant-delete")) {
+    el("plant-delete").textContent = deleteConfirmId === plant.id ? "Confirm remove" : "Remove plant";
+    el("plant-delete").classList.toggle("confirming", deleteConfirmId === plant.id);
+  }
+  if (el("placement-hint")) el("placement-hint").hidden = !movingPlant;
 }
 
 function slotName(index) {
@@ -172,6 +174,7 @@ function slotName(index) {
 }
 
 function renderPlacementGrid() {
+  if (!el("garden-slots")) return;
   const occupants = new Map(state.plants.map((plant) => [plant.plot_slot, plant]));
   const selected = selectedPlant();
   el("garden-world").classList.toggle("arranging", movingPlant);
@@ -192,6 +195,7 @@ function renderPlacementGrid() {
 
 function renderSlotOptions() {
   const select = el("plant-slot");
+  if (!select) return;
   const previous = Number(select.value);
   const occupied = new Set(state.plants.map((plant) => plant.plot_slot));
   const available = PLANT_SPOTS.map((_, index) => index).filter((index) => !occupied.has(index));
@@ -455,12 +459,12 @@ function tellAboutSelected() {
 }
 
 el("plant-care").addEventListener("click", startCareGame);
-el("plant-move").addEventListener("click", () => {
+el("plant-move")?.addEventListener("click", () => {
   movingPlant = !movingPlant;
   deleteConfirmId = null;
   render();
 });
-el("plant-delete").addEventListener("click", deleteSelectedPlant);
+el("plant-delete")?.addEventListener("click", deleteSelectedPlant);
 el("care-cancel").addEventListener("click", () => { careCleanup(); el("care-game").hidden = true; });
 el("dialogue-close").addEventListener("click", () => { el("robot-dialogue").hidden = true; speechSynthesis?.cancel(); stopSpeechFace(); });
 window.addEventListener("keydown", (event) => {
@@ -473,12 +477,11 @@ el("plant-tell").addEventListener("click", tellAboutSelected);
 el("seed-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const species = new FormData(event.currentTarget).get("seed");
-  if (!el("plant-slot").value) return;
-  const result = await request("/api/garden/plants", {
-    species,
-    nickname: el("plant-nickname").value,
-    plot_slot: Number(el("plant-slot").value),
-  });
+  const slot = el("plant-slot");
+  if (slot && !slot.value) return;
+  const payload = {species, nickname: el("plant-nickname").value};
+  if (slot) payload.plot_slot = Number(slot.value);
+  const result = await request("/api/garden/plants", payload);
   el("plant-nickname").value = "";
   selectedId = result.plant.id;
   movingPlant = false;

@@ -443,9 +443,10 @@ def test_check_in_has_a_local_fallback_and_accepts_no_audio(client):
     assert response.status_code == 200
     assert response.json() == {
         "ok": True,
-        "response": "Thanks for telling me. We can take that with us and move on when you’re ready.",
+        "response": "I’m listening—that sounds worth staying with for a moment.",
         "response_source": "local",
         "safety_pause": False,
+        "follow_up": "What made that the first thing that came to mind?",
     }
 
     rejected = client.post(
@@ -468,7 +469,11 @@ def test_check_in_uses_a_scripted_pause_for_direct_self_harm_language(client):
 
 def test_openai_check_in_is_bounded_and_structured():
     class Parsed:
-        output_parsed = type("Output", (), {"message": "A slower pace sounds like a good fit for the next few shapes."})()
+        output_parsed = type("Output", (), {
+            "message": "A slower pace sounds like a good fit for the next few shapes.",
+            "follow_up": "Would a longer pause between shapes feel better?",
+            "memory_note": "Prefers a slower movement pace.",
+        })()
 
     class Responses:
         def __init__(self):
@@ -485,16 +490,37 @@ def test_openai_check_in_is_bounded_and_structured():
     assert reply == CheckInReply(
         message="A slower pace sounds like a good fit for the next few shapes.",
         source="openai",
+        memory_note="Prefers a slower movement pace.",
+        follow_up="Would a longer pause between shapes feel better?",
     )
     sent = client.responses.request
     assert sent["store"] is False
-    assert sent["max_output_tokens"] == 120
+    assert sent["max_output_tokens"] == 180
     assert sent["text_format"].__name__ == "ModelCheckInReply"
     assert json.loads(sent["input"][1]["content"]) == {
         "check_in_question": "What pace feels right?",
         "answer": "A little slower.",
         "local_history": "",
     }
+
+
+def test_openai_trailing_question_becomes_a_follow_up():
+    class Parsed:
+        output_parsed = type("Output", (), {
+            "message": "Finishing that took persistence. What helped you keep going?",
+            "follow_up": "",
+            "memory_note": "",
+        })()
+
+    class Responses:
+        def parse(self, **kwargs):
+            return Parsed()
+
+    service = FeedbackService(client=type("Client", (), {"responses": Responses()})())
+    reply = service.check_in_reply("What went okay?", "I finished a difficult task.")
+
+    assert reply.message == "Finishing that took persistence."
+    assert reply.follow_up == "What helped you keep going?"
 
 
 # ---- only this computer, and only our own page ----

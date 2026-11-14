@@ -45,6 +45,17 @@ let voiceController = null;
 let voiceAudio = null;
 let voiceObjectUrl = null;
 let voiceFinish = null;
+let voiceQueue = Promise.resolve();
+let voiceGeneration = 0;
+let checkInDepth = 0;
+let lastCompletionLine = "";
+
+const COMPLETION_LINES = [
+  "Nice, you found it. Let’s take a breath.",
+  "There it is. Take a comfortable moment.",
+  "Got it. No rush into the next one.",
+  "That was smooth. Let your hand relax for a second.",
+];
 
 function delay(ms) { return new Promise((resolve) => window.setTimeout(resolve, ms)); }
 
@@ -106,6 +117,8 @@ function startSpeechFace() {
 }
 
 function cancelSpeechPlayback() {
+  voiceGeneration += 1;
+  voiceQueue = Promise.resolve();
   voiceController?.abort();
   voiceController = null;
   voiceAudio?.pause();
@@ -174,20 +187,29 @@ async function elevenLabsSpeak(text, restFace) {
   });
 }
 
-async function speak(text, force = false, restFace = "(^_^)" ) {
-  if (!force && !el("game-voice").checked) return "off";
-  cancelSpeechPlayback();
+async function playSpeech(text, restFace) {
   try {
     await elevenLabsSpeak(text, restFace);
     el("game-voice-provider").textContent = "ElevenLabs voice played";
     return "elevenlabs";
   } catch (error) {
-    if (error.name === "AbortError") return;
+    if (error.name === "AbortError") return "cancelled";
     console.warn("ElevenLabs voice failed; using browser voice.", error);
     await browserSpeak(text, restFace);
     el("game-voice-provider").textContent = "Browser voice fallback";
     return "browser";
   }
+}
+
+function speak(text, force = false, restFace = "(^_^)" ) {
+  if (!force && !el("game-voice").checked) return "off";
+  const generation = voiceGeneration;
+  const queued = voiceQueue.catch(() => {}).then(() => {
+    if (generation !== voiceGeneration) return "cancelled";
+    return playSpeech(text, restFace);
+  });
+  voiceQueue = queued;
+  return queued;
 }
 
 function say(text) { void speak(text); }
@@ -351,7 +373,7 @@ function updatePose(points) {
   if (held >= HOLD_MS) completePose();
 }
 
-function completePose() {
+async function completePose() {
   if (phase !== "pose") return;
   phase = "transition";
   const finishedIndex = poseIndex;
@@ -360,15 +382,20 @@ function completePose() {
   poseIndex += 1;
   holdStarted = null;
   renderProgress();
-  say("Got it. Take a moment.");
+  const choices = COMPLETION_LINES.filter((line) => line !== lastCompletionLine);
+  lastCompletionLine = choices[Math.floor(Math.random() * choices.length)];
   robotSuccessCue();
-  if (checkInAfter === finishedIndex) window.setTimeout(() => beginCheckIn(pose), 1100);
-  else window.setTimeout(() => transitionToNextPose(), 900);
+  await speak(lastCompletionLine);
+  await delay(450);
+  if (!running) return;
+  if (checkInAfter === finishedIndex) beginCheckIn(pose);
+  else transitionToNextPose();
 }
 
 async function beginCheckIn(pose) {
   if (!running) return;
   phase = "checkin";
+  checkInDepth = 0;
   recognitionAttempts = 0;
   recognitionHandled = false;
   try {
@@ -470,6 +497,7 @@ async function sendCheckIn(answer) {
     checkIns.push({
       question: activeQuestion, answer, response: reply.response,
       response_source: reply.response_source, safety_pause: reply.safety_pause,
+      follow_up: reply.follow_up || "",
     });
     safetyPaused = reply.safety_pause;
     el("checkin-reply-text").textContent = reply.response;
@@ -479,7 +507,22 @@ async function sendCheckIn(answer) {
       pauseCameraForSafety();
     }
     await speak(reply.response, true);
-    await delay(1400);
+    const followUp = String(reply.follow_up || "").trim();
+    if (!safetyPaused && followUp && checkInDepth < 1 && running) {
+      checkInDepth += 1;
+      activeQuestion = followUp;
+      activeQuestionId = null;
+      recognitionAttempts = 0;
+      el("checkin-question").textContent = followUp;
+      el("checkin-transcript").textContent = "";
+      el("checkin-transcript").hidden = true;
+      el("checkin-status").textContent = "Salus is curious…";
+      await delay(500);
+      await speak(followUp, true, "(o_o)");
+      if (running && phase === "checkin") listenForCheckIn();
+      return;
+    }
+    await delay(900);
     el("checkin-card").hidden = true;
     if (safetyPaused) finishGame();
     else if (running) transitionToNextPose("Next signal when you’re ready");
@@ -532,8 +575,8 @@ async function startGame() {
   el("game-stop").disabled = false;
   renderProgress();
   detectFrame();
-  say("We’ll start slowly.");
-  transitionToNextPose("Starting gently");
+  await speak("We’ll start slowly.");
+  if (running) transitionToNextPose("Starting gently");
 }
 
 function pauseCameraForSafety() {

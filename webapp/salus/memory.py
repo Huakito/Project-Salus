@@ -52,10 +52,13 @@ class HistoryStore:
         with self._connect() as db:
             row = db.execute("SELECT summary FROM memory WHERE id=1").fetchone()
             recent = db.execute(
-                "SELECT question, answer FROM check_ins ORDER BY id DESC LIMIT 5"
+                "SELECT question, answer, response FROM check_ins ORDER BY id DESC LIMIT 5"
             ).fetchall()
         summary = row[0] if row else "No saved preferences yet."
-        turns = "\n".join(f"- Q: {q}\n  A: {a}" for q, a in reversed(recent))
+        turns = "\n".join(
+            f"- Salus asked: {question}\n  Person said: {answer}\n  Salus replied: {response}"
+            for question, answer, response in reversed(recent)
+        )
         return f"Saved notes:\n{summary}\n\nRecent answers:\n{turns or 'None yet.'}"[:5000]
 
     def next_question(self) -> dict[str, str]:
