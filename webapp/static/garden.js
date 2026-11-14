@@ -138,15 +138,19 @@ function slotName(index) {
 }
 
 function renderPlacementGrid() {
-  const occupied = new Set(state.plants.map((plant) => plant.plot_slot));
+  const occupants = new Map(state.plants.map((plant) => [plant.plot_slot, plant]));
+  const selected = selectedPlant();
   el("garden-world").classList.toggle("arranging", movingPlant);
   el("garden-slots").replaceChildren(...PLANT_SPOTS.map((spot, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "garden-slot";
     button.style.left = `${spot[0]}%`; button.style.top = `${spot[1]}%`;
-    button.disabled = occupied.has(index);
-    button.setAttribute("aria-label", occupied.has(index) ? `${slotName(index)}, occupied` : `Move plant to ${slotName(index)}`);
+    const occupant = occupants.get(index);
+    button.disabled = selected?.plot_slot === index;
+    button.setAttribute("aria-label", occupant
+      ? `Swap with ${occupant.nickname} in ${slotName(index)}`
+      : `Move plant to ${slotName(index)}`);
     button.addEventListener("click", () => moveSelectedPlant(index));
     return button;
   }));

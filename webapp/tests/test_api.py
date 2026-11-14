@@ -231,28 +231,29 @@ def test_garden_persists_and_never_kills_a_missed_plant(contract_file, data_dir)
     app = create_app(mode="fake", contract_path=contract_file, data_dir=data_dir, feedback_service=FeedbackService())
     with TestClient(app, base_url="http://127.0.0.1:8000") as garden_client:
         initial = garden_client.get("/api/garden").json()
+        assert len(initial["plants"]) == 24
         assert initial["plants"][0]["needs_care"] is True
         assert initial["plants"][0]["plot_slot"] == 0
-        added = garden_client.post("/api/garden/plants", json={
-            "species": "sunflower", "nickname": "Sunny", "plot_slot": 5
-        }).json()["plant"]
-        assert added["plot_slot"] == 5
-        moved = garden_client.post(f"/api/garden/plants/{added['id']}/move", json={"plot_slot": 9})
+        sunflower = next(plant for plant in initial["plants"] if plant["nickname"] == "Sunflower")
+        original_growth = sunflower["growth"]
+        moved = garden_client.post(f"/api/garden/plants/{sunflower['id']}/move", json={"plot_slot": 9})
         assert moved.status_code == 200
         assert moved.json()["plant"]["plot_slot"] == 9
-        occupied = garden_client.post("/api/garden/plants", json={"species": "tulip", "plot_slot": 9})
-        assert occupied.status_code == 422
-        cared = garden_client.post(f"/api/garden/plants/{added['id']}/care", json={
+        swapped = garden_client.get("/api/garden").json()["plants"]
+        assert next(plant for plant in swapped if plant["nickname"] == "Lemon Queen")["plot_slot"] == 1
+        full = garden_client.post("/api/garden/plants", json={"species": "tulip"})
+        assert full.status_code == 422
+        cared = garden_client.post(f"/api/garden/plants/{sunflower['id']}/care", json={
             "activity": "water", "duration_seconds": 12, "score": 1
         }).json()
         assert cared["changed"] is True
-        assert cared["plant"]["growth"] == 1
+        assert cared["plant"]["growth"] == min(5, original_growth + 1)
         garden_client.post("/api/garden/admin", json={"action": "advance_day", "days": 10})
         later = garden_client.get("/api/garden").json()
-        sunny = next(plant for plant in later["plants"] if plant["nickname"] == "Sunny")
-        assert sunny["needs_care"] is True
-        assert sunny["growth"] == 1
-        assert "dead" not in sunny
+        sunflower_later = next(plant for plant in later["plants"] if plant["nickname"] == "Sunflower")
+        assert sunflower_later["needs_care"] is True
+        assert sunflower_later["growth"] == min(5, original_growth + 1)
+        assert "dead" not in sunflower_later
         assert later["history"][0]["activity"] == "water"
         assert later["history"][0]["duration_seconds"] == 12
 

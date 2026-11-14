@@ -20,6 +20,20 @@ CATALOG = {
 STAGE_NAMES = ("freshly planted", "sprout", "young plant", "growing", "established", "flowering")
 PLOT_SLOT_COUNT = 24
 
+DEMO_PLANTS = (
+    ("daisy", "Daisy"), ("sunflower", "Sunflower"), ("lavender", "English Lavender"),
+    ("tulip", "Red Tulip"), ("cattail", "Common Cattail"), ("vine", "Climbing Vine"),
+    ("mushroom", "Oyster Mushroom"), ("wildflower", "Wildflower Meadow"),
+    ("daisy", "Oxeye Daisy"), ("sunflower", "Lemon Queen"),
+    ("lavender", "Hidcote Lavender"), ("tulip", "Queen of Night"),
+    ("cattail", "Dwarf Cattail"), ("vine", "Sweet Pea"),
+    ("mushroom", "Chanterelle"), ("wildflower", "Cornflower"),
+    ("daisy", "Shasta Daisy"), ("sunflower", "Velvet Queen"),
+    ("lavender", "French Lavender"), ("tulip", "Apricot Beauty"),
+    ("cattail", "Broadleaf Cattail"), ("vine", "Star Jasmine"),
+    ("mushroom", "Morel"), ("wildflower", "Field Poppy"),
+)
+
 
 class GardenStore:
     def __init__(self, data_dir: Path):
@@ -48,6 +62,7 @@ class GardenStore:
                 today = self._day(db)
                 db.execute("INSERT INTO garden_plants(species,nickname,growth,planted_day,plot_slot) VALUES ('daisy','Dot',1,?,0)", (today,))
             self._upgrade_plot_grid(db)
+            self._seed_demo_garden(db)
             self._repair_plot_slots(db)
 
     def _connect(self):
@@ -67,6 +82,21 @@ class GardenStore:
                 new_slot = (old_slot // 4) * 6 + (old_slot % 4)
                 db.execute("UPDATE garden_plants SET plot_slot=? WHERE id=?", (new_slot, plant_id))
         db.execute("INSERT INTO garden_meta(key,value) VALUES ('plot_grid_version','2')")
+
+    def _seed_demo_garden(self, db) -> None:
+        """Replace the prototype names once with a full presentation garden."""
+        if db.execute("SELECT 1 FROM garden_meta WHERE key='demo_garden_version'").fetchone():
+            return
+        db.execute("DELETE FROM garden_care_log")
+        db.execute("DELETE FROM garden_plants")
+        today = self._day(db)
+        for plot_slot, (species, nickname) in enumerate(DEMO_PLANTS):
+            growth = 2 + plot_slot % 4
+            db.execute(
+                "INSERT INTO garden_plants(species,nickname,growth,planted_day,plot_slot) VALUES (?,?,?,?,?)",
+                (species, nickname, growth, today, plot_slot),
+            )
+        db.execute("INSERT INTO garden_meta(key,value) VALUES ('demo_garden_version','1')")
 
     def _repair_plot_slots(self, db) -> None:
         """Give old saves stable, non-overlapping bed positions."""
@@ -124,13 +154,15 @@ class GardenStore:
         if not 0 <= plot_slot < PLOT_SLOT_COUNT:
             raise ValueError("That flower-bed position does not exist.")
         with self._connect() as db:
-            if not db.execute("SELECT 1 FROM garden_plants WHERE id=?", (plant_id,)).fetchone():
+            plant = db.execute("SELECT plot_slot FROM garden_plants WHERE id=?", (plant_id,)).fetchone()
+            if not plant:
                 raise ValueError("That plant is not in the garden.")
-            occupied = db.execute(
-                "SELECT 1 FROM garden_plants WHERE plot_slot=? AND id<>?", (plot_slot, plant_id)
+            current_slot = plant[0]
+            occupant = db.execute(
+                "SELECT id FROM garden_plants WHERE plot_slot=? AND id<>?", (plot_slot, plant_id)
             ).fetchone()
-            if occupied:
-                raise ValueError("That flower-bed position is already in use.")
+            if occupant:
+                db.execute("UPDATE garden_plants SET plot_slot=? WHERE id=?", (current_slot, occupant[0]))
             db.execute("UPDATE garden_plants SET plot_slot=? WHERE id=?", (plot_slot, plant_id))
         return next(p for p in self.state()["plants"] if p["id"] == plant_id)
 

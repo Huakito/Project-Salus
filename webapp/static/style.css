@@ -2916,3 +2916,34 @@ body:has(.garden-view:not([hidden])) .topbar-inner {
   .garden-water { width: 14%; }
   .garden-layout > .plant-panel { left: calc(14% + 10px); }
 }
+
+/* Presentation framing: keep the map centred and the guide off the beds. */
+body:has(.garden-view:not([hidden])) .topbar-inner {
+  max-width: 1580px;
+}
+
+.page:has(.garden-view:not([hidden])) {
+  width: min(1580px, calc(100% - 64px));
+  margin-inline: auto;
+  padding-inline: 0;
+}
+
+.garden-view:not([hidden]) {
+  width: 100%;
+  max-width: none;
+}
+
+.garden-layout > .plant-panel {
+  top: 14px;
+  left: 14px;
+}
+
+@media (max-width: 900px) {
+  .page:has(.garden-view:not([hidden])) {
+    width: calc(100% - 24px);
+  }
+
+  .garden-layout > .plant-panel {
+    left: 10px;
+  }
+}
