@@ -130,13 +130,13 @@
           <div>
             <p class="eyebrow">A quiet place to return to</p>
             <h2>Your garden</h2>
-            <p>Walk with WASD or the arrow keys. Click a plant when you are nearby.</p>
           </div>
           <div class="garden-day"><span>Garden day</span><strong id="garden-day">—</strong></div>
         </header>
 
         <section class="garden-layout">
           <div class="garden-world" id="garden-world" tabindex="0" aria-label="Walkable garden. Use arrow keys or WASD.">
+            <div class="garden-water" aria-hidden="true"></div>
             <div class="farm-path path-horizontal" aria-hidden="true"></div>
             <div class="farm-path path-vertical" aria-hidden="true"></div>
             <div class="farm-bed bed-one" aria-hidden="true"></div>
@@ -167,7 +167,7 @@
             <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
             <div class="game-character" id="game-character" aria-hidden="true"></div>
             <div class="robot-follower" id="robot-follower" aria-label="Salus follows you"><img src="favicon.svg" alt=""></div>
-            <div class="game-help">WASD / arrows to move · click nearby plants</div>
+            <div class="game-help" id="game-help">Move with WASD or arrows</div>
           </div>
           <aside class="plant-panel" id="plant-panel" aria-label="Garden information and controls">
             <div class="robot-dialogue" id="robot-dialogue" role="status" aria-live="polite" hidden>

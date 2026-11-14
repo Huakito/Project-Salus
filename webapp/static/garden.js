@@ -336,6 +336,7 @@ el("care-cancel").addEventListener("click", () => { careCleanup(); el("care-game
 el("dialogue-close").addEventListener("click", () => { el("robot-dialogue").hidden = true; speechSynthesis?.cancel(); stopSpeechFace(); });
 window.addEventListener("keydown", (event) => {
   if (el("garden-view").hidden || !["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","w","a","s","d"].includes(event.key)) return;
+  el("game-help")?.classList.add("dismissed");
   event.preventDefault(); heldKeys.add(event.key);
 });
 window.addEventListener("keyup", (event) => heldKeys.delete(event.key));

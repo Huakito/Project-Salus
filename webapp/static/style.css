@@ -2455,3 +2455,275 @@ body:has(.play-view:not([hidden])) .topbar-inner,
     max-height: none;
   }
 }
+
+/* Full-map garden pass: controls sit over the world and scenery gets room. */
+body:has(.garden-view:not([hidden])) .topbar-inner {
+  max-width: 1720px;
+}
+
+.page:has(.garden-view:not([hidden])) {
+  width: min(1720px, 100%);
+  padding: 0 12px 10px;
+}
+
+.garden-view:not([hidden]) {
+  max-width: 1696px;
+  grid-template-rows: 40px minmax(0, 1fr);
+  gap: 6px;
+}
+
+.garden-heading {
+  min-height: 40px;
+  height: 40px;
+}
+
+.garden-heading h2 {
+  font-size: clamp(1.25rem, 1.6vw, 1.65rem);
+}
+
+.garden-heading > div:first-child p:last-child,
+.garden-heading .eyebrow {
+  display: none;
+}
+
+.garden-day {
+  min-width: 120px;
+  padding: 5px 9px;
+}
+
+.garden-layout {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: calc(100dvh - 142px);
+  min-height: 620px;
+  max-height: none;
+}
+
+.garden-world {
+  width: 100%;
+  height: 100%;
+  min-height: 620px;
+}
+
+.garden-water {
+  position: absolute;
+  z-index: 0;
+  inset: 0 auto 0 0;
+  width: 14%;
+  min-width: 120px;
+  background: #4b98c4 url("assets/tulipmere-lite/tiles/water_c.png") repeat;
+  background-size: 64px 64px;
+  clip-path: polygon(0 0, 76% 0, 89% 7%, 72% 15%, 94% 24%, 79% 33%, 96% 43%, 73% 53%, 91% 63%, 76% 72%, 96% 82%, 78% 91%, 86% 100%, 0 100%);
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.garden-water::after {
+  position: absolute;
+  inset: 7% 18% 7% 12%;
+  background: linear-gradient(90deg, transparent 0 12%, rgb(212 245 255 / .72) 12% 17%, transparent 17% 48%, rgb(212 245 255 / .55) 48% 54%, transparent 54%) 0 0 / 90px 64px repeat;
+  opacity: .7;
+  content: "";
+  animation: water-glint 2.8s steps(3, end) infinite;
+}
+
+.farm-path {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.path-horizontal {
+  left: 10%;
+  right: -2%;
+  top: 39%;
+  height: 19%;
+  transform: rotate(-1.1deg);
+  clip-path: polygon(0 27%, 8% 18%, 17% 25%, 27% 12%, 38% 22%, 49% 10%, 61% 20%, 72% 13%, 84% 24%, 100% 16%, 100% 82%, 89% 72%, 78% 84%, 66% 73%, 54% 88%, 42% 74%, 30% 86%, 19% 72%, 9% 83%, 0 74%);
+}
+
+.path-vertical {
+  top: -3%;
+  bottom: -3%;
+  left: 43%;
+  width: 16%;
+  transform: rotate(.8deg);
+  clip-path: polygon(24% 0, 76% 0, 68% 9%, 82% 18%, 65% 28%, 79% 39%, 62% 49%, 76% 59%, 61% 70%, 81% 81%, 68% 91%, 77% 100%, 25% 100%, 35% 91%, 18% 82%, 36% 71%, 20% 60%, 37% 49%, 21% 39%, 37% 29%, 18% 18%, 34% 9%);
+}
+
+.bed-one { left: 18%; top: 13%; }
+.bed-two { right: 10%; top: 13%; }
+.bed-three { left: 18%; top: 61%; }
+.bed-four { right: 10%; top: 61%; }
+
+.spring-pond {
+  display: none;
+}
+
+.oak-left { left: 14%; top: 1%; }
+.oak-right { right: 1.2%; top: 1%; }
+.spring-bench { left: 15%; top: 45%; }
+.tulips-one { left: 15%; top: 25%; }
+.daffodils-two { left: 15%; top: 58%; }
+
+.garden-layout > .plant-panel {
+  position: absolute;
+  z-index: 24;
+  top: 16px;
+  left: calc(14% + 16px);
+  display: block;
+  width: 268px;
+  height: auto;
+  max-height: calc(100% - 32px);
+  padding: 12px;
+  border: 3px solid #4c3428;
+  border-radius: 4px;
+  background: rgb(255 247 218 / .94);
+  color: #34291f;
+  box-shadow: 5px 6px 0 rgb(50 37 28 / .32);
+  overflow: visible;
+}
+
+.plant-panel > .eyebrow,
+.plant-panel #plant-about,
+.plant-panel .hardware-hint,
+.plant-panel .plant-large {
+  display: none;
+}
+
+.plant-panel #plant-details:not([hidden]) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.plant-panel #plant-name,
+.plant-panel .plant-state,
+.plant-panel .result {
+  grid-column: 1 / -1;
+}
+
+.plant-panel #plant-name {
+  margin: 0;
+  color: #244f40;
+  font-size: .88rem;
+}
+
+.plant-panel .plant-state {
+  margin: 0;
+  padding: 6px 8px;
+  border-left: 3px solid #d6a94d;
+  background: rgb(221 192 125 / .2);
+  color: #4e4134;
+  font-size: .64rem;
+  line-height: 1.35;
+}
+
+.plant-panel .button {
+  width: auto;
+  min-height: 36px;
+  margin: 0;
+  padding: 7px 8px;
+  border-radius: 3px;
+  font-size: .66rem;
+}
+
+.plant-panel .button.primary {
+  border-color: #8a6933;
+  background: #e8c36b;
+  color: #34291f;
+}
+
+.plant-panel .button.quiet {
+  border-color: #6b5846;
+  background: transparent;
+  color: #34291f;
+}
+
+.plant-panel .robot-dialogue {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 310px;
+  margin: 0;
+  padding: 11px 44px 11px 12px;
+  border-width: 3px;
+  font-size: .72rem;
+}
+
+.garden-tools {
+  position: absolute;
+  z-index: 25;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  gap: 6px;
+  width: 210px;
+  height: auto;
+  max-height: calc(100% - 28px);
+  overflow: visible;
+}
+
+.garden-tools .seed-shelf,
+.garden-tools .admin-tools,
+.garden-tools .garden-journal {
+  margin: 0;
+  padding: 0;
+  border: 2px solid #4c3428;
+  border-radius: 3px;
+  background: rgb(255 247 218 / .92);
+  color: #34291f;
+  box-shadow: 3px 4px 0 rgb(50 37 28 / .22);
+}
+
+.garden-tools details > summary,
+.garden-tools .seed-shelf > summary {
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: .65rem;
+}
+
+.garden-tools details[open],
+.garden-tools .seed-shelf[open] {
+  max-height: min(520px, calc(100dvh - 230px));
+  padding: 0 9px 9px;
+  overflow-y: auto;
+}
+
+.garden-tools details[open] > summary,
+.garden-tools .seed-shelf[open] > summary {
+  margin-inline: -9px;
+}
+
+.game-help {
+  left: 16%;
+  bottom: 10px;
+  padding: 4px 7px;
+  opacity: .82;
+  transition: opacity .3s ease, translate .3s ease;
+}
+
+.game-help.dismissed {
+  opacity: 0;
+  translate: 0 5px;
+  pointer-events: none;
+}
+
+@keyframes water-glint {
+  50% { transform: translateY(7px); opacity: .45; }
+}
+
+@media (max-width: 900px) {
+  .garden-layout {
+    height: 720px;
+    min-height: 720px;
+  }
+
+  .garden-water { width: 18%; }
+  .garden-layout > .plant-panel { left: calc(18% + 10px); width: 230px; }
+  .garden-tools { width: 180px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .garden-water::after { animation: none; }
+}
