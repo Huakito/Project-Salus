@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -344,7 +344,27 @@ def create_app(
 
     @app.get("/api/calendar/events")
     def calendar_events() -> dict:
-        return {"connected": True, "source": "demo", "events": calendar.upcoming()}
+        return {**calendar.status(), "events": calendar.upcoming()}
+
+    @app.get("/api/calendar/google/connect")
+    def connect_google_calendar():
+        try:
+            return RedirectResponse(calendar.auth_url())
+        except ValueError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=409)
+
+    @app.get("/api/calendar/google/callback")
+    def google_calendar_callback(code: str, state: str):
+        try:
+            calendar.finish_auth(code, state)
+        except Exception as exc:
+            return RedirectResponse("/?calendar=error#journal-view")
+        return RedirectResponse("/?calendar=connected#journal-view")
+
+    @app.post("/api/calendar/google/disconnect")
+    def disconnect_google_calendar() -> dict:
+        calendar.disconnect()
+        return {"ok": True}
 
     @app.get("/api/journal")
     def journal_entries() -> dict:

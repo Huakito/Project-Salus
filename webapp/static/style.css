@@ -2556,6 +2556,8 @@ body:has(.play-view:not([hidden])) .topbar-inner,
 .journal-view[hidden] { display: none; }
 .journal-panel { border: 1px solid var(--line); background: var(--panel); padding: 1.5rem; min-width: 0; }
 .journal-panel h2 { margin-top: .25rem; }
+.journal-calendar { margin: 1rem 0 1.5rem; padding: 1rem; border: 1px solid var(--line); background: rgba(0,0,0,.1); }
+.journal-calendar h3 { margin: 0; }
 .journal-panel textarea, .journal-chat-form input { width: 100%; }
 .journal-panel form .button { margin-top: .75rem; }
 .journal-entries { display: grid; gap: 1rem; margin-top: 1.5rem; max-height: 58vh; overflow: auto; }

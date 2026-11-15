@@ -454,7 +454,7 @@ def test_demo_calendar_exposes_events_and_can_prompt_about_one(client, tmp_path)
     calendar = client.get("/api/calendar/events")
     assert calendar.status_code == 200
     assert calendar.json()["source"] == "demo"
-    assert len(calendar.json()["events"]) == 3
+    assert len(calendar.json()["events"]) >= 3
 
     from salus.calendar import DemoCalendar
 

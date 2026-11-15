@@ -40,6 +40,7 @@ async function speak(text) {
     if (!response.ok) return;
     const audio = new Audio(URL.createObjectURL(await response.blob()));
     await audio.play();
+    await new Promise((resolve) => { audio.onended = resolve; audio.onerror = resolve; });
   } catch { /* Text remains visible if audio is unavailable. */ }
 }
 
@@ -53,12 +54,11 @@ el("journal-form").addEventListener("submit", async (event) => {
   el("journal-entries").prepend(renderEntry(data.entry));
 });
 
-el("journal-chat-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const input = el("journal-chat-input");
-  const text = input.value.trim();
+let liveChat = false;
+let recognition = null;
+
+async function sendMessage(text) {
   if (!text) return;
-  input.value = "";
   message("person", text);
   el("journal-chat-status").textContent = "Salus is thinking…";
   try {
@@ -67,22 +67,80 @@ el("journal-chat-form").addEventListener("submit", async (event) => {
     if (reply.follow_up) message("salus", reply.follow_up);
     await speak([reply.response, reply.follow_up].filter(Boolean).join(" "));
     el("journal-chat-status").textContent = reply.calendar_event ? "Calendar updated." : "";
+    if (reply.calendar_event) loadCalendar();
   } catch (error) { el("journal-chat-status").textContent = error.message; }
+  if (liveChat) startListening();
+}
+
+el("journal-chat-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const input = el("journal-chat-input");
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  await sendMessage(text);
 });
 
-el("journal-mic").addEventListener("click", () => {
+function startListening() {
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Recognition) { el("journal-chat-status").textContent = "Speech recognition is not available in this browser."; return; }
-  const recognition = new Recognition();
+  recognition?.abort();
+  recognition = new Recognition();
   recognition.lang = "en-GB";
   recognition.interimResults = false;
   recognition.onstart = () => { el("journal-chat-status").textContent = "Listening…"; };
   recognition.onresult = (event) => {
-    el("journal-chat-input").value = event.results[0][0].transcript;
-    el("journal-chat-form").requestSubmit();
+    const transcript = event.results[0][0].transcript;
+    el("journal-chat-input").value = "";
+    sendMessage(transcript);
   };
-  recognition.onerror = () => { el("journal-chat-status").textContent = "I didn’t catch that."; };
+  recognition.onerror = (event) => {
+    if (liveChat && event.error !== "aborted") {
+      el("journal-chat-status").textContent = "I didn’t catch that. Listening again…";
+      setTimeout(startListening, 500);
+    }
+  };
   recognition.start();
+}
+
+el("journal-mic").addEventListener("click", () => {
+  liveChat = !liveChat;
+  el("journal-mic").textContent = liveChat ? "Stop live chat" : "Start live chat";
+  if (liveChat) startListening();
+  else {
+    recognition?.abort();
+    el("journal-chat-status").textContent = "Live chat stopped.";
+  }
+});
+
+function renderCalendarEvent(event) {
+  const row = document.createElement("div");
+  row.className = "calendar-event";
+  const date = new Date(event.starts_at);
+  const time = document.createElement("time");
+  time.textContent = date.toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  const title = document.createElement("span");
+  title.textContent = event.title;
+  row.append(time, title);
+  return row;
+}
+
+async function loadCalendar() {
+  const data = await api("/api/calendar/events");
+  el("journal-calendar-events").replaceChildren(...data.events.slice(0, 8).map(renderCalendarEvent));
+  el("google-calendar-status").textContent = data.connected ? "Connected to Google Calendar." : (data.configured ? "Using demo events until you connect Google." : "Google OAuth credentials are needed. Demo events are shown for now.");
+  el("google-calendar-connect").textContent = data.connected ? "Disconnect Google" : "Connect Google Calendar";
+  el("google-calendar-connect").dataset.connected = String(data.connected);
+}
+
+el("google-calendar-connect").addEventListener("click", async () => {
+  if (el("google-calendar-connect").dataset.connected === "true") {
+    await api("/api/calendar/google/disconnect", {});
+    loadCalendar();
+  } else {
+    window.location.href = "/api/calendar/google/connect";
+  }
 });
 
 loadEntries();
+loadCalendar();

@@ -152,6 +152,14 @@
         <section class="journal-panel">
           <p class="eyebrow">Private and local</p>
           <h2>Your journal</h2>
+          <section class="journal-calendar" aria-labelledby="journal-calendar-title">
+            <div class="calendar-preview-heading">
+              <h3 id="journal-calendar-title">Calendar</h3>
+              <button class="button small" id="google-calendar-connect" type="button">Connect Google Calendar</button>
+            </div>
+            <p id="google-calendar-status" role="status"></p>
+            <div id="journal-calendar-events"></div>
+          </section>
           <form id="journal-form">
             <label for="journal-entry">Write something down</label>
             <textarea id="journal-entry" rows="5" placeholder="What happened today?"></textarea>
@@ -168,7 +176,7 @@
           <form id="journal-chat-form" class="journal-chat-form">
             <label class="sr-only" for="journal-chat-input">Message Salus</label>
             <input id="journal-chat-input" autocomplete="off" placeholder="Say something or add a calendar event…">
-            <button class="button" id="journal-mic" type="button">Talk</button>
+            <button class="button" id="journal-mic" type="button">Start live chat</button>
             <button class="button primary" type="submit">Send</button>
           </form>
           <p id="journal-chat-status" role="status"></p>
