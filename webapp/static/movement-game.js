@@ -528,6 +528,7 @@ function activateView(tab, moveFocus = false) {
   const view = tab.dataset.view;
   el("play-view").hidden = view !== "play";
   el("garden-view").hidden = view !== "garden";
+  el("about-view").hidden = view !== "about";
   el("stage").hidden = view !== "home";
   el("commands-note").hidden = view !== "home";
   for (const item of viewTabs) {

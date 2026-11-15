@@ -2389,53 +2389,198 @@ body:has(.play-view:not([hidden])) .topbar-inner,
   gap: 24px;
 }
 
-/* ---- Home: a short "About Salus" card above the test modules ---- */
-/* Styled like a module card and as wide as the header's contents. On a wide screen it
-   sits on its own row above the console and the modules on either side; on a
-   narrow one it is simply first in the column. The page scrolls as usual. */
-.home-intro {
-  width: 100%; /* as wide as the header's contents */
+/* ---- About: its own tab, with cards styled like the Home modules ---- */
+.page:has(.about-view:not([hidden])) {
+  max-width: 1320px;
+  padding: 24px 20px 56px;
+}
+
+.about-view {
+  display: grid;
+  gap: 24px;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.about-card {
   padding: 18px;
   border: 1px solid var(--line);
   background: var(--panel);
 }
 
-.home-intro h2 {
+.about-card h2 {
   font-size: 1rem;
 }
 
-/* Text runs the full width of the card, with tight spacing between parts. */
-#stage .home-intro {
-  line-height: 1.45;
-}
-
-.home-intro .command-heading {
+.about-card .command-heading {
   margin-bottom: 8px;
   padding-bottom: 8px;
 }
 
-.home-intro p + p {
+.about-card p + p,
+.about-card p + ol {
   margin-top: 8px;
 }
 
-@media (min-width: 1120px) {
-  .home-intro {
-    grid-area: 1 / 1 / 2 / -1; /* across all three columns */
-    width: auto;
-    margin-bottom: 24px;
-  }
+.about-card sup {
+  line-height: 0;
+}
 
-  .stage > .console {
-    grid-area: 2 / 2;
-  }
+.about-card sup a {
+  color: var(--accent);
+}
 
-  .stage > .side-left {
-    grid-area: 2 / 1;
-  }
+/* "Why relapse matters": the text, with a line chart of its figures beside it
+   on a wide screen and under it on a narrow one. Each series has its own
+   marker shape and a direct label, so none relies on colour alone. */
+.relapse-layout {
+  display: grid;
+  gap: 18px 28px;
+}
 
-  .stage > .side-right {
-    grid-area: 2 / 3;
+@media (min-width: 900px) {
+  .relapse-layout {
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr);
+    align-items: start;
   }
+}
+
+.relapse-chart {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--field);
+}
+
+/* The title fills the chart box's width on one line: JetBrains Mono letters
+   are each 0.6em wide, so the 72-letter title (plus a hair of margin) fills the box (less its 14px padding on
+   each side) at this size. It wraps only if the box gets very narrow. */
+.relapse-chart {
+  container-type: inline-size;
+}
+
+.relapse-chart figcaption {
+  font-size: max(0.62rem, calc((100cqi - 28px) / (73 * 0.6)));
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+@container (max-width: 380px) {
+  .relapse-chart figcaption {
+    white-space: normal;
+  }
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 6px 0 4px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-legend svg {
+  width: 22px;
+  height: 12px;
+  overflow: visible;
+}
+
+.line-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: var(--font);
+}
+
+.chart-grid line {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart-baseline {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+.chart-axis text {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.line-specialist {
+  fill: none;
+  stroke: var(--note);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.dot-specialist {
+  fill: var(--note);
+  stroke: var(--field); /* a ring of the surface colour keeps each point distinct */
+  stroke-width: 2;
+}
+
+.ring-mueller {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.dot-general {
+  fill: var(--ink);
+  stroke: var(--field);
+  stroke-width: 2;
+}
+
+.line-chart circle,
+.line-chart rect {
+  cursor: default;
+}
+
+.chart-label text {
+  fill: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chart-label .chart-label-small {
+  fill: var(--muted);
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.chart-source {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.about-card .relapse-layout + ol {
+  margin-top: 14px;
+}
+
+.about-sources {
+  margin: 0;
+  padding: 10px 0 0 1.4em;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.about-sources li + li {
+  margin-top: 4px;
 }
 
 /* ---- Movement: "Hand Signals" underlined and kept to one line ---- */

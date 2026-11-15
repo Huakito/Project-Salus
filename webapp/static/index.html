@@ -20,6 +20,7 @@
           <button class="nav-tab active" id="home-tab" type="button" role="tab" data-view="home" aria-controls="stage" aria-selected="true">Home</button>
           <button class="nav-tab" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="false" tabindex="-1">Movement</button>
           <button class="nav-tab" id="garden-tab" type="button" role="tab" data-view="garden" aria-controls="garden-view" aria-selected="false" tabindex="-1">Garden</button>
+          <button class="nav-tab" id="about-tab" type="button" role="tab" data-view="about" aria-controls="about-view" aria-selected="false" tabindex="-1">About</button>
         </nav>
         <div class="link">
           <p class="mic-note" id="mic-note" role="status" hidden></p>
@@ -230,15 +231,6 @@
       </main>
 
       <main class="stage" id="stage" role="tabpanel" aria-labelledby="home-tab">
-        <section class="home-intro" aria-labelledby="home-intro-title">
-          <div class="command-heading">
-            <h2 id="home-intro-title">About SALUS</h2>
-            <span class="command-key">our aims</span>
-          </div>
-          <p>Depression often comes back, and it tends to creep in quietly: a skipped walk, a day spent in bed, plans that slip away one at a time. We built SALUS to help stop that slide before it starts. It's a small robot friend that sits beside you, with a face, a voice, a knob to turn and lights that glow, and it's there every day, not just on the hard ones.</p>
-          <p>Our main goal is to help prevent relapse by building a steady routine and the motivation to reach your daily tasks and bigger goals. Hand Signals is a short camera game of gentle movements, with one spoken check-in. The Garden grows as you come back to care for it each day. You can talk to SALUS out loud, and it replies in its own voice. Camera video stays on this computer and is never saved, and the voice chat sends only the written words of what you say, never the audio, to write its reply. If anything you say suggests you are in danger, SALUS points you to a real person or a crisis line.</p>
-          <p class="hint">SALUS is here to support you, alongside the people and care already in your life, never instead of them. The modules below test the robot's parts.</p>
-        </section>
         <section class="console" id="console" aria-labelledby="face-title" data-board="offline">
           <div class="console-top">
             <span class="console-led" aria-hidden="true"></span>
@@ -391,6 +383,70 @@
       </main>
 
       <p class="hint stage-note" id="commands-note"></p>
+
+      <main class="about-view" id="about-view" role="tabpanel" aria-labelledby="about-tab" hidden>
+        <section class="about-card" aria-labelledby="about-title">
+          <div class="command-heading">
+            <h2 id="about-title">About SALUS</h2>
+            <span class="command-key">our aims</span>
+          </div>
+          <p>Depression often comes back, and it tends to creep in quietly: a skipped walk, a day spent in bed, plans that slip away one at a time. We built SALUS to help stop that slide before it starts. It's a small robot friend that sits beside you, with a face, a voice, a knob to turn and lights that glow, and it's there every day, not just on the hard ones.</p>
+          <p>Our main goal is to help prevent relapse by building a steady routine and the motivation to reach your daily tasks and bigger goals. Hand Signals is a short camera game of gentle movements, with one spoken check-in. The Garden grows as you come back to care for it each day. You can talk to SALUS out loud, and it replies in its own voice. Camera video stays on this computer and is never saved, and the voice chat sends only the written words of what you say, never the audio, to write its reply. If anything you say suggests you are in danger, SALUS points you to a real person or a crisis line.</p>
+          <p class="hint">SALUS is here to support you, alongside the people and care already in your life, never instead of them.</p>
+        </section>
+
+        <section class="about-card" aria-labelledby="relapse-title">
+          <div class="command-heading">
+            <h2 id="relapse-title">Why relapse matters</h2>
+            <span class="command-key">the research</span>
+          </div>
+          <div class="relapse-layout">
+          <div class="relapse-text">
+          <p>Getting better from depression is often not the end of it. A review of long-term studies found that among people treated in specialist mental health care, depression returned for 60% within 5 years, 67% within 10 years and 85% within 15 years. Among people in the general population it returned for 35% within 15 years. The number of past episodes and symptoms that linger after recovery were the strongest signs that it would come back.<sup><a href="#source-1">1</a></sup></p>
+          <p>A separate study followed 380 people for 15 years after they recovered from major depression: 85% had at least one more episode.<sup><a href="#source-2">2</a></sup> That is why SALUS focuses on the everyday habits that help people stay well, not only on the hard days.</p>
+          <p>We focus on preventing relapse because each episode makes the next one more likely, and the review above found that past episodes and lingering symptoms were the clearest warning signs.<sup><a href="#source-1">1</a></sup> Recovery is hard-won, and losing it can mean time off work, strain on the people closest to you, and the exhausting feeling of starting again from the beginning. By helping people keep a steady routine, stay motivated towards the things they care about, and notice early when things start to slip, we hope SALUS can help people hold on to the progress they've made: fewer setbacks, more good days, and the confidence that staying well is something they can keep doing.</p>
+          </div>
+          <figure class="relapse-chart" aria-labelledby="relapse-chart-title">
+            <figcaption id="relapse-chart-title">Recovered patients' chance of relapsing into depression over given years</figcaption>
+            <ul class="chart-legend">
+              <li><svg viewBox="0 0 22 12" aria-hidden="true"><line x1="1" y1="6" x2="21" y2="6" class="line-specialist"/><circle cx="11" cy="6" r="4" class="dot-specialist"/></svg>Specialist care<sup>1</sup></li>
+              <li><svg viewBox="0 0 22 12" aria-hidden="true"><circle cx="11" cy="6" r="5" class="ring-mueller"/></svg>380 recovered patients<sup>2</sup></li>
+              <li><svg viewBox="0 0 22 12" aria-hidden="true"><rect x="6" y="1" width="10" height="10" class="dot-general"/></svg>General population<sup>1</sup></li>
+            </ul>
+            <svg class="line-chart" viewBox="0 0 480 270" role="img" aria-label="Line chart. Specialist care: 60% within 5 years, 67% within 10 years, 85% within 15 years. 380 recovered patients: 85% within 15 years. General population: 35% within 15 years.">
+              <g class="chart-grid">
+                <line x1="44" y1="20" x2="380" y2="20"/><line x1="44" y1="70" x2="380" y2="70"/><line x1="44" y1="120" x2="380" y2="120"/><line x1="44" y1="170" x2="380" y2="170"/>
+              </g>
+              <line class="chart-baseline" x1="44" y1="220" x2="380" y2="220"/>
+              <g class="chart-axis" text-anchor="end">
+                <text x="36" y="24">100%</text><text x="36" y="74">75%</text><text x="36" y="124">50%</text><text x="36" y="174">25%</text><text x="36" y="224">0%</text>
+              </g>
+              <g class="chart-axis" text-anchor="middle">
+                <text x="44" y="238">0</text><text x="156" y="238">5</text><text x="268" y="238">10</text><text x="380" y="238">15</text>
+                <text x="212" y="262">Years since recovery</text>
+              </g>
+              <polyline class="line-specialist" points="156,100 268,86 380,50"/>
+              <circle class="ring-mueller" cx="380" cy="50" r="9"><title>380 recovered patients: 85% within 15 years</title></circle>
+              <circle class="dot-specialist" cx="156" cy="100" r="5"><title>Specialist care: 60% within 5 years</title></circle>
+              <circle class="dot-specialist" cx="268" cy="86" r="5"><title>Specialist care: 67% within 10 years</title></circle>
+              <circle class="dot-specialist" cx="380" cy="50" r="5"><title>Specialist care: 85% within 15 years</title></circle>
+              <rect class="dot-general" x="375" y="145" width="10" height="10"><title>General population: 35% within 15 years</title></rect>
+              <g class="chart-label">
+                <text x="156" y="88" text-anchor="middle">60%</text>
+                <text x="268" y="74" text-anchor="middle">67%</text>
+                <text x="394" y="47">85%</text><text x="394" y="61" class="chart-label-small">both studies</text>
+                <text x="394" y="154">35%</text>
+              </g>
+            </svg>
+            <p class="chart-source">Source: <sup>1</sup> Hardeveld et al., <cite>Acta Psychiatrica Scandinavica</cite>, 2010; <sup>2</sup> Mueller et al., <cite>American Journal of Psychiatry</cite>, 1999. Full references below.</p>
+          </figure>
+          </div>
+          <ol class="about-sources">
+            <li id="source-1">Hardeveld F, Spijker J, De Graaf R, Nolen WA, Beekman ATF. Prevalence and predictors of recurrence of major depressive disorder in the adult population. <cite>Acta Psychiatrica Scandinavica</cite>. 2010;122(3):184&ndash;191.</li>
+            <li id="source-2">Mueller TI, Leon AC, Keller MB, et al. Recurrence after recovery from major depressive disorder during 15 years of observational follow-up. <cite>American Journal of Psychiatry</cite>. 1999;156(7):1000&ndash;1006. doi:10.1176/ajp.156.7.1000</li>
+          </ol>
+        </section>
+      </main>
     </div>
 
   </body>
