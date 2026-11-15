@@ -24,9 +24,9 @@ code:
     // laptop address over USB, and the board keeps them in its flash. These three
     // are only the fallback for a board that has never been set up that way; they
     // can be left empty ("") so no password is committed with this file.
-    const char* WIFI_SSID   = "James";       // 2.4 GHz networks only
-    const char* WIFI_PASS   = "abcdefgh";                 // open network: no password
-    const char* LAPTOP_IP   = "172.20.10.2";    // the laptop running server.py: `ipconfig getifaddr en0` on a Mac, `ip -4 -br addr` on Linux (address only, no port)
+    const char* WIFI_SSID   = "Hype-Guest";       // 2.4 GHz networks only
+    const char* WIFI_PASS   = "";                 // open network: no password
+    const char* LAPTOP_IP   = "192.168.201.197";    // the laptop running server.py: `ipconfig getifaddr en0` on a Mac, `ip -4 -br addr` on Linux (address only, no port)
     const uint16_t LAPTOP_PORT = 9000;              // AUDIO_PORT in server.py
 
     // Level meter thresholds, in the units `atech monitor --key mic_level` prints.
@@ -64,7 +64,6 @@ code:
     volatile bool relink = false;          // the laptop's address changed: netTask reconnects
     bool screenStale = false;              // redraw the screen even if the scene is the same
     uint32_t lastJoinAt = 0;               // when joinWifi() last started an attempt
-    volatile uint8_t wifiReason = 0;       // why the last attempt failed (wifi_err_reason_t), 0 once joined
     const uint32_t WIFI_RETRY_MS = 30000;  // not joined after this long: start a fresh attempt
 
     void setLaptop(const String& ip) {
@@ -522,13 +521,6 @@ code:
     WiFi.mode(WIFI_STA);
     WiFi.persistent(false);             // the settings live in wifiStore, not in the WiFi driver's own copy
     loadWifiSettings();
-    // Remember why an attempt failed, so the web app can say (201: network not
-    // seen, 15/202/204: password refused, ...). Cleared once the robot has an address.
-    WiFi.onEvent([](arduino_event_id_t, arduino_event_info_t info) {
-      wifiReason = info.wifi_sta_disconnected.reason;
-    }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
-    WiFi.onEvent([](arduino_event_id_t, arduino_event_info_t) { wifiReason = 0; },
-                 ARDUINO_EVENT_WIFI_STA_GOT_IP);
     joinWifi();                         // returns at once; netTask waits for it
     WiFi.setSleep(false);               // WiFi power saving adds delays and gaps to audio
 
@@ -713,8 +705,7 @@ code:
                             : WiFi.status() == WL_CONNECTED ? "connected" : "connecting";
       String ip = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : String();
       String wifiNow = String("{\"state\":\"") + wifiState + "\",\"ssid\":" + jsonText(wifiSsid) +
-                       ",\"ip\":" + jsonText(ip) + ",\"laptop\":" + jsonText(laptopAddress()) +
-                       ",\"reason\":" + String((int)wifiReason) + "}";
+                       ",\"ip\":" + jsonText(ip) + ",\"laptop\":" + jsonText(laptopAddress()) + "}";
       if (wifiNow != toldWifi || millis() - toldWifiAt >= 2000) {
         toldWifi = wifiNow;
         toldWifiAt = millis();
