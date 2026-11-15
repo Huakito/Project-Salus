@@ -1,12 +1,24 @@
 {
   "questions": [
-    {"id": "pace", "topic": "pace", "text": "What pace feels right from here?"},
-    {"id": "small_win", "topic": "reflection", "text": "What is one small thing that went okay today?"},
-    {"id": "easier", "topic": "support", "text": "What would make the rest of today feel a little easier?"},
-    {"id": "attention", "topic": "focus", "text": "Where would you like your attention to be for the next few minutes?"},
-    {"id": "set_down", "topic": "pause", "text": "Is there something you would like to set down for the next minute?"},
-    {"id": "look_forward", "topic": "motivation", "text": "Is there anything small you are looking forward to?"},
-    {"id": "comfortable", "topic": "comfort", "text": "What would feel comfortable for the next part?"},
-    {"id": "helped", "topic": "patterns", "text": "Has anything helped the day feel more manageable so far?"}
+    {"id": "day_so_far", "level": "light", "topic": "daily_life", "text": "What have you been up to today?"},
+    {"id": "enjoying", "level": "light", "topic": "interests", "text": "What have you been enjoying lately?"},
+    {"id": "watching_playing", "level": "light", "topic": "interests", "text": "Have you watched or played anything good lately?"},
+    {"id": "music", "level": "light", "topic": "interests", "text": "Have you been listening to anything good lately?"},
+    {"id": "food_drink", "level": "light", "topic": "daily_life", "text": "Have you had anything nice to eat or drink today?"},
+    {"id": "smile", "level": "light", "topic": "positive", "text": "Has anything made you smile lately, even for a second?"},
+    {"id": "look_forward", "level": "light", "topic": "plans", "text": "Is there anything nice you are looking forward to this week?"},
+    {"id": "small_win", "level": "light", "topic": "positive", "text": "What is one small thing that went okay today?"},
+
+    {"id": "easier", "level": "familiar", "topic": "support", "text": "What would make the rest of today feel a little easier?"},
+    {"id": "helped", "level": "familiar", "topic": "patterns", "text": "Has anything helped the day feel more manageable so far?"},
+    {"id": "tomorrow", "level": "familiar", "topic": "future", "text": "What would make tomorrow feel like a decent day?"},
+    {"id": "proud", "level": "familiar", "topic": "positive", "text": "What is something you have done recently that you feel good about?"},
+    {"id": "want_to_do", "level": "familiar", "topic": "interests", "text": "Is there something you have wanted to do but have not got around to yet?"},
+    {"id": "energy_for", "level": "familiar", "topic": "motivation", "text": "What is something you wish you had a little more energy for?"},
+
+    {"id": "headspace", "level": "reflective", "topic": "reflection", "text": "What has been taking up most of your headspace today?"},
+    {"id": "missing", "level": "reflective", "topic": "connection", "text": "Is there anyone or anything you have been missing recently?"},
+    {"id": "surprisingly_hard", "level": "reflective", "topic": "reflection", "text": "Has anything felt surprisingly difficult today?"},
+    {"id": "change_today", "level": "reflective", "topic": "reflection", "text": "If you could change one part of today, what would it be?"}
   ]
 }

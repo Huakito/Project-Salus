@@ -6,15 +6,16 @@ import logging
 import os
 import json
 import threading
+import re
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -29,11 +30,13 @@ from .board import (
     fake_board,
     real_board,
 )
+from .calendar import DemoCalendar
 from .contract import DEFAULT_PATH, Contract, ContractError, load_contract
 from .face import FaceError, check_face, rgb565
 from .feedback import FeedbackService
 from .memory import HistoryStore
-from .garden import GardenStore
+from .journal import JournalStore
+from .voice import ElevenLabsVoice, MAX_SPEECH_CHARS, VoiceError
 from .wifi import WifiRequest, this_computer
 
 log = logging.getLogger("salus")
@@ -95,30 +98,32 @@ class CheckInRequest(BaseModel):
     question_id: str | None = Field(default=None, max_length=80)
 
 
+class VoiceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1, max_length=MAX_SPEECH_CHARS)
+
+
+class JournalEntryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    body: str = Field(min_length=1, max_length=5000)
+
+
+class JournalChatRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    message: str = Field(min_length=1, max_length=1000)
+
+
+class ConversationContinueRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    quiet_turn: int = Field(default=0, ge=0, le=20)
+
+
 class SettingsRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     spoken_guidance: bool | None = None
     spoken_check_ins: bool | None = None
     robot_colour: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
-
-
-class AddPlantRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    species: str = Field(min_length=1, max_length=40)
-    nickname: str = Field(default="", max_length=30)
-
-
-class GardenAdminRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    action: Literal["advance_day", "grow_all", "make_due", "flower_all"]
-    days: int = Field(default=1, ge=1, le=30)
-
-
-class GardenCareRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    activity: Literal["water", "mist", "turn", "sun", "check"]
-    duration_seconds: int = Field(default=0, ge=0, le=600)
-    score: float = Field(default=1, ge=0, le=1)
 
 
 class _HideStatusPolls(logging.Filter):
@@ -149,6 +154,7 @@ def create_app(
     contract_path: Path = DEFAULT_PATH,
     data_dir: Path | None = None,
     feedback_service: FeedbackService | None = None,
+    voice_service: ElevenLabsVoice | None = None,
 ) -> FastAPI:
     """Build the app. ``mode`` is "real" (the robot on USB) or "fake" (no hardware needed)."""
     if mode not in ("real", "fake"):
@@ -166,8 +172,17 @@ def create_app(
     session_path = session_dir / "movement-sessions.jsonl"
     session_lock = threading.Lock()
     feedback_service = feedback_service or FeedbackService.from_environment()
+    reload_voice_environment = voice_service is None
+    voice_service = voice_service or ElevenLabsVoice.from_environment()
+
+    def current_voice_service():
+        """Reload editable .env voice settings without requiring a restart."""
+        if reload_voice_environment:
+            return ElevenLabsVoice.from_environment()
+        return voice_service
     history = HistoryStore(session_dir, Path(__file__).with_name("conversation_library.json"))
-    garden = GardenStore(session_dir)
+    calendar = DemoCalendar(session_dir)
+    journal = JournalStore(session_dir)
     screen_lock = threading.Lock()
     screen_state: dict[str, Any] = {
         "kind": "face",
@@ -211,7 +226,8 @@ def create_app(
         # The page loads nothing from anywhere else, so say so; and always check
         # for a newer copy of the page's files instead of using a stale one.
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; frame-ancestors 'none'"
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; "
+            "media-src 'self' blob:; frame-ancestors 'none'"
         )
         response.headers["Permissions-Policy"] = "camera=(self), microphone=(self)"
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -341,11 +357,101 @@ def create_app(
             "response": reply.message,
             "response_source": reply.source,
             "safety_pause": reply.safety_pause,
+            "follow_up": reply.follow_up,
         }
 
     @app.get("/api/check-in/question")
     def next_check_in_question() -> dict:
-        return history.next_question()
+        return history.next_question(calendar.question())
+
+    @app.get("/api/calendar/events")
+    def calendar_events() -> dict:
+        return {**calendar.status(), "events": calendar.upcoming()}
+
+    @app.get("/api/calendar/google/connect")
+    def connect_google_calendar():
+        try:
+            return RedirectResponse(calendar.auth_url())
+        except ValueError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=409)
+
+    @app.get("/api/calendar/google/callback")
+    def google_calendar_callback(code: str, state: str):
+        try:
+            calendar.finish_auth(code, state)
+        except Exception as exc:
+            return RedirectResponse("/?calendar=error#journal-view")
+        return RedirectResponse("/?calendar=connected#journal-view")
+
+    @app.post("/api/calendar/google/disconnect")
+    def disconnect_google_calendar() -> dict:
+        calendar.disconnect()
+        return {"ok": True}
+
+    @app.get("/api/journal")
+    def journal_entries() -> dict:
+        return {"entries": journal.entries()}
+
+    @app.post("/api/journal")
+    def add_journal_entry(request: JournalEntryRequest) -> dict:
+        return {"ok": True, "entry": journal.add(request.body)}
+
+    @app.post("/api/journal/chat")
+    def journal_chat(request: JournalChatRequest) -> dict:
+        message = " ".join(request.message.split())
+        event = None
+        # Demo grammar: "add/book/schedule <title> tomorrow [at 3pm]".
+        match = re.search(
+            r"(?:add|book|schedule)\s+(.+?)\s+(today|tomorrow)(?:\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?[.!]?$",
+            message, re.IGNORECASE,
+        )
+        if match:
+            title, day_word, hour_text, minute_text, meridiem = match.groups()
+            hour = int(hour_text or 9)
+            if meridiem:
+                hour = hour % 12 + (12 if meridiem.casefold() == "pm" else 0)
+            start = datetime.now().astimezone().replace(hour=hour, minute=int(minute_text or 0), second=0, microsecond=0)
+            if day_word.casefold() == "tomorrow":
+                start += timedelta(days=1)
+            event = calendar.add(title.strip(), start)
+            response = f"Done — I added {event['title']} to your calendar for {start.strftime('%A at %-I:%M %p')}."
+            follow_up = ""
+            source = "calendar_action"
+        else:
+            context = history.context() + "\n\nJournal entries:\n" + journal.context()
+            reply = feedback_service.check_in_reply("The person is talking with you about their journal.", message, context)
+            response, follow_up, source = reply.message, reply.follow_up, reply.source
+        return {"ok": True, "response": response, "follow_up": follow_up, "source": source, "calendar_event": event}
+
+    @app.post("/api/journal/chat/continue")
+    def continue_journal_chat(request: ConversationContinueRequest) -> dict:
+        events = calendar.upcoming(5)
+        calendar_context = "\n".join(
+            f"- {event['starts_at']}: {event['title']}" for event in events
+        ) or "No upcoming events."
+        context = (
+            history.context() + "\n\nJournal entries:\n" + journal.context()
+            + "\n\nUpcoming calendar events:\n" + calendar_context
+        )
+        reply = feedback_service.conversation_continuation(context, request.quiet_turn)
+        return {"ok": True, "response": reply.message, "source": reply.source}
+
+    @app.get("/api/voice/status")
+    def voice_status() -> dict:
+        active_voice = current_voice_service()
+        return {
+            "provider": "elevenlabs" if active_voice.configured else "browser",
+            "configured": active_voice.configured,
+            "voice_id": active_voice.voice_id if active_voice.configured else None,
+        }
+
+    @app.post("/api/voice")
+    def generate_voice(request: VoiceRequest):
+        try:
+            audio = current_voice_service().synthesize(request.text)
+        except VoiceError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=503)
+        return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
 
     @app.get("/api/settings")
     def get_settings() -> dict:
@@ -354,32 +460,6 @@ def create_app(
     @app.post("/api/settings")
     def save_settings(request: SettingsRequest) -> dict:
         return history.save_settings(request.model_dump(exclude_none=True))
-
-    @app.get("/api/garden")
-    def garden_state() -> dict:
-        return garden.state()
-
-    @app.post("/api/garden/plants")
-    def add_garden_plant(request: AddPlantRequest) -> dict:
-        try:
-            return {"ok": True, "plant": garden.add(request.species, request.nickname)}
-        except ValueError as exc:
-            return JSONResponse({"detail": str(exc)}, status_code=422)
-
-    @app.post("/api/garden/plants/{plant_id}/care")
-    def care_for_garden_plant(plant_id: int, request: GardenCareRequest) -> dict:
-        try:
-            plant, changed = garden.care(plant_id, request.activity, request.duration_seconds, request.score)
-            return {"ok": True, "changed": changed, "plant": plant}
-        except ValueError as exc:
-            return JSONResponse({"detail": str(exc)}, status_code=404)
-
-    @app.post("/api/garden/admin")
-    def garden_admin(request: GardenAdminRequest) -> dict:
-        try:
-            return garden.admin(request.action, request.days)
-        except ValueError as exc:
-            return JSONResponse({"detail": str(exc)}, status_code=422)
 
     # Everything else is the page. Mounted last so it cannot shadow the API.
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="page")

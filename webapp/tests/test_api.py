@@ -20,8 +20,11 @@ def contract_file(tmp_path):
 
 
 @pytest.fixture
-def client(contract_file):
-    app = create_app(mode="fake", contract_path=contract_file, feedback_service=FeedbackService())
+def client(contract_file, tmp_path):
+    app = create_app(
+        mode="fake", contract_path=contract_file, data_dir=tmp_path / "data",
+        feedback_service=FeedbackService(),
+    )
     # The app only answers to its own address, so the test client must use it.
     with TestClient(app, base_url="http://127.0.0.1:8000") as client:
         assert app.state.manager.wait_for("connected", 2)
@@ -61,6 +64,85 @@ def test_settings_survive_between_requests(client):
     assert client.get("/api/settings").json() == {
         "spoken_guidance": False, "spoken_check_ins": True, "robot_colour": "#224466"
     }
+
+
+def test_movement_voice_audio_is_generated_server_side(contract_file, data_dir):
+    class FakeVoice:
+        configured = True
+        voice_id = "test-voice"
+
+        def __init__(self):
+            self.spoken = []
+
+        def synthesize(self, text):
+            self.spoken.append(text)
+            return b"ID3-fake-mp3"
+
+    voice = FakeVoice()
+    app = create_app(
+        mode="fake", contract_path=contract_file, data_dir=data_dir,
+        feedback_service=FeedbackService(), voice_service=voice,
+    )
+    with TestClient(app, base_url="http://127.0.0.1:8000") as voice_client:
+        assert voice_client.get("/api/voice/status").json() == {
+            "provider": "elevenlabs", "configured": True, "voice_id": "test-voice"
+        }
+        response = voice_client.post("/api/voice", json={"text": "Move gently."})
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "audio/mpeg"
+    assert response.content == b"ID3-fake-mp3"
+    assert voice.spoken == ["Move gently."]
+
+
+def test_movement_voice_settings_reload_without_restart(contract_file, data_dir, monkeypatch):
+    from salus.voice import ElevenLabsVoice
+
+    class FakeVoice:
+        configured = True
+
+        def __init__(self, voice_id):
+            self.voice_id = voice_id
+            self.spoken = []
+
+        def synthesize(self, text):
+            self.spoken.append(text)
+            return b"ID3-reloaded-voice"
+
+    first = FakeVoice("first-voice")
+    second = FakeVoice("second-voice")
+    selected = {"voice": first}
+    monkeypatch.setattr(
+        ElevenLabsVoice,
+        "from_environment",
+        staticmethod(lambda: selected["voice"]),
+    )
+    app = create_app(
+        mode="fake", contract_path=contract_file, data_dir=data_dir,
+        feedback_service=FeedbackService(),
+    )
+    with TestClient(app, base_url="http://127.0.0.1:8000") as voice_client:
+        assert voice_client.get("/api/voice/status").json()["voice_id"] == "first-voice"
+        selected["voice"] = second
+        assert voice_client.get("/api/voice/status").json()["voice_id"] == "second-voice"
+        response = voice_client.post("/api/voice", json={"text": "Use the new voice."})
+
+    assert response.content == b"ID3-reloaded-voice"
+    assert first.spoken == []
+    assert second.spoken == ["Use the new voice."]
+
+
+def test_movement_voice_falls_back_when_elevenlabs_is_not_configured(contract_file, data_dir):
+    from salus.voice import ElevenLabsVoice
+
+    app = create_app(
+        mode="fake", contract_path=contract_file, data_dir=data_dir,
+        feedback_service=FeedbackService(), voice_service=ElevenLabsVoice(api_key=""),
+    )
+    with TestClient(app, base_url="http://127.0.0.1:8000") as voice_client:
+        assert voice_client.get("/api/voice/status").json()["provider"] == "browser"
+        response = voice_client.post("/api/voice", json={"text": "Move gently."})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "ElevenLabs voice is not configured."
 
 
 def test_commands_are_the_contents_of_commands_json(client, contract_file):
@@ -228,27 +310,6 @@ def test_movement_session_is_saved_without_camera_data(contract_file, data_dir):
     assert saved["feedback_source"] == "local"
 
 
-def test_garden_persists_and_never_kills_a_missed_plant(contract_file, data_dir):
-    app = create_app(mode="fake", contract_path=contract_file, data_dir=data_dir, feedback_service=FeedbackService())
-    with TestClient(app, base_url="http://127.0.0.1:8000") as garden_client:
-        initial = garden_client.get("/api/garden").json()
-        assert initial["plants"][0]["needs_care"] is True
-        added = garden_client.post("/api/garden/plants", json={"species": "sunflower", "nickname": "Sunny"}).json()["plant"]
-        cared = garden_client.post(f"/api/garden/plants/{added['id']}/care", json={
-            "activity": "water", "duration_seconds": 12, "score": 1
-        }).json()
-        assert cared["changed"] is True
-        assert cared["plant"]["growth"] == 1
-        garden_client.post("/api/garden/admin", json={"action": "advance_day", "days": 10})
-        later = garden_client.get("/api/garden").json()
-        sunny = next(plant for plant in later["plants"] if plant["nickname"] == "Sunny")
-        assert sunny["needs_care"] is True
-        assert sunny["growth"] == 1
-        assert "dead" not in sunny
-        assert later["history"][0]["activity"] == "water"
-        assert later["history"][0]["duration_seconds"] == 12
-
-
 def test_openai_feedback_receives_only_derived_session_data():
     class Parsed:
         output_parsed = type("Output", (), {"message": "Nice work — three steady shapes found."})()
@@ -340,9 +401,10 @@ def test_check_in_has_a_local_fallback_and_accepts_no_audio(client):
     assert response.status_code == 200
     assert response.json() == {
         "ok": True,
-        "response": "Thanks for telling me. We can take that with us and move on when you’re ready.",
+        "response": "You mentioned “A little slower would be good.” I’d like to stay with that for a moment.",
         "response_source": "local",
         "safety_pause": False,
+        "follow_up": "Is there a part of that you want to tell me more about?",
     }
 
     rejected = client.post(
@@ -351,6 +413,77 @@ def test_check_in_has_a_local_fallback_and_accepts_no_audio(client):
     )
     assert rejected.status_code == 422
     assert "audio" in rejected.json()["detail"]
+
+
+def test_vague_check_in_gets_a_direct_comment_without_a_strange_follow_up(client):
+    response = client.post(
+        "/api/check-in",
+        json={"question": "What would feel comfortable?", "answer": "Anything"},
+    )
+    assert response.json()["response"] == (
+        "Anything works for you—easy choice. I’ll keep the next bit relaxed."
+    )
+    assert response.json()["follow_up"] == ""
+
+
+def test_questions_start_light_and_deepen_with_conversation_history(
+    contract_file, data_dir, monkeypatch
+):
+    monkeypatch.setattr("salus.memory.random.choice", lambda choices: choices[-1])
+    app = create_app(
+        mode="fake", contract_path=contract_file, data_dir=data_dir,
+        feedback_service=FeedbackService(),
+    )
+    with TestClient(app, base_url="http://127.0.0.1:8000") as staged_client:
+        assert staged_client.get("/api/check-in/question").json()["level"] == "light"
+
+        for index in range(5):
+            staged_client.post("/api/check-in", json={
+                "question_id": f"light-{index}",
+                "question": "What have you been up to today?",
+                "answer": "I worked on a small project.",
+            })
+        assert staged_client.get("/api/check-in/question").json()["level"] == "familiar"
+
+        for index in range(10):
+            staged_client.post("/api/check-in", json={
+                "question_id": f"familiar-{index}",
+                "question": "What have you been enjoying lately?",
+                "answer": "I have been enjoying music.",
+            })
+        assert staged_client.get("/api/check-in/question").json()["level"] == "reflective"
+
+
+def test_demo_calendar_exposes_events_and_can_prompt_about_one(client, tmp_path):
+    calendar = client.get("/api/calendar/events")
+    assert calendar.status_code == 200
+    assert calendar.json()["source"] == "demo"
+    assert len(calendar.json()["events"]) >= 3
+
+    from salus.calendar import DemoCalendar
+
+    question = DemoCalendar(tmp_path).question()
+    assert question is not None
+    assert question["topic"] == "calendar"
+    assert "Salus prototype" in question["text"]
+
+
+def test_journal_is_seeded_and_conversation_can_add_calendar_event(client):
+    journal = client.get("/api/journal").json()["entries"]
+    assert len(journal) >= 3
+    assert "Salus" in " ".join(entry["body"] for entry in journal)
+
+    reply = client.post("/api/journal/chat", json={"message": "Add dentist tomorrow at 3pm"})
+    assert reply.status_code == 200
+    assert reply.json()["calendar_event"]["title"] == "dentist"
+    assert reply.json()["source"] == "calendar_action"
+
+
+def test_live_journal_chat_continues_after_silence(client):
+    reply = client.post("/api/journal/chat/continue", json={"quiet_turn": 1})
+    assert reply.status_code == 200
+    assert reply.json()["source"] == "local"
+    assert reply.json()["response"].endswith("?")
 
 
 def test_check_in_uses_a_scripted_pause_for_direct_self_harm_language(client):
@@ -365,7 +498,11 @@ def test_check_in_uses_a_scripted_pause_for_direct_self_harm_language(client):
 
 def test_openai_check_in_is_bounded_and_structured():
     class Parsed:
-        output_parsed = type("Output", (), {"message": "A slower pace sounds like a good fit for the next few shapes."})()
+        output_parsed = type("Output", (), {
+            "message": "A slower pace sounds like a good fit for the next few shapes.",
+            "follow_up": "Would a longer pause between shapes feel better?",
+            "memory_note": "Prefers a slower movement pace.",
+        })()
 
     class Responses:
         def __init__(self):
@@ -382,16 +519,37 @@ def test_openai_check_in_is_bounded_and_structured():
     assert reply == CheckInReply(
         message="A slower pace sounds like a good fit for the next few shapes.",
         source="openai",
+        memory_note="Prefers a slower movement pace.",
+        follow_up="Would a longer pause between shapes feel better?",
     )
     sent = client.responses.request
     assert sent["store"] is False
-    assert sent["max_output_tokens"] == 120
+    assert sent["max_output_tokens"] == 180
     assert sent["text_format"].__name__ == "ModelCheckInReply"
     assert json.loads(sent["input"][1]["content"]) == {
         "check_in_question": "What pace feels right?",
         "answer": "A little slower.",
         "local_history": "",
     }
+
+
+def test_openai_trailing_question_becomes_a_follow_up():
+    class Parsed:
+        output_parsed = type("Output", (), {
+            "message": "Finishing that took persistence. What helped you keep going?",
+            "follow_up": "",
+            "memory_note": "",
+        })()
+
+    class Responses:
+        def parse(self, **kwargs):
+            return Parsed()
+
+    service = FeedbackService(client=type("Client", (), {"responses": Responses()})())
+    reply = service.check_in_reply("What went okay?", "I finished a difficult task.")
+
+    assert reply.message == "Finishing that took persistence."
+    assert reply.follow_up == "What helped you keep going?"
 
 
 # ---- only this computer, and only our own page ----
@@ -419,7 +577,8 @@ def test_responses_forbid_loading_anything_from_elsewhere(client):
     for path in ("/", "/api/status"):
         headers = client.get(path).headers
         assert headers["content-security-policy"] == (
-            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; frame-ancestors 'none'"
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; "
+            "media-src 'self' blob:; frame-ancestors 'none'"
         )
         assert headers["permissions-policy"] == "camera=(self), microphone=(self)"
         assert headers["cache-control"] == "no-cache"
