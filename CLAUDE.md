@@ -1,6 +1,6 @@
 # Project Salus
 
-Local-first companion robot for people living with depression: an ESP32-S3 board (`firmware/`) connected over USB & WiFi to a Python FastAPI control/audio companion on the computer (`webapp/`, `firmware/server.py`). Audio, speech recognition and the voice run on this computer; the voice chat sends the transcribed text (never audio) to Gemini to write replies.
+Local-first companion robot for people living with depression: an ESP32-S3 board (`firmware/`) connected over USB & WiFi to a Python FastAPI control/audio companion on the computer (`webapp/`, `firmware/server.py`). Audio and speech recognition run on this computer; the voice chat sends the transcribed text (never audio) to Gemini to write replies, and, only when `SALUS_TTS=elevenlabs`, the reply text to ElevenLabs to speak it (Piper, on this computer, otherwise).
 
 ## Repository Map
 
@@ -18,7 +18,7 @@ Local-first companion robot for people living with depression: an ESP32-S3 board
   - Events: `knob`, `knob_btn`, `btn`, `mic_level` (built in) and `mic_muted`, `volume`, `wifi` (printed by the loop on change and every 2 s; `salus/board.py` puts them in `/api/status`). `wifi` never carries the password.
   - The WiFi name, password and laptop address at the top of `code: globals:` are only the fallback for a board never set up from the Home tab's WiFi module. They get committed with the file, so leave them empty (`""`) or check before pushing.
 - `firmware/server.py` — TCP audio server on port `9000` (16 kHz 16-bit mono PCM, 30 ms chunks) + FastAPI utterances UI on `127.0.0.1:8001`. Each utterance: Whisper -> crisis screening -> Gemini -> Piper.
-- `firmware/chat.py` — The voice pipeline's parts (Whisper transcriber, Gemini chatter and its system prompt, Piper speaker). Settings come from `firmware/.env` (see `.env.example`).
+- `firmware/chat.py` — The voice pipeline's parts (Whisper transcriber, Gemini chatter and its system prompt, Piper speaker, and the optional ElevenLabs speaker with Piper as its backup). Settings come from `firmware/.env` (see `.env.example`); the ElevenLabs key may also sit in the project's `.env`, which the web app's Movement voice (`webapp/salus/voice.py`) reads. `python firmware/chat.py --find-voice NAME` looks up an ElevenLabs voice ID. The crisis message and the apology are always spoken by Piper.
 - `firmware/crisis.py` — Deterministic crisis screening: a phrase list and the scripted message. `server.py` calls it on every transcript before Gemini; a match is answered with the scripted message, Gemini is not called, and the turn is kept out of the chat history. Not yet reviewed by a clinician.
 
 ## Commands
@@ -35,7 +35,7 @@ Run from repo root (`.venv` holds all Python + `atech` + `pytest` dependencies):
 
 ## Critical Invariants & Safety Rules
 
-1. **Patient privacy & git hygiene:** Never read, log, commit, or expose `*.db*`, `recordings/`, `*.wav/*.mp3/*.pcm`, `webapp/data/`, `exports/`, or `.env*`. Keep processing local (`127.0.0.1`); the one exception is the transcribed chat text sent to Gemini by `firmware/chat.py`, and nothing else may leave this computer.
+1. **Patient privacy & git hygiene:** Never read, log, commit, or expose `*.db*`, `recordings/`, `*.wav/*.mp3/*.pcm`, `webapp/data/`, `exports/`, or `.env*`. Keep processing local (`127.0.0.1`); the exceptions are the transcribed chat text sent to Gemini by `firmware/chat.py`, and text to be spoken sent to ElevenLabs when it is configured (`firmware/chat.py` with `SALUS_TTS=elevenlabs`; `webapp/salus/voice.py` for the Movement page). Nothing else may leave this computer. Never send audio, and never let the crisis message depend on a network service.
 2. **Clinical safety:** Never use an LLM to score mood or improvise self-harm responses. Mood questionnaires must use deterministic validated scoring (PHQ-9 / PHQ-A / WHO-5); any self-harm/crisis signal must trigger scripted escalation to a person or crisis line. `firmware/crisis.py` does this for the voice chat: never call the language model on a transcript that has not been through `crisis.is_crisis()` first, and never weaken its phrase list without adding tests.
 3. **USB serial ownership:** Never bypass `salus/board.py`'s single-worker lock or spawn competing serial readers.
 4. **Audio/UI lag-free hot paths:** In `firmware/server.py`, never block the asyncio loop or port-9000 frame reader with synchronous disk/model calls—offload heavy inference/TTS/file I/O cleanly. Keep `webapp/static/` vanilla JS with zero unnecessary polling/DOM thrash.

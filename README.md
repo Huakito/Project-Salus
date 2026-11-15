@@ -80,6 +80,24 @@ python firmware/chat.py "hello" --wav /tmp/reply.wav   # smoke test (calls Gemin
 python firmware/server.py                   # run the audio server
 ```
 
+**ElevenLabs voice (optional).** The robot can speak with an ElevenLabs voice
+instead of Piper. The reply text is then sent to ElevenLabs as well as Gemini;
+the audio and what the robot hears still stay on this computer. Add to
+`firmware/.env` (the key can be in the project's `.env` instead, where the web
+app's Movement voice reads it):
+
+```bash
+SALUS_TTS=elevenlabs
+ELEVENLABS_API_KEY=...                       # ElevenLabs, Profile > API Keys
+ELEVENLABS_VOICE_ID=...                      # find it with the line below
+python firmware/chat.py --find-voice Valory  # prints matching voices and their IDs
+```
+
+Any sentence ElevenLabs cannot speak (no connection, no credit, a slow
+answer) is spoken by Piper, so keep the Piper voice downloaded. The crisis
+message and the apology are always spoken by Piper, so they never wait on the
+internet.
+
 The audio server needs Python 3.11 or newer (the web app below still works on
 3.10).
 

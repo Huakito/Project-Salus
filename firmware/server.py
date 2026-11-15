@@ -80,8 +80,9 @@ class Pipeline:
 
     transcribe: Callable[[bytes], str]              # 16 kHz PCM -> text ("" for no speech)
     respond: Callable[[list[dict], str], str]       # earlier turns, text -> reply text
-    speak: Callable[[str], bytes]                   # text -> 16 kHz PCM
+    speak: Callable[[str], bytes]                   # text -> 16 kHz PCM (ElevenLabs or Piper)
     problems: list[str] = field(default_factory=list)   # setup problems to tell the user about
+    speak_local: Callable[[str], bytes] | None = None   # Piper only: the crisis message and the apology
 
 
 pipeline: Pipeline | None = None     # built in the lifespan; tests put fakes here
@@ -99,11 +100,17 @@ def build_pipeline() -> Pipeline:
         problems.append("SALUS_CRISIS_HELPLINE is not set: the crisis message names no local helpline (see firmware/.env.example)")
     if not config.gemini_api_key:
         problems.append("GEMINI_API_KEY is not set: copy firmware/.env.example to firmware/.env and add your key")
+    speak, speak_local, voice_problems = chat.make_speaker(config)
+    problems += voice_problems
+    voice = (f"ElevenLabs voice {config.elevenlabs_voice_id} (Piper as backup)"
+             if speak is not speak_local else f"Piper voice {config.voice}")
+    print(f"[chat] speaking with {voice}")
     return Pipeline(
         transcribe=chat.Transcriber(config.whisper_model).transcribe,
         respond=chat.Chatter(config.gemini_api_key, config.gemini_model).respond,
-        speak=chat.Speaker(config.voice, config.models_dir).speak,
+        speak=speak,
         problems=problems,
+        speak_local=speak_local,
     )
 
 
@@ -122,9 +129,11 @@ async def warm_up(pipe: Pipeline) -> None:
 
     async def load_piper() -> None:
         global fallback_audio, crisis_audio
+        # Always Piper, on this computer: the crisis message must never depend on the internet.
+        local = getattr(pipe, "speak_local", None) or pipe.speak
         try:
-            fallback_audio = await asyncio.to_thread(pipe.speak, chat.FALLBACK_LINE) or None
-            crisis_audio = await asyncio.to_thread(pipe.speak, chat.clean_for_speech(crisis_message)) or None
+            fallback_audio = await asyncio.to_thread(local, chat.FALLBACK_LINE) or None
+            crisis_audio = await asyncio.to_thread(local, chat.clean_for_speech(crisis_message)) or None
         except FileNotFoundError as error:   # the message already says how to download the voice
             print(f"[chat] {error}")
         except Exception as error:
@@ -260,12 +269,14 @@ async def send_audio(robot: Robot, turn: Turn, pcm: bytes) -> None:
                 turn.deadline.reschedule(None)
 
 
-async def synthesize(sentences: list[str], queue: asyncio.Queue) -> None:
+async def synthesize(sentences: list[str], queue: asyncio.Queue, local: bool = False) -> None:
     """Producer: speak each sentence in a worker thread and queue its audio, then None.
-    It stops at the first sentence that fails (a broken voice fails every time)."""
+    It stops at the first sentence that fails (a broken voice fails every time).
+    local=True uses Piper only, never ElevenLabs (for the crisis message)."""
+    speak = (getattr(pipeline, "speak_local", None) or pipeline.speak) if local else pipeline.speak
     for sentence in sentences:
         try:
-            audio = await asyncio.to_thread(pipeline.speak, sentence)
+            audio = await asyncio.to_thread(speak, sentence)
         except Exception as error:
             print(f"[tts] failed: {type(error).__name__}: {error}")
             break
@@ -273,12 +284,12 @@ async def synthesize(sentences: list[str], queue: asyncio.Queue) -> None:
     await queue.put(None)   # not reached if cancelled, and then nobody is waiting for it
 
 
-async def speak_sentences(robot: Robot, turn: Turn, sentences: list[str]) -> None:
+async def speak_sentences(robot: Robot, turn: Turn, sentences: list[str], local: bool = False) -> None:
     """Send the reply as it is synthesised: the robot starts after the first sentence,
     and the later ones are made while the earlier ones play (the queue holds 2)."""
     started = time.monotonic()
     queue: asyncio.Queue = asyncio.Queue(maxsize=2)
-    producer = asyncio.create_task(synthesize(sentences, queue))
+    producer = asyncio.create_task(synthesize(sentences, queue, local))
     try:
         first = True
         while (audio := await queue.get()) is not None:
@@ -326,7 +337,7 @@ async def converse(robot: Robot, pcm: bytes, turn: Turn) -> None:
         if crisis_audio:
             await send_audio(robot, turn, crisis_audio)
         else:   # warm-up could not make it: speak it now
-            await speak_sentences(robot, turn, chat.split_sentences(chat.clean_for_speech(crisis_message)))
+            await speak_sentences(robot, turn, chat.split_sentences(chat.clean_for_speech(crisis_message)), local=True)
         if not turn.spoke:
             print("[crisis] the scripted message could NOT be spoken")
             entry["said"] = ""

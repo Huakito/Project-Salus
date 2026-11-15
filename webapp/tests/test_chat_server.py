@@ -698,3 +698,33 @@ def test_disconnect_during_a_reply_cancels_it_and_leaves_no_task(fakes):
 
     pending, kinds = asyncio.run(scenario())
     assert pending == set() and kinds == [b"T"]
+
+
+
+# ------------------------------------------------------------------- the crisis message stays on Piper
+
+
+def test_warm_up_makes_the_crisis_message_with_the_local_voice_not_elevenlabs(fakes, monkeypatch):
+    monkeypatch.setattr(server, "crisis_audio", None)
+    monkeypatch.setattr(server, "fallback_audio", None)
+    local_said = []
+    fakes.speak_local = lambda text: (local_said.append(text), b"LOCAL" * 400)[1]
+    asyncio.run(server.warm_up(fakes))
+    assert server.crisis_audio == b"LOCAL" * 400
+    assert server.fallback_audio == b"LOCAL" * 400
+    assert chat.clean_for_speech(server.crisis_message) in local_said
+    assert fakes.spoken == []   # the main voice (maybe ElevenLabs) was never asked
+
+
+def test_a_live_crisis_message_uses_the_local_voice_too(fakes, monkeypatch):
+    local_said = []
+    fakes.speak_local = lambda text: (local_said.append(text), audio_for(text))[1]
+    queue = asyncio.Queue()
+
+    async def run():
+        await server.synthesize(["Please talk to someone you trust."], queue, local=True)
+        return [await queue.get(), await queue.get()]
+
+    first, end = asyncio.run(run())
+    assert local_said == ["Please talk to someone you trust."]
+    assert fakes.spoken == [] and end is None

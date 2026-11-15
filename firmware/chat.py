@@ -12,14 +12,17 @@ Smoke test (needs firmware/.env and a downloaded voice):
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import subprocess
 import sys
 import threading
+import time
 import wave
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 
@@ -90,6 +93,11 @@ class Config:
     voice: str = "en_US-amy-medium"
     models_dir: Path = _HERE / "models"
     crisis_helpline: str = crisis.DEFAULT_HELPLINE   # the local crisis line sentence (Finland unless set)
+    # The voice: "piper" (on this computer) or "elevenlabs" (reply text goes to ElevenLabs).
+    tts: str = "piper"
+    elevenlabs_api_key: str = field(default="", repr=False)
+    elevenlabs_voice_id: str = ""
+    elevenlabs_model: str = "eleven_flash_v2_5"   # their low-latency model
 
 
 def load_config() -> Config:
@@ -97,6 +105,9 @@ def load_config() -> Config:
     from dotenv import load_dotenv
 
     load_dotenv(_HERE / ".env", override=False)
+    # The web app keeps its ElevenLabs key in the project's own .env; read it too, so
+    # one key serves both. firmware/.env wins where both set the same thing.
+    load_dotenv(_HERE.parent / ".env", override=False)
     env = os.environ
     return Config(
         gemini_api_key=env.get("GEMINI_API_KEY", "").strip(),
@@ -104,6 +115,10 @@ def load_config() -> Config:
         whisper_model=env.get("SALUS_WHISPER_MODEL") or Config.whisper_model,
         voice=env.get("SALUS_VOICE") or Config.voice,
         crisis_helpline=env.get("SALUS_CRISIS_HELPLINE", "").strip() or crisis.DEFAULT_HELPLINE,
+        tts=(env.get("SALUS_TTS", "").strip().lower() or Config.tts),
+        elevenlabs_api_key=env.get("ELEVENLABS_API_KEY", "").strip(),
+        elevenlabs_voice_id=env.get("ELEVENLABS_VOICE_ID", "").strip(),
+        elevenlabs_model=env.get("ELEVENLABS_MODEL", "").strip() or Config.elevenlabs_model,
     )
 
 
@@ -314,6 +329,121 @@ class Speaker:
         return resample_pcm16(pcm, chunks[0].sample_rate, SAMPLE_RATE)
 
 
+# ---------------------------------------------------------------- ElevenLabs
+
+ELEVENLABS_API = "https://api.elevenlabs.io"
+_ELEVENLABS_TIMEOUT_S = 8      # one sentence; slower than this and Piper says it instead
+_ELEVENLABS_COOLDOWN_S = 60    # after a failure, Piper only for this long, so every sentence is not a wait
+
+
+class ElevenLabsError(RuntimeError):
+    """ElevenLabs could not speak a sentence. The message never contains the key."""
+
+
+def _https(method: str, url: str, key: str, body: dict | None = None, timeout: float = _ELEVENLABS_TIMEOUT_S):
+    """One request to ElevenLabs: (status, bytes). httpx brings its own certificates."""
+    import httpx
+
+    headers = {"xi-api-key": key}
+    if body is not None:
+        headers["Content-Type"] = "application/json"
+    response = httpx.request(method, url, headers=headers, content=json.dumps(body) if body is not None else None,
+                             timeout=timeout)
+    return response.status_code, response.content
+
+
+def _elevenlabs_problem(status: int, data: bytes, key: str) -> str:
+    """A short reason from an ElevenLabs error answer, with the key taken out just in case."""
+    try:
+        detail = json.loads(data).get("detail")
+        reason = detail.get("message") if isinstance(detail, dict) else detail
+    except (ValueError, AttributeError):
+        reason = None
+    text = f"ElevenLabs answered {status}" + (f": {reason}" if reason else "")
+    return text.replace(key, "<key>") if key else text
+
+
+class ElevenLabsSpeaker:
+    """Text -> 16 kHz s16le mono PCM, made by ElevenLabs. The text leaves this computer."""
+
+    def __init__(self, api_key: str, voice_id: str, model: str = Config.elevenlabs_model, request=_https):
+        self._key = api_key
+        self._voice_id = voice_id
+        self._model = model
+        self._request = request
+
+    def __repr__(self) -> str:
+        return f"ElevenLabsSpeaker(voice_id={self._voice_id!r}, model={self._model!r})"   # never the key
+
+    def speak(self, text: str) -> bytes:
+        url = f"{ELEVENLABS_API}/v1/text-to-speech/{self._voice_id}?output_format=pcm_16000"
+        status, data = self._request("POST", url, self._key, {"text": text, "model_id": self._model})
+        if status != 200:
+            raise ElevenLabsError(_elevenlabs_problem(status, data, self._key))
+        return data[: len(data) // 2 * 2]   # raw 16 kHz 16-bit mono: what the robot plays
+
+
+class SpeakerWithBackup:
+    """Speak with `primary` (ElevenLabs); any sentence it cannot do is spoken by `backup` (Piper).
+
+    After a failure the primary is left alone for `cooldown` seconds, so a dead
+    connection or used-up credit costs one wait, not one per sentence."""
+
+    def __init__(self, primary, backup, cooldown: float = _ELEVENLABS_COOLDOWN_S, clock=time.monotonic):
+        self._primary = primary
+        self._backup = backup
+        self._cooldown = cooldown
+        self._clock = clock
+        self._resume_at = 0.0
+
+    def speak(self, text: str) -> bytes:
+        if self._clock() >= self._resume_at:
+            try:
+                pcm = self._primary(text)
+                if pcm:
+                    return pcm
+            except Exception as error:
+                print(f"[chat] {type(error).__name__}: {error}. Using Piper for the next {self._cooldown:g} s.")
+                self._resume_at = self._clock() + self._cooldown
+        return self._backup(text)
+
+
+def make_speaker(cfg: Config) -> tuple[Callable[[str], bytes], Callable[[str], bytes], list[str]]:
+    """(speak, speak_local, problems). speak_local is always Piper: the crisis message
+    and the apology use it, so they never wait on the internet."""
+    piper = Speaker(cfg.voice, cfg.models_dir)
+    if cfg.tts != "elevenlabs":
+        return piper.speak, piper.speak, []
+    missing = [name for name, value in (("ELEVENLABS_API_KEY", cfg.elevenlabs_api_key),
+                                        ("ELEVENLABS_VOICE_ID", cfg.elevenlabs_voice_id)) if not value]
+    if missing:
+        return piper.speak, piper.speak, [f"SALUS_TTS=elevenlabs but {' and '.join(missing)} is not set: using Piper"]
+    eleven = ElevenLabsSpeaker(cfg.elevenlabs_api_key, cfg.elevenlabs_voice_id, cfg.elevenlabs_model)
+    return SpeakerWithBackup(eleven.speak, piper.speak).speak, piper.speak, []
+
+
+def find_voices(key: str, name: str, request=_https) -> list[dict]:
+    """ElevenLabs voices called `name`: in the account first, then the public library."""
+    from urllib.parse import urlencode
+
+    found = []
+    for where, path, query in (("your voices", "/v2/voices", {"search": name, "page_size": 20}),
+                               ("voice library", "/v1/shared-voices", {"search": name, "page_size": 20})):
+        status, data = request("GET", f"{ELEVENLABS_API}{path}?{urlencode(query)}", key, None, 20)
+        if status != 200:
+            raise ElevenLabsError(_elevenlabs_problem(status, data, key))
+        for voice in json.loads(data).get("voices", []):
+            labels = voice.get("labels") or {}
+            found.append({
+                "where": where,
+                "name": voice.get("name"),
+                "voice_id": voice.get("voice_id"),
+                "accent": voice.get("accent") or labels.get("accent"),
+                "language": voice.get("language") or labels.get("language"),
+            })
+    return found
+
+
 # ---------------------------------------------------------------- command line
 
 
@@ -322,8 +452,19 @@ def _main() -> int:
     parser.add_argument("text", nargs="?", help="what to say to Salus")
     parser.add_argument("--wav", metavar="PATH", help="also write the spoken reply to this WAV file")
     parser.add_argument("--download-voice", action="store_true", help="download the configured Piper voice")
+    parser.add_argument("--find-voice", metavar="NAME", help="look up an ElevenLabs voice's ID by name")
     args = parser.parse_args()
     cfg = load_config()
+
+    if args.find_voice:
+        if not cfg.elevenlabs_api_key:
+            parser.error("ELEVENLABS_API_KEY is not set (firmware/.env or the project's .env)")
+        voices = find_voices(cfg.elevenlabs_api_key, args.find_voice)
+        for v in voices:
+            print(f"{v['where']:13}  {v['name']}  |  {v['voice_id']}  |  accent: {v['accent']}  |  language: {v['language']}")
+        if not voices:
+            print(f"No ElevenLabs voice called {args.find_voice!r} was found.")
+        return 0
 
     if args.download_voice:
         cfg.models_dir.mkdir(parents=True, exist_ok=True)
@@ -337,7 +478,10 @@ def _main() -> int:
         reply = Chatter(cfg.gemini_api_key, cfg.gemini_model).respond([], args.text)
     print(reply)
     if args.wav:
-        pcm = Speaker(cfg.voice, cfg.models_dir).speak(clean_for_speech(reply))
+        speak, _, problems = make_speaker(cfg)
+        for problem in problems:
+            print(f"[chat] {problem}", file=sys.stderr)
+        pcm = speak(clean_for_speech(reply))
         with wave.open(args.wav, "wb") as wav:
             wav.setnchannels(1)
             wav.setsampwidth(2)

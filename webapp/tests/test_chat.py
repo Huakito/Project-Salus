@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import re
 import subprocess
 import sys
@@ -255,7 +256,8 @@ def test_building_a_transcriber_does_not_load_a_model(monkeypatch):
 
 # ------------------------------------------------------------------- load_config
 
-CONFIG_VARS = ["GEMINI_API_KEY", "GEMINI_MODEL", "SALUS_WHISPER_MODEL", "SALUS_VOICE", "SALUS_CRISIS_HELPLINE"]
+CONFIG_VARS = ["GEMINI_API_KEY", "GEMINI_MODEL", "SALUS_WHISPER_MODEL", "SALUS_VOICE", "SALUS_CRISIS_HELPLINE",
+               "SALUS_TTS", "ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID", "ELEVENLABS_MODEL"]
 
 
 @pytest.fixture
@@ -581,3 +583,101 @@ def test_the_prompt_forbids_mood_quizzes_and_scoring_feelings():
     # CLAUDE.md invariant 2: mood is only ever scored by validated questionnaires, never by the model.
     assert "Never make a quiz, test or questionnaire about their mood" in chat.SYSTEM_PROMPT
     assert "never score or rate how they feel" in chat.SYSTEM_PROMPT
+
+
+# ------------------------------------------------------------------- ElevenLabs voice
+
+KEY = "sk_test_secret_key"
+
+
+class FakeElevenLabs:
+    def __init__(self, status=200, data=b"\x01\x02" * 800):
+        self.status, self.data, self.calls = status, data, []
+
+    def __call__(self, method, url, key, body=None, timeout=None):
+        self.calls.append({"method": method, "url": url, "key": key, "body": body})
+        return self.status, self.data
+
+
+def test_elevenlabs_is_asked_for_the_robots_audio_format():
+    fake = FakeElevenLabs(data=b"\x01\x02\x03")   # an odd byte at the end is dropped
+    speaker = chat.ElevenLabsSpeaker(KEY, "voice123", "eleven_flash_v2_5", request=fake)
+    assert speaker.speak("Hello there.") == b"\x01\x02"
+    call = fake.calls[0]
+    assert call["method"] == "POST"
+    assert call["url"] == "https://api.elevenlabs.io/v1/text-to-speech/voice123?output_format=pcm_16000"
+    assert call["body"] == {"text": "Hello there.", "model_id": "eleven_flash_v2_5"}
+    assert call["key"] == KEY
+
+
+def test_an_elevenlabs_error_explains_itself_without_the_key():
+    body = json.dumps({"detail": {"status": "quota_exceeded", "message": f"Out of credit for {KEY}"}}).encode()
+    speaker = chat.ElevenLabsSpeaker(KEY, "voice123", request=FakeElevenLabs(401, body))
+    with pytest.raises(chat.ElevenLabsError) as caught:
+        speaker.speak("Hello.")
+    assert "401" in str(caught.value) and "Out of credit" in str(caught.value)
+    assert KEY not in str(caught.value)
+    assert KEY not in repr(speaker)
+
+
+def test_piper_speaks_whatever_elevenlabs_cannot_and_elevenlabs_rests_for_a_while():
+    now = [0.0]
+    calls = []
+
+    def eleven(text):
+        calls.append(("eleven", text))
+        if text == "fails":
+            raise chat.ElevenLabsError("ElevenLabs answered 503")
+        return b"EL"
+
+    def piper(text):
+        calls.append(("piper", text))
+        return b"PI"
+
+    speaker = chat.SpeakerWithBackup(eleven, piper, cooldown=60, clock=lambda: now[0])
+    assert speaker.speak("one") == b"EL"
+    assert speaker.speak("fails") == b"PI"           # that sentence is still spoken
+    now[0] = 30
+    assert speaker.speak("two") == b"PI"             # resting: ElevenLabs is not even tried
+    now[0] = 61
+    assert speaker.speak("three") == b"EL"           # and back again after the rest
+    assert ("eleven", "two") not in calls
+
+
+def test_piper_is_the_voice_unless_elevenlabs_is_chosen_and_set_up(clean_env, monkeypatch):
+    speak, local, problems = chat.make_speaker(chat.load_config())
+    assert speak == local and problems == []          # default: Piper only, nothing leaves the computer
+
+    monkeypatch.setenv("SALUS_TTS", "elevenlabs")
+    speak, local, problems = chat.make_speaker(chat.load_config())
+    assert speak == local
+    assert problems == ["SALUS_TTS=elevenlabs but ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID is not set: using Piper"]
+
+    monkeypatch.setenv("ELEVENLABS_API_KEY", KEY)
+    monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice123")
+    config = chat.load_config()
+    speak, local, problems = chat.make_speaker(config)
+    assert speak != local and problems == []          # ElevenLabs, with Piper kept for the crisis message
+    assert KEY not in repr(config)
+
+
+def test_the_elevenlabs_key_can_live_in_the_projects_own_env_file(clean_env):
+    (clean_env.parent / ".env").write_text(f"ELEVENLABS_API_KEY={KEY}\nELEVENLABS_VOICE_ID=voice123\n")
+    try:
+        config = chat.load_config()
+    finally:
+        (clean_env.parent / ".env").unlink()
+    assert config.elevenlabs_api_key == KEY and config.elevenlabs_voice_id == "voice123"
+
+
+def test_voices_are_found_by_name_in_the_account_and_the_library():
+    def fake(method, url, key, body=None, timeout=None):
+        if "/v2/voices" in url:
+            return 200, json.dumps({"voices": [{"name": "Valory", "voice_id": "mine1",
+                                                "labels": {"accent": "british"}}]}).encode()
+        return 200, json.dumps({"voices": [{"name": "Valory", "voice_id": "lib1", "accent": "british",
+                                            "language": "en"}]}).encode()
+
+    found = chat.find_voices(KEY, "valory", request=fake)
+    assert [(v["where"], v["voice_id"], v["accent"]) for v in found] == [
+        ("your voices", "mine1", "british"), ("voice library", "lib1", "british")]
