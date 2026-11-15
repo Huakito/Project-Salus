@@ -44,6 +44,14 @@ class DemoCalendar:
             for row in rows
         ]
 
+    def add(self, title: str, starts_at: datetime, source: str = "conversation") -> dict[str, str]:
+        with self._connect() as db:
+            cursor = db.execute(
+                "INSERT INTO calendar_events (title, starts_at, kind, source) VALUES (?, ?, 'personal', ?)",
+                (title, starts_at.astimezone(timezone.utc).isoformat(), source),
+            )
+        return {"id": str(cursor.lastrowid), "title": title, "starts_at": starts_at.isoformat(), "kind": "personal", "source": source}
+
     def question(self) -> dict[str, str] | None:
         events = self.upcoming(1)
         if not events:

@@ -4,6 +4,7 @@
 import { checkFace, drawFace, drawVolume, rgb565, rgb565ToCss } from "./face.js";
 import "./movement-game.js";
 import "./floating-screen.js";
+import "./journal.js";
 
 async function loadDemoCalendar() {
   const container = document.getElementById("calendar-events");

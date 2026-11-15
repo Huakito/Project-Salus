@@ -19,6 +19,7 @@
         <nav class="main-nav" aria-label="Main sections" role="tablist">
           <button class="nav-tab active" id="home-tab" type="button" role="tab" data-view="home" aria-controls="stage" aria-selected="true">Home</button>
           <button class="nav-tab" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="false" tabindex="-1">Movement</button>
+          <button class="nav-tab" id="journal-tab" type="button" role="tab" data-view="journal" aria-controls="journal-view" aria-selected="false" tabindex="-1">Journal</button>
         </nav>
         <div class="link">
           <p class="mic-note" id="mic-note" role="status" hidden></p>
@@ -145,6 +146,33 @@
             <span id="floating-screen-status" role="status" aria-live="polite">Live</span>
           </div>
         </aside>
+      </main>
+
+      <main class="journal-view" id="journal-view" role="tabpanel" aria-labelledby="journal-tab" hidden>
+        <section class="journal-panel">
+          <p class="eyebrow">Private and local</p>
+          <h2>Your journal</h2>
+          <form id="journal-form">
+            <label for="journal-entry">Write something down</label>
+            <textarea id="journal-entry" rows="5" placeholder="What happened today?"></textarea>
+            <button class="button primary" type="submit">Save entry</button>
+            <span id="journal-save-status" role="status"></span>
+          </form>
+          <div id="journal-entries" class="journal-entries"></div>
+        </section>
+        <section class="journal-panel journal-chat">
+          <p class="eyebrow">Talk with Salus</p>
+          <h2>Conversation</h2>
+          <p class="privacy-note">Salus can refer to journal entries and add an event when you say, for example, “Add coffee with Alex tomorrow at 3pm.”</p>
+          <div id="journal-messages" class="journal-messages" aria-live="polite"></div>
+          <form id="journal-chat-form" class="journal-chat-form">
+            <label class="sr-only" for="journal-chat-input">Message Salus</label>
+            <input id="journal-chat-input" autocomplete="off" placeholder="Say something or add a calendar event…">
+            <button class="button" id="journal-mic" type="button">Talk</button>
+            <button class="button primary" type="submit">Send</button>
+          </form>
+          <p id="journal-chat-status" role="status"></p>
+        </section>
       </main>
 
       <main class="stage" id="stage" role="tabpanel" aria-labelledby="home-tab">

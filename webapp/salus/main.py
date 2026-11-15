@@ -6,8 +6,9 @@ import logging
 import os
 import json
 import threading
+import re
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urlsplit
@@ -34,6 +35,7 @@ from .contract import DEFAULT_PATH, Contract, ContractError, load_contract
 from .face import FaceError, check_face, rgb565
 from .feedback import FeedbackService
 from .memory import HistoryStore
+from .journal import JournalStore
 from .voice import ElevenLabsVoice, MAX_SPEECH_CHARS, VoiceError
 
 log = logging.getLogger("salus")
@@ -101,6 +103,16 @@ class VoiceRequest(BaseModel):
     text: str = Field(min_length=1, max_length=MAX_SPEECH_CHARS)
 
 
+class JournalEntryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    body: str = Field(min_length=1, max_length=5000)
+
+
+class JournalChatRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    message: str = Field(min_length=1, max_length=1000)
+
+
 class SettingsRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     spoken_guidance: bool | None = None
@@ -164,6 +176,7 @@ def create_app(
         return voice_service
     history = HistoryStore(session_dir, Path(__file__).with_name("conversation_library.json"))
     calendar = DemoCalendar(session_dir)
+    journal = JournalStore(session_dir)
     screen_lock = threading.Lock()
     screen_state: dict[str, Any] = {
         "kind": "face",
@@ -332,6 +345,41 @@ def create_app(
     @app.get("/api/calendar/events")
     def calendar_events() -> dict:
         return {"connected": True, "source": "demo", "events": calendar.upcoming()}
+
+    @app.get("/api/journal")
+    def journal_entries() -> dict:
+        return {"entries": journal.entries()}
+
+    @app.post("/api/journal")
+    def add_journal_entry(request: JournalEntryRequest) -> dict:
+        return {"ok": True, "entry": journal.add(request.body)}
+
+    @app.post("/api/journal/chat")
+    def journal_chat(request: JournalChatRequest) -> dict:
+        message = " ".join(request.message.split())
+        event = None
+        # Demo grammar: "add/book/schedule <title> tomorrow [at 3pm]".
+        match = re.search(
+            r"(?:add|book|schedule)\s+(.+?)\s+(today|tomorrow)(?:\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?[.!]?$",
+            message, re.IGNORECASE,
+        )
+        if match:
+            title, day_word, hour_text, minute_text, meridiem = match.groups()
+            hour = int(hour_text or 9)
+            if meridiem:
+                hour = hour % 12 + (12 if meridiem.casefold() == "pm" else 0)
+            start = datetime.now().astimezone().replace(hour=hour, minute=int(minute_text or 0), second=0, microsecond=0)
+            if day_word.casefold() == "tomorrow":
+                start += timedelta(days=1)
+            event = calendar.add(title.strip(), start)
+            response = f"Done — I added {event['title']} to your calendar for {start.strftime('%A at %-I:%M %p')}."
+            follow_up = ""
+            source = "calendar_action"
+        else:
+            context = history.context() + "\n\nJournal entries:\n" + journal.context()
+            reply = feedback_service.check_in_reply("The person is talking with you about their journal.", message, context)
+            response, follow_up, source = reply.message, reply.follow_up, reply.source
+        return {"ok": True, "response": response, "follow_up": follow_up, "source": source, "calendar_event": event}
 
     @app.get("/api/voice/status")
     def voice_status() -> dict:

@@ -661,6 +661,7 @@ const viewTabs = [...document.querySelectorAll("[data-view]")];
 function activateView(tab, moveFocus = false) {
   const view = tab.dataset.view;
   el("play-view").hidden = view !== "play";
+  el("journal-view").hidden = view !== "journal";
   el("stage").hidden = view !== "home";
   el("commands-note").hidden = view !== "home";
   for (const item of viewTabs) {

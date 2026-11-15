@@ -464,6 +464,17 @@ def test_demo_calendar_exposes_events_and_can_prompt_about_one(client, tmp_path)
     assert "Salus prototype" in question["text"]
 
 
+def test_journal_is_seeded_and_conversation_can_add_calendar_event(client):
+    journal = client.get("/api/journal").json()["entries"]
+    assert len(journal) >= 3
+    assert "Salus" in " ".join(entry["body"] for entry in journal)
+
+    reply = client.post("/api/journal/chat", json={"message": "Add dentist tomorrow at 3pm"})
+    assert reply.status_code == 200
+    assert reply.json()["calendar_event"]["title"] == "dentist"
+    assert reply.json()["source"] == "calendar_action"
+
+
 def test_check_in_uses_a_scripted_pause_for_direct_self_harm_language(client):
     response = client.post(
         "/api/check-in",
