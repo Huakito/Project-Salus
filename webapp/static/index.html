@@ -21,6 +21,9 @@
           <button class="nav-tab" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="false" tabindex="-1">Movement</button>
           <button class="nav-tab" id="garden-tab" type="button" role="tab" data-view="garden" aria-controls="garden-view" aria-selected="false" tabindex="-1">Garden</button>
           <button class="nav-tab" id="about-tab" type="button" role="tab" data-view="about" aria-controls="about-view" aria-selected="false" tabindex="-1">About</button>
+          <button class="nav-tab nav-cog" id="settings-tab" type="button" role="tab" data-view="settings" aria-controls="settings-view" aria-selected="false" tabindex="-1" aria-label="Settings" title="Settings">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M10.3 2h3.4l.5 2.6a7.9 7.9 0 0 1 1.9 1.1l2.5-.9 1.7 2.9-2 1.7a8 8 0 0 1 0 2.2l2 1.7-1.7 2.9-2.5-.9a7.9 7.9 0 0 1-1.9 1.1l-.5 2.6h-3.4l-.5-2.6a7.9 7.9 0 0 1-1.9-1.1l-2.5.9-1.7-2.9 2-1.7a8 8 0 0 1 0-2.2l-2-1.7 1.7-2.9 2.5.9a7.9 7.9 0 0 1 1.9-1.1zM12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z"/></svg>
+          </button>
         </nav>
         <div class="link">
           <p class="mic-note" id="mic-note" role="status" hidden></p>
@@ -446,6 +449,30 @@
             <li id="source-2">Mueller TI, Leon AC, Keller MB, et al. Recurrence after recovery from major depressive disorder during 15 years of observational follow-up. <cite>American Journal of Psychiatry</cite>. 1999;156(7):1000&ndash;1006. doi:10.1176/ajp.156.7.1000</li>
           </ol>
         </section>
+      </main>
+
+      <main class="settings-view" id="settings-view" role="tabpanel" aria-labelledby="settings-tab" hidden>
+        <h2 class="settings-title">Settings</h2>
+        <form class="command settings-card" id="wifi-module" aria-labelledby="wifi-title" autocomplete="off" hidden>
+          <div class="command-heading">
+            <h2 id="wifi-title">WiFi</h2>
+            <code class="command-key">wifi_set</code>
+          </div>
+          <p class="hint">The network the robot joins to reach this computer, for the voice chat. 2.4 GHz only: on an iPhone hotspot, turn on Maximise Compatibility and keep the Personal Hotspot screen open while the robot joins. The robot saves this and remembers it, so it is needed only when the network or this computer's address changes.</p>
+          <p class="wifi-now" id="wifi-now" role="status"></p>
+          <div class="wifi-fields">
+            <label for="wifi-ssid">Network name</label>
+            <input id="wifi-ssid" type="text" maxlength="32" spellcheck="false" autocomplete="off" required>
+            <label for="wifi-password">Password</label>
+            <input id="wifi-password" type="password" maxlength="63" autocomplete="off" placeholder="empty for an open network">
+            <label for="wifi-laptop">This computer</label>
+            <input id="wifi-laptop" type="text" maxlength="15" inputmode="decimal" spellcheck="false" autocomplete="off" required placeholder="192.168.1.20">
+          </div>
+          <div class="row">
+            <button class="button" id="wifi-send" type="submit" data-needs-board disabled>Send to robot</button>
+          </div>
+          <p class="result" id="wifi-result" role="status"></p>
+        </form>
       </main>
     </div>
 

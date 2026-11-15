@@ -43,13 +43,14 @@ def test_status(client):
         "mic_muted": False,
         "volume": None,
         "knob": None,
+        "wifi": None,
     }
 
 
 def test_the_page_is_served(client):
     page = client.get("/")
     assert page.status_code == 200
-    assert "<title>Salus" in page.text
+    assert "<title>SALUS" in page.text
 
 
 def test_settings_survive_between_requests(client):
@@ -427,3 +428,57 @@ def test_responses_forbid_loading_anything_from_elsewhere(client):
 def test_the_mode_must_be_one_the_app_knows():
     with pytest.raises(ValueError, match='"real" or "fake"'):
         create_app(mode="pretend")
+
+
+# ---- WiFi: the network the robot joins, sent over USB ----
+
+GOOD_WIFI = {"ssid": "Home 2.4", "password": "correct horse", "laptop": "192.168.1.20"}
+
+
+def test_wifi_settings_are_sent_to_the_board(client):
+    sent = []
+    board = client.app.state.manager
+    original = board.send
+    board.send = lambda key, value="": (sent.append((key, value)), original(key, value))[1]
+
+    answer = client.post("/api/wifi", json=GOOD_WIFI)
+
+    assert answer.status_code == 200
+    assert answer.json() == {"ok": True, "ssid": "Home 2.4", "laptop": "192.168.1.20"}  # no password back
+    assert sent == [("wifi_set", GOOD_WIFI)]
+
+
+def test_an_open_network_needs_no_password(client):
+    answer = client.post("/api/wifi", json={"ssid": "Cafe", "laptop": "10.0.0.5"})
+    assert answer.status_code == 200
+
+
+@pytest.mark.parametrize("change, reason", [
+    ({"password": "short"}, "at least 8"),
+    ({"password": "x" * 64}, "password"),
+    ({"ssid": ""}, "ssid"),
+    ({"ssid": "x" * 33}, "ssid"),
+    ({"ssid": "Caf\u00e9"}, "plain keyboard"),
+    ({"laptop": "not an address"}, "192.168.1.20"),
+    ({"laptop": "127.0.0.1"}, "cannot be reached"),
+    ({"extra": "field"}, "extra"),
+])
+def test_wifi_settings_the_board_cannot_use_are_refused(client, change, reason):
+    answer = client.post("/api/wifi", json={**GOOD_WIFI, **change})
+    assert answer.status_code == 422
+    assert reason in answer.json()["detail"]
+    assert "correct horse" not in answer.text  # the password is never echoed back
+
+
+def test_wifi_set_cannot_skip_the_checks_through_the_generic_command(client):
+    answer = client.post("/api/command", json={"key": "wifi_set", "value": {"ssid": "x", "password": "1"}})
+    assert answer.status_code == 422
+    assert "/api/wifi" in answer.json()["detail"]
+
+
+def test_the_wifi_form_is_filled_in_with_this_computer(client, monkeypatch):
+    monkeypatch.setattr("salus.main.this_computer", lambda: {"ip": "192.168.1.20", "ssid": None})
+    assert client.get("/api/wifi").json() == {
+        "computer": {"ip": "192.168.1.20", "ssid": None},
+        "robot": None,
+    }

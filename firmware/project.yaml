@@ -15,10 +15,15 @@ modules:
 code:
   globals: |
     #include <WiFi.h>
+    #include <Preferences.h>
     #include <lwip/sockets.h>
     #include <freertos/stream_buffer.h>
 
     // ======== EDIT THESE ========
+    // WiFi: the web app's WiFi module (Home tab) sends the network, password and
+    // laptop address over USB, and the board keeps them in its flash. These three
+    // are only the fallback for a board that has never been set up that way; they
+    // can be left empty ("") so no password is committed with this file.
     const char* WIFI_SSID   = "James";       // 2.4 GHz networks only
     const char* WIFI_PASS   = "abcdefgh";                 // open network: no password
     const char* LAPTOP_IP   = "172.20.10.2";    // the laptop running server.py: `ipconfig getifaddr en0` on a Mac, `ip -4 -br addr` on Linux (address only, no port)
@@ -50,6 +55,61 @@ code:
     // Mic audio flows only while the robot listens: not while the laptop thinks and
     // not while the robot talks, so it never hears its own voice.
     // ---------------------------------------------------------------------------
+
+    // ---- WiFi settings, saved on the board (see wifi_set in commands.json) ----
+    Preferences wifiStore;                 // flash storage, namespace "salus"
+    String wifiSsid, wifiPass;             // used by loop() and setup() only
+    char laptopHost[16];                   // read by netTask, written by loop(): under laptopLock
+    portMUX_TYPE laptopLock = portMUX_INITIALIZER_UNLOCKED;
+    volatile bool relink = false;          // the laptop's address changed: netTask reconnects
+    bool screenStale = false;              // redraw the screen even if the scene is the same
+    uint32_t lastJoinAt = 0;               // when joinWifi() last started an attempt
+    volatile uint8_t wifiReason = 0;       // why the last attempt failed (wifi_err_reason_t), 0 once joined
+    const uint32_t WIFI_RETRY_MS = 30000;  // not joined after this long: start a fresh attempt
+
+    void setLaptop(const String& ip) {
+      portENTER_CRITICAL(&laptopLock);
+      strlcpy(laptopHost, ip.c_str(), sizeof(laptopHost));
+      portEXIT_CRITICAL(&laptopLock);
+      relink = true;
+    }
+
+    String laptopAddress() {
+      char copy[sizeof(laptopHost)];
+      portENTER_CRITICAL(&laptopLock);
+      strlcpy(copy, laptopHost, sizeof(copy));
+      portEXIT_CRITICAL(&laptopLock);
+      return String(copy);
+    }
+
+    // What the web app saved, or the defaults at the top of this file.
+    void loadWifiSettings() {
+      wifiStore.begin("salus", true);      // read-only
+      wifiSsid = wifiStore.isKey("ssid") ? wifiStore.getString("ssid") : String(WIFI_SSID);
+      wifiPass = wifiStore.isKey("pass") ? wifiStore.getString("pass") : String(WIFI_PASS);
+      String laptop = wifiStore.isKey("laptop") ? wifiStore.getString("laptop") : String(LAPTOP_IP);
+      wifiStore.end();
+      setLaptop(laptop);
+    }
+
+    // Join the network in wifiSsid (nothing to join if it is empty).
+    void joinWifi() {
+      lastJoinAt = millis();
+      WiFi.disconnect();
+      if (wifiSsid.length()) WiFi.begin(wifiSsid.c_str(), wifiPass.length() ? wifiPass.c_str() : nullptr);
+    }
+
+    // `text` as a JSON string, quotes included (for the wifi event).
+    String jsonText(const String& text) {
+      String out = "\"";
+      for (size_t i = 0; i < text.length(); i++) {
+        char c = text[i];
+        if (c == '"' || c == '\\') { out += '\\'; out += c; }
+        else if ((uint8_t)c < 0x20 || (uint8_t)c > 0x7E) out += '?';
+        else out += c;
+      }
+      return out + "\"";
+    }
 
     enum Convo : uint8_t { CONVO_LISTEN, CONVO_THINK, CONVO_SPEAK };
 
@@ -134,6 +194,11 @@ code:
       uint32_t lastTry = 0;
 
       for (;;) {
+        if (relink) {                    // new laptop address: drop the old connection, try the new one now
+          relink = false;
+          if (linkUp) { client.stop(); linkUp = false; stopReply = true; }
+          lastTry = millis() - 2000;
+        }
         if (linkUp && (!client.connected() || peerClosed(client))) {
           client.stop();
           linkUp = false;
@@ -146,7 +211,11 @@ code:
           }
           lastTry = millis();
           // 5 s: on a busy network one lost packet makes the handshake take seconds.
-          if (!client.connect(LAPTOP_IP, LAPTOP_PORT, 5000)) continue;
+          char host[sizeof(laptopHost)];
+          portENTER_CRITICAL(&laptopLock);
+          strlcpy(host, laptopHost, sizeof(host));
+          portEXIT_CRITICAL(&laptopLock);
+          if (!client.connect(host, LAPTOP_PORT, 5000)) continue;
           client.setNoDelay(true);
           keepAlive(client.fd());
           headGot = 0;
@@ -376,9 +445,10 @@ code:
       screen.clear();
       switch (scene) {
         case SCENE_NO_WIFI:
-          if (!drawFace(String("(-_-)\nwifi...\n") + WIFI_SSID, C_YELLOW)) drawFace("(-_-)\nwifi...", C_YELLOW);
+          if (!wifiSsid.length()) drawFace("(-_-)\nset wifi\nin web app", C_YELLOW);
+          else if (!drawFace(String("(-_-)\nwifi...\n") + wifiSsid, C_YELLOW)) drawFace("(-_-)\nwifi...", C_YELLOW);
           break;
-        case SCENE_NO_LAPTOP: drawFace(String("(o_o)\nno laptop\n") + LAPTOP_IP, C_ORANGE); break;
+        case SCENE_NO_LAPTOP: drawFace(String("(o_o)\nno laptop\n") + laptopAddress(), C_ORANGE); break;
         case SCENE_LISTEN:    drawFace(restFace, restColour); break;
         case SCENE_THINK:     drawFace(String("(o.o)\n") + DOTS[frame % 3], C_CYAN); break;
         case SCENE_SPEAK:     drawFace(frame ? "(^o^)" : "(^-^)", restColour); break;
@@ -450,7 +520,16 @@ code:
 
     WiFi.setHostname("salus-robot");
     WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASS);   // returns at once; netTask waits for it
+    WiFi.persistent(false);             // the settings live in wifiStore, not in the WiFi driver's own copy
+    loadWifiSettings();
+    // Remember why an attempt failed, so the web app can say (201: network not
+    // seen, 15/202/204: password refused, ...). Cleared once the robot has an address.
+    WiFi.onEvent([](arduino_event_id_t, arduino_event_info_t info) {
+      wifiReason = info.wifi_sta_disconnected.reason;
+    }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+    WiFi.onEvent([](arduino_event_id_t, arduino_event_info_t) { wifiReason = 0; },
+                 ARDUINO_EVENT_WIFI_STA_GOT_IP);
+    joinWifi();                         // returns at once; netTask waits for it
     WiFi.setSleep(false);               // WiFi power saving adds delays and gaps to audio
 
     xTaskCreatePinnedToCore(netTask, "salusNet", 6144, nullptr, 2, nullptr, 1);
@@ -478,6 +557,36 @@ code:
         restFace = text;
         restColour = (uint16_t)atechNum(atech_value, "colour", 0xFFFF);
         restVersion++;
+      }
+      atechDone();
+    }
+
+    // ---- the web app's `wifi_set` action (commands.json): save the WiFi, then rejoin ----
+    // Never print the password, here or anywhere else.
+    if (atech_action == "wifi_set") {
+      String ssid = atechJsonString(atech_value, "ssid");
+      String pass = atechJsonString(atech_value, "password");
+      String laptop = atechJsonString(atech_value, "laptop");
+      IPAddress parsed;
+      if (ssid.length() < 1 || ssid.length() > 32) {
+        atechFail("the network name must be 1 to 32 characters");
+      } else if (pass.length() > 0 && (pass.length() < 8 || pass.length() > 63)) {
+        atechFail("the password must be 8 to 63 characters, or empty for an open network");
+      } else if (laptop.length() >= sizeof(laptopHost) || !parsed.fromString(laptop)) {
+        atechFail("the laptop's address must look like 192.168.1.20");
+      } else {
+        wifiStore.begin("salus", false);
+        wifiStore.putString("ssid", ssid);
+        wifiStore.putString("pass", pass);
+        wifiStore.putString("laptop", laptop);
+        wifiStore.end();
+        wifiSsid = ssid;
+        wifiPass = pass;
+        setLaptop(laptop);
+        joinWifi();
+        screenStale = true;
+        Serial.print("[salus] wifi settings saved: ");
+        Serial.println(ssid);
       }
       atechDone();
     }
@@ -585,6 +694,35 @@ code:
       Serial.printf("{\"type\":\"event\",\"payload\":{\"event_type\":\"state\",\"key\":\"volume\",\"value\":%d,\"source\":\"salus\"}}\n", toldVolume * 100 / VOLUME_STEPS);
     }
 
+    // ---- WiFi: not joined yet, so start a fresh attempt every 30 s ----
+    // The driver's own retries can stop after a few failures (an iPhone hotspot
+    // that new devices could not see yet, a 5 GHz band), which left the robot on
+    // "wifi..." until it was sent its settings again. This keeps it trying.
+    if (wifiSsid.length() && WiFi.status() != WL_CONNECTED && millis() - lastJoinAt >= WIFI_RETRY_MS) {
+      Serial.println("[salus] wifi not joined yet, trying again");
+      joinWifi();
+    }
+
+    // ---- tell the web app the WiFi: state, network, the robot's address, the laptop it looks for ----
+    // On every change, and again every 2 s. The password is never sent.
+    static String toldWifi;
+    static uint32_t toldWifiAt = 0, wifiCheckedAt = 0;
+    if (millis() - wifiCheckedAt >= 250) {   // four times a second is plenty
+      wifiCheckedAt = millis();
+      const char* wifiState = !wifiSsid.length() ? "unset"
+                            : WiFi.status() == WL_CONNECTED ? "connected" : "connecting";
+      String ip = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : String();
+      String wifiNow = String("{\"state\":\"") + wifiState + "\",\"ssid\":" + jsonText(wifiSsid) +
+                       ",\"ip\":" + jsonText(ip) + ",\"laptop\":" + jsonText(laptopAddress()) +
+                       ",\"reason\":" + String((int)wifiReason) + "}";
+      if (wifiNow != toldWifi || millis() - toldWifiAt >= 2000) {
+        toldWifi = wifiNow;
+        toldWifiAt = millis();
+        Serial.println(String("{\"type\":\"event\",\"payload\":{\"event_type\":\"state\",\"key\":\"wifi\",\"value\":") +
+                       wifiNow + ",\"source\":\"salus\"}}");
+      }
+    }
+
     // ---- who may send mic audio: listening, not muted, no beep playing ----
     static uint32_t quietFrom = 0;
     if (spk.isPlaying()) quietFrom = millis() + 250;
@@ -641,8 +779,9 @@ code:
     if (scene == SCENE_THINK) frame = (millis() / 400) % 3;
     static uint32_t shownKey = 0xFFFFFFFF;
     uint32_t key = scene | (frame << 4) | (volumeStep << 8) | ((uint32_t)restVersion << 16);
-    if (key != shownKey) {
+    if (key != shownKey || screenStale) {
       shownKey = key;
+      screenStale = false;
       drawScene(scene, frame);
     }
 

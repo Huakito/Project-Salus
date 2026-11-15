@@ -2591,3 +2591,56 @@ body:has(.play-view:not([hidden])) .topbar-inner,
   text-decoration-thickness: 2px;
   text-underline-offset: 0.18em;
 }
+
+/* ---- Home: the WiFi module ---- */
+#wifi-module input[type="password"] {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--edge);
+  border-radius: 0;
+  background: var(--field);
+  color: var(--ink);
+  font: 0.95rem/1.4 var(--font);
+}
+
+.wifi-fields label {
+  margin: 10px 0 4px;
+  font-size: 0.85rem;
+}
+
+.wifi-now {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* ---- Settings: a small cog at the end of the tab bar, and its page ---- */
+.nav-tab.nav-cog {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 10px;
+}
+
+.nav-cog svg {
+  display: block;
+}
+
+.page:has(.settings-view:not([hidden])) {
+  max-width: 1320px;
+  padding: 24px 20px 56px;
+}
+
+.settings-view {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.settings-title {
+  margin-bottom: 16px;
+  font-size: 1.2rem;
+}
+
+.settings-card {
+  width: min(100%, 560px);
+}

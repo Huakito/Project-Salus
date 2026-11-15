@@ -87,9 +87,11 @@ Crisis screening runs on every transcript before Gemini is called
 (`firmware/crisis.py`). If the words match its list of self-harm phrases, the
 robot says a fixed message pointing to a trusted person, a crisis line and the
 emergency number; Gemini is not asked and the words are not kept in the chat
-history. Set `SALUS_CRISIS_HELPLINE` in `firmware/.env` to add the helpline for
-where the robot is used. The phrase list and the message are a first version
-and have not been reviewed by a clinician.
+history. By default the message ends with Finland's crisis line (MIELI,
+09 2525 0111, in Finnish, 24/7) and emergency number (112); set
+`SALUS_CRISIS_HELPLINE` in `firmware/.env` to name the helpline for somewhere
+else instead. The phrase list and the message are a first version and have not
+been reviewed by a clinician.
 
 ## Run the web app
 

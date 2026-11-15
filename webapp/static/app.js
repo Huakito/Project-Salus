@@ -91,6 +91,7 @@ function showStatus() {
 
   followRobotVolume();
   followKnob();
+  showRobotWifi();
 
   let trouble = "";
   if (!status) {
@@ -274,6 +275,7 @@ async function loadCommands() {
   el("volume-module").hidden = !listed("spk_set_volume");
   el("knob-module").hidden = !contract.events.some((event) => event.key === "knob");
   el("lights-module").hidden = !listed("led_colour");
+  el("wifi-module").hidden = !listed("wifi_set");
   note.className = "hint stage-note";
   note.textContent = "Each module wired to the console sends commands listed in commands.json.";
   for (const card of cards) sizes.observe(card);
@@ -649,6 +651,54 @@ el("led-play").addEventListener("click", () => {
 el("led-meter").addEventListener("click", () => {
   send(el("led-meter"), el("led-result"), () => api("/api/command", { key: "led_meter", value: null }));
 });
+
+// ---- WiFi: the network the robot joins, saved on the robot over USB ----
+
+// What the robot last said about its WiFi (it reports every 2 s), in a sentence.
+function showRobotWifi() {
+  const wifi = status?.state === "connected" ? status.wifi : null;
+  let text = "";
+  if (wifi?.state === "connected") {
+    text = `The robot is on ${wifi.ssid} at ${wifi.ip}, looking for this computer at ${wifi.laptop}.`;
+  } else if (wifi?.state === "connecting") {
+    text = `The robot is trying to join ${wifi.ssid ?? "the network"}…`;
+  } else if (wifi?.state === "unset") {
+    text = "The robot has no WiFi saved yet.";
+  }
+  setText(el("wifi-now"), text);
+  el("wifi-now").hidden = !text;
+}
+
+// Fill in what can be found out: this computer's address, and the network's name
+// where the system tells it (recent macOS hides it, so it may need typing).
+async function fillWifiForm() {
+  try {
+    const found = await api("/api/wifi");
+    if (!el("wifi-ssid").value) el("wifi-ssid").value = found.computer?.ssid ?? found.robot?.ssid ?? "";
+    if (!el("wifi-laptop").value) el("wifi-laptop").value = found.computer?.ip ?? "";
+  } catch {
+    // Left for the person to type.
+  }
+}
+
+el("wifi-module").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (el("wifi-send").disabled) return;
+  const request = {
+    ssid: el("wifi-ssid").value.trim(),
+    password: el("wifi-password").value,
+    laptop: el("wifi-laptop").value.trim(),
+  };
+  await send(el("wifi-send"), el("wifi-result"), async () => {
+    await api("/api/wifi", request);
+    el("wifi-password").value = ""; // not kept on the page either
+  });
+  if (el("wifi-result").dataset.kind === "ok") {
+    show(el("wifi-result"), "ok", `Saved on the robot. It is joining ${request.ssid} now.`);
+  }
+});
+
+fillWifiForm();
 
 for (const module of [el("melody-module"), el("volume-module"), el("lights-module"), el("knob-module")]) {
   for (const type of ["mouseenter", "mouseleave", "focusin", "focusout"]) {

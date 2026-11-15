@@ -255,7 +255,7 @@ def test_building_a_transcriber_does_not_load_a_model(monkeypatch):
 
 # ------------------------------------------------------------------- load_config
 
-CONFIG_VARS = ["GEMINI_API_KEY", "GEMINI_MODEL", "SALUS_WHISPER_MODEL", "SALUS_VOICE"]
+CONFIG_VARS = ["GEMINI_API_KEY", "GEMINI_MODEL", "SALUS_WHISPER_MODEL", "SALUS_VOICE", "SALUS_CRISIS_HELPLINE"]
 
 
 @pytest.fixture
@@ -295,6 +295,14 @@ def test_empty_variables_fall_back_to_the_defaults(clean_env, monkeypatch):
     config = chat.load_config()
     assert config.gemini_model == "gemini-3.5-flash-lite"
     assert config.voice == "en_US-amy-medium"
+
+
+def test_the_crisis_helpline_is_finlands_unless_set(clean_env, monkeypatch):
+    assert chat.load_config().crisis_helpline == chat.crisis.DEFAULT_HELPLINE
+    monkeypatch.setenv("SALUS_CRISIS_HELPLINE", "   ")  # blank counts as not set
+    assert chat.load_config().crisis_helpline == chat.crisis.DEFAULT_HELPLINE
+    monkeypatch.setenv("SALUS_CRISIS_HELPLINE", "Call Samaritans on 116 123.")
+    assert chat.load_config().crisis_helpline == "Call Samaritans on 116 123."
 
 
 def test_values_in_the_env_file_are_used(clean_env):
@@ -557,3 +565,19 @@ def test_the_env_template_documents_every_setting():
     text = (FIRMWARE / ".env.example").read_text()
     for name in ("GEMINI_API_KEY", "GEMINI_MODEL", "SALUS_WHISPER_MODEL", "SALUS_VOICE"):
         assert name in text
+
+
+# ------------------------------------------------------------------- fun: jokes, facts, quizzes
+
+
+def test_the_prompt_says_how_to_tell_a_joke_share_a_fact_and_run_a_quiz():
+    prompt = chat.SYSTEM_PROMPT
+    assert "A joke:" in prompt and "Never joke about sadness" in prompt
+    assert "A fun fact:" in prompt and "Only facts you are sure are true" in prompt
+    assert "A quiz:" in prompt and "ONE question per reply" in prompt
+
+
+def test_the_prompt_forbids_mood_quizzes_and_scoring_feelings():
+    # CLAUDE.md invariant 2: mood is only ever scored by validated questionnaires, never by the model.
+    assert "Never make a quiz, test or questionnaire about their mood" in chat.SYSTEM_PROMPT
+    assert "never score or rate how they feel" in chat.SYSTEM_PROMPT

@@ -53,6 +53,23 @@ what made them smile, something they are looking forward to.
 - Acknowledge how they feel before anything else. Never lecture and never rush to fix. \
 Do not dismiss sadness or say things like "just cheer up". Do not be relentlessly cheerful.
 
+Jokes, fun facts and quizzes (only when they ask, or say yes when you offer):
+- A joke: tell ONE short, gentle, clean joke that works out loud, like a pun or a \
+silly riddle, then maybe ask if they want another. Never joke about sadness, mental \
+health, illness, death, bodies, weight, or any group of people.
+- A fun fact: share ONE true, surprising, cheerful fact about animals, space, nature, \
+food or history, in one or two sentences. Only facts you are sure are true; if unsure, \
+pick a different, well-known one. Then maybe ask if they knew it.
+- A quiz: a light trivia quiz about general knowledge, animals, music, food, geography \
+or a topic they choose. Ask ONE question per reply with three answer options, said as \
+"is it A, B, or C?", then wait. When they answer, say kindly whether it was right, give \
+the right answer in a few words, and ask the next question. Five questions, then tell \
+them their score warmly, whatever it is. Celebrate trying, never make a wrong answer \
+feel bad, and stop at once if they want to stop or talk about something else.
+- Never make a quiz, test or questionnaire about their mood, feelings, mental health \
+or wellbeing, and never score or rate how they feel, even if asked. Say that is not \
+something you can do, and offer a fun trivia quiz instead.
+
 Limits:
 - You are a companion, not a therapist or a doctor. Never claim to be one.
 - Never diagnose, never give medical advice, and never tell anyone what medication or \
@@ -72,7 +89,7 @@ class Config:
     whisper_model: str = "small.en"
     voice: str = "en_US-amy-medium"
     models_dir: Path = _HERE / "models"
-    crisis_helpline: str = ""   # a sentence naming the local crisis line, added to the scripted message
+    crisis_helpline: str = crisis.DEFAULT_HELPLINE   # the local crisis line sentence (Finland unless set)
 
 
 def load_config() -> Config:
@@ -86,7 +103,7 @@ def load_config() -> Config:
         gemini_model=env.get("GEMINI_MODEL") or Config.gemini_model,
         whisper_model=env.get("SALUS_WHISPER_MODEL") or Config.whisper_model,
         voice=env.get("SALUS_VOICE") or Config.voice,
-        crisis_helpline=env.get("SALUS_CRISIS_HELPLINE", "").strip(),
+        crisis_helpline=env.get("SALUS_CRISIS_HELPLINE", "").strip() or crisis.DEFAULT_HELPLINE,
     )
 
 

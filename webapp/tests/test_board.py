@@ -182,6 +182,7 @@ def test_status_describes_the_connection(rig):
         "mic_muted": False,
         "volume": None,
         "knob": None,
+        "wifi": None,
     }
 
 
@@ -318,3 +319,18 @@ def test_status_follows_the_volume_the_board_reports(rig):
     assert volume_becomes(100)
     rig.manager.disconnect()
     assert rig.manager.status()["volume"] is None
+
+
+def test_status_reports_the_robots_wifi_but_never_a_password(rig):
+    assert rig.manager.status()["wifi"] is None  # not known until the board says
+    rig.board.emit("wifi", {"state": "connected", "ssid": "Home", "ip": "192.168.1.30",
+                            "laptop": "192.168.1.20", "password": "should not pass"}, "state")
+    for _ in range(200):
+        if rig.manager.status()["wifi"] is not None:
+            break
+        threading.Event().wait(0.01)
+    assert rig.manager.status()["wifi"] == {
+        "state": "connected", "ssid": "Home", "ip": "192.168.1.30", "laptop": "192.168.1.20",
+    }
+    rig.manager.disconnect()
+    assert rig.manager.status()["wifi"] is None

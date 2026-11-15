@@ -26,6 +26,18 @@ MESSAGE = (
     "If you might act on these thoughts, call your emergency number now."
 )
 
+# The helpline sentence added to MESSAGE when SALUS_CRISIS_HELPLINE is not set:
+# Finland. Numbers are written as words so the voice reads them digit by digit.
+# Checked November 2026: MIELI Mental Health Finland's Crisis Helpline is
+# 09 2525 0111, in Finnish, open 24/7 (mieli.fi); 112 is the emergency number.
+# MIELI's English-language phone line closed in 2026, so none is given.
+# Like the rest of this file, not yet reviewed by a clinician.
+DEFAULT_HELPLINE = (
+    "In Finland, the MIELI crisis line is open day and night, in Finnish, on "
+    "zero nine, two five two five, zero one one one. "
+    "In an emergency, call one one two."
+)
+
 # Each line is one way of saying it. They are matched on lower-case text with
 # apostrophes removed and everything else that is not a letter turned into a space.
 _PHRASES = [

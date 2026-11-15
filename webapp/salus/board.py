@@ -24,6 +24,7 @@ from atech.runtime import Action, Event, all_ports, encode_action
 
 from .contract import Contract
 from .fake_board import FakeBoardTransport
+from .wifi import robot_wifi
 
 log = logging.getLogger("salus.board")
 
@@ -211,6 +212,9 @@ class BoardManager:
                 "volume": self._volume(),
                 # The knob's running count of clicks, or None until it has been turned.
                 "knob": self._knob(),
+                # The robot's WiFi (state, network, its address, the laptop it looks for),
+                # or None until the board has said. Never includes the password.
+                "wifi": robot_wifi(self._latest.get("wifi")),
             }
 
     def _volume(self) -> int | None:

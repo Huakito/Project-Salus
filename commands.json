@@ -58,6 +58,14 @@
       "description": "Give the light grid back to the sound level meter.",
       "value": "none",
       "editor": "lights"
+    },
+    {
+      "key": "wifi_set",
+      "label": "WiFi",
+      "description": "Save the WiFi network (2.4 GHz) and the laptop's address on the robot, then reconnect.",
+      "value": "json",
+      "example": { "ssid": "Home", "password": "secret123", "laptop": "192.168.1.20" },
+      "editor": "wifi"
     }
   ],
 
@@ -67,6 +75,7 @@
     { "key": "knob_btn", "type": "button", "description": "1 each time the knob is pushed." },
     { "key": "mic_level", "type": "sensor", "description": "How loud the microphone hears the room, 0 to 32767, every 250 ms." },
     { "key": "mic_muted", "type": "state", "description": "1 while the microphone is muted (knob pushed), 0 while it is on. Sent on change and every 2 s. The page shows a red notice." },
-    { "key": "volume", "type": "state", "description": "Speaker volume as a percentage, 0 to 100. Sent on change and every 2 s, so the page's slider follows the knob." }
+    { "key": "volume", "type": "state", "description": "Speaker volume as a percentage, 0 to 100. Sent on change and every 2 s, so the page's slider follows the knob." },
+    { "key": "wifi", "type": "state", "description": "The robot's WiFi: state, ssid, ip and laptop. On change and every 2 s. Never the password." }
   ]
 }

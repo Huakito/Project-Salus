@@ -72,3 +72,11 @@ def test_the_message_points_to_a_person_and_a_crisis_line():
 def test_the_local_helpline_is_added_when_set():
     assert crisis.message("  Call Samaritans on 116 123.  ").endswith("emergency number now. Call Samaritans on 116 123.")
     assert crisis.message("   ") == crisis.MESSAGE
+
+
+def test_the_default_helpline_is_finlands_crisis_line_and_emergency_number():
+    said = crisis.message(crisis.DEFAULT_HELPLINE)
+    assert said.startswith(crisis.MESSAGE)  # the scripted message is unchanged, the helpline follows it
+    assert "zero nine, two five two five, zero one one one" in said  # MIELI, 09 2525 0111
+    assert "call one one two" in said  # 112
+    assert crisis.DEFAULT_HELPLINE.isascii()

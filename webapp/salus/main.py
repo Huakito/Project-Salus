@@ -34,6 +34,7 @@ from .face import FaceError, check_face, rgb565
 from .feedback import FeedbackService
 from .memory import HistoryStore
 from .garden import GardenStore
+from .wifi import WifiRequest, this_computer
 
 log = logging.getLogger("salus")
 
@@ -257,6 +258,9 @@ def create_app(
         spec = contract().command(request.key)
         if spec is None:
             raise InvalidCommand(f'"{request.key}" is not a command in {contract_path.name}.')
+        if spec.key == "wifi_set":
+            # Only through /api/wifi, which checks the network name, password and address.
+            raise InvalidCommand("Set the WiFi with the WiFi module (POST /api/wifi).")
         try:
             value = spec.check(request.value)
         except ValueError as exc:
@@ -279,6 +283,19 @@ def create_app(
         manager.send("face", value)
         update_screen(kind="face", text=value["text"], colour=request.colour)
         return {"ok": True, **value}
+
+    @app.get("/api/wifi")
+    def wifi_details() -> dict:
+        """What the WiFi form fills itself in with: this computer's address and network name."""
+        return {"computer": this_computer(), "robot": manager.status()["wifi"]}
+
+    @app.post("/api/wifi")
+    def set_wifi(request: WifiRequest) -> dict:
+        """Send the network and the laptop's address to the board. The password is not kept or logged."""
+        if contract().command("wifi_set") is None:
+            raise InvalidCommand(f'There is no "wifi_set" command in {contract_path.name}.')
+        manager.send("wifi_set", request.for_board())
+        return {"ok": True, "ssid": request.ssid, "laptop": request.laptop}
 
     @app.get("/api/screen-state")
     def get_screen_state() -> dict:
