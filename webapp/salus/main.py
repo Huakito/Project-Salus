@@ -113,6 +113,11 @@ class JournalChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=1000)
 
 
+class ConversationContinueRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    quiet_turn: int = Field(default=0, ge=0, le=20)
+
+
 class SettingsRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     spoken_guidance: bool | None = None
@@ -400,6 +405,19 @@ def create_app(
             reply = feedback_service.check_in_reply("The person is talking with you about their journal.", message, context)
             response, follow_up, source = reply.message, reply.follow_up, reply.source
         return {"ok": True, "response": response, "follow_up": follow_up, "source": source, "calendar_event": event}
+
+    @app.post("/api/journal/chat/continue")
+    def continue_journal_chat(request: ConversationContinueRequest) -> dict:
+        events = calendar.upcoming(5)
+        calendar_context = "\n".join(
+            f"- {event['starts_at']}: {event['title']}" for event in events
+        ) or "No upcoming events."
+        context = (
+            history.context() + "\n\nJournal entries:\n" + journal.context()
+            + "\n\nUpcoming calendar events:\n" + calendar_context
+        )
+        reply = feedback_service.conversation_continuation(context, request.quiet_turn)
+        return {"ok": True, "response": reply.message, "source": reply.source}
 
     @app.get("/api/voice/status")
     def voice_status() -> dict:

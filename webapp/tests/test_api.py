@@ -20,8 +20,11 @@ def contract_file(tmp_path):
 
 
 @pytest.fixture
-def client(contract_file):
-    app = create_app(mode="fake", contract_path=contract_file, feedback_service=FeedbackService())
+def client(contract_file, tmp_path):
+    app = create_app(
+        mode="fake", contract_path=contract_file, data_dir=tmp_path / "data",
+        feedback_service=FeedbackService(),
+    )
     # The app only answers to its own address, so the test client must use it.
     with TestClient(app, base_url="http://127.0.0.1:8000") as client:
         assert app.state.manager.wait_for("connected", 2)
@@ -473,6 +476,13 @@ def test_journal_is_seeded_and_conversation_can_add_calendar_event(client):
     assert reply.status_code == 200
     assert reply.json()["calendar_event"]["title"] == "dentist"
     assert reply.json()["source"] == "calendar_action"
+
+
+def test_live_journal_chat_continues_after_silence(client):
+    reply = client.post("/api/journal/chat/continue", json={"quiet_turn": 1})
+    assert reply.status_code == 200
+    assert reply.json()["source"] == "local"
+    assert reply.json()["response"].endswith("?")
 
 
 def test_check_in_uses_a_scripted_pause_for_direct_self_harm_language(client):

@@ -319,3 +319,46 @@ class FeedbackService:
         except Exception as exc:
             log.warning("OpenAI check-in unavailable (%s); using local reply.", type(exc).__name__)
             return fallback
+
+    def conversation_continuation(self, context: str, quiet_turn: int = 0) -> Feedback:
+        """Keep a live conversation moving when the person has not answered yet."""
+        local_lines = (
+            "No rush. You mentioned making busy project days more manageable—what part would you most like to make easier?",
+            "I can keep you company. What is one small thing you would still like from today?",
+            "We can take this somewhere lighter. What have you been enjoying lately?",
+            "I was thinking about the things coming up in your calendar. Is there one you would like to talk through?",
+        )
+        fallback = Feedback(local_lines[quiet_turn % len(local_lines)], "local")
+        if self.client is None:
+            return fallback
+        try:
+            response = self.client.responses.parse(
+                model=self.model,
+                store=False,
+                max_output_tokens=100,
+                input=[
+                    {
+                        "role": "developer",
+                        "content": (
+                            "You are Salus in an ongoing casual voice conversation. The person has been "
+                            "quiet for a few seconds. Keep the conversation alive without guilt, pressure, "
+                            "or saying they ignored you. Write one warm observation followed by one easy, "
+                            "specific question, at most 35 words total. Use a journal or calendar detail "
+                            "when it fits, but do not reveal sensitive detail unexpectedly. Vary the topic "
+                            "from earlier prompts. Never diagnose or sound clinical.\n\n" + companion_personality()
+                        ),
+                    },
+                    {"role": "user", "content": json.dumps({"quiet_turn": quiet_turn, "local_context": context}, separators=(",", ":"))},
+                ],
+                text_format=ModelFeedback,
+            )
+            parsed = response.output_parsed
+            if parsed is None:
+                raise ValueError("The model returned no continuation.")
+            message = " ".join(parsed.message.split())
+            if not message or len(message) > 240 or message.count("?") != 1:
+                raise ValueError("The continuation was outside the accepted shape.")
+            return Feedback(message, "openai")
+        except Exception as exc:
+            log.warning("Conversation continuation unavailable (%s); using local continuation.", type(exc).__name__)
+            return fallback

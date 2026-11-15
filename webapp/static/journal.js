@@ -56,9 +56,39 @@ el("journal-form").addEventListener("submit", async (event) => {
 
 let liveChat = false;
 let recognition = null;
+let silenceTimer = null;
+let quietTurn = 0;
+
+function cancelSilenceFollowUp() {
+  if (silenceTimer) clearTimeout(silenceTimer);
+  silenceTimer = null;
+}
+
+function scheduleSilenceFollowUp() {
+  cancelSilenceFollowUp();
+  if (!liveChat) return;
+  el("journal-chat-status").textContent = "Still here…";
+  silenceTimer = setTimeout(continueConversation, 5000);
+}
+
+async function continueConversation() {
+  if (!liveChat) return;
+  el("journal-chat-status").textContent = "Salus is keeping the conversation going…";
+  try {
+    const reply = await api("/api/journal/chat/continue", { quiet_turn: quietTurn++ });
+    if (!liveChat) return;
+    message("salus", reply.response);
+    await speak(reply.response);
+  } catch (error) {
+    el("journal-chat-status").textContent = error.message;
+  }
+  if (liveChat) startListening();
+}
 
 async function sendMessage(text) {
   if (!text) return;
+  cancelSilenceFollowUp();
+  quietTurn = 0;
   message("person", text);
   el("journal-chat-status").textContent = "Salus is thinking…";
   try {
@@ -85,20 +115,23 @@ function startListening() {
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Recognition) { el("journal-chat-status").textContent = "Speech recognition is not available in this browser."; return; }
   recognition?.abort();
+  cancelSilenceFollowUp();
   recognition = new Recognition();
   recognition.lang = "en-GB";
   recognition.interimResults = false;
+  let heardAnswer = false;
   recognition.onstart = () => { el("journal-chat-status").textContent = "Listening…"; };
   recognition.onresult = (event) => {
+    heardAnswer = true;
     const transcript = event.results[0][0].transcript;
     el("journal-chat-input").value = "";
     sendMessage(transcript);
   };
   recognition.onerror = (event) => {
-    if (liveChat && event.error !== "aborted") {
-      el("journal-chat-status").textContent = "I didn’t catch that. Listening again…";
-      setTimeout(startListening, 500);
-    }
+    if (liveChat && event.error !== "aborted" && event.error !== "no-speech") scheduleSilenceFollowUp();
+  };
+  recognition.onend = () => {
+    if (liveChat && !heardAnswer) scheduleSilenceFollowUp();
   };
   recognition.start();
 }
@@ -108,6 +141,7 @@ el("journal-mic").addEventListener("click", () => {
   el("journal-mic").textContent = liveChat ? "Stop live chat" : "Start live chat";
   if (liveChat) startListening();
   else {
+    cancelSilenceFollowUp();
     recognition?.abort();
     el("journal-chat-status").textContent = "Live chat stopped.";
   }
