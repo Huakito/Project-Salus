@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SALUS</title>
+    <title>Salus</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="style.css">
     <script type="module" src="app.js"></script>
@@ -19,7 +19,7 @@
         <nav class="main-nav" aria-label="Main sections" role="tablist">
           <button class="nav-tab active" id="home-tab" type="button" role="tab" data-view="home" aria-controls="stage" aria-selected="true">Home</button>
           <button class="nav-tab" id="play-tab" type="button" role="tab" data-view="play" aria-controls="play-view" aria-selected="false" tabindex="-1">Movement</button>
-          <button class="nav-tab" id="garden-tab" type="button" role="tab" data-view="garden" aria-controls="garden-view" aria-selected="false" tabindex="-1">Garden</button>
+          <button class="nav-tab" id="journal-tab" type="button" role="tab" data-view="journal" aria-controls="journal-view" aria-selected="false" tabindex="-1">Journal</button>
           <button class="nav-tab" id="about-tab" type="button" role="tab" data-view="about" aria-controls="about-view" aria-selected="false" tabindex="-1">About</button>
         </nav>
         <div class="link">
@@ -55,9 +55,21 @@
             <div class="game-toggles">
               <label class="voice-toggle"><input id="game-voice" type="checkbox" checked> Spoken guidance</label>
               <label class="voice-toggle"><input id="game-checkins" type="checkbox" checked> One spoken check-in</label>
+              <div class="voice-test-row">
+                <button class="button voice-test" id="game-test-voice" type="button">Test voice</button>
+                <span id="game-voice-provider" role="status">Checking voice…</span>
+              </div>
             </div>
           </div>
           <p class="privacy-note">Video stays on this computer and is never saved. Your browser handles speech recognition; only the resulting transcript is used for the reply and stored with the run.</p>
+          <section class="calendar-preview" aria-labelledby="calendar-preview-title">
+            <div class="calendar-preview-heading">
+              <p class="eyebrow" id="calendar-preview-title">Demo calendar</p>
+              <span>Connected</span>
+            </div>
+            <div id="calendar-events"><p>Loading upcoming events…</p></div>
+            <p class="privacy-note">A Google Calendar connection can replace this demo source later.</p>
+          </section>
         </section>
 
         <section class="game-board" id="game-board" aria-label="Hand Signals camera game">
@@ -124,110 +136,52 @@
           </dl>
           <p class="hardware-readout">The square shown here before was a preview of the robot's 3×3 light grid.</p>
         </aside>
+
+        <aside class="floating-screen" id="floating-screen" aria-label="Movable live robot screen">
+          <header class="floating-screen-handle" id="floating-screen-handle" tabindex="0" aria-label="Move robot face window with pointer or arrow keys">
+            <strong>Salus face</strong>
+            <button type="button" id="floating-screen-toggle" aria-label="Minimise robot face window">−</button>
+          </header>
+          <div class="floating-screen-body" id="floating-screen-body">
+            <canvas id="floating-screen-canvas" width="480" height="240" role="img" aria-label="Live robot face"></canvas>
+            <span id="floating-screen-status" role="status" aria-live="polite">Live</span>
+          </div>
+        </aside>
       </main>
 
-      <main class="garden-view" id="garden-view" role="tabpanel" aria-labelledby="garden-tab" hidden>
-        <header class="garden-heading">
-          <div>
-            <p class="eyebrow">A quiet place to return to</p>
-            <h2>Your garden</h2>
-            <p>Walk with WASD or the arrow keys. Click a plant when you are nearby.</p>
-          </div>
-          <div class="garden-day"><span>Garden day</span><strong id="garden-day">—</strong></div>
-        </header>
-
-        <section class="garden-layout">
-          <div class="garden-world" id="garden-world" tabindex="0" aria-label="Walkable garden. Use arrow keys or WASD.">
-            <div class="farm-path path-horizontal" aria-hidden="true"></div>
-            <div class="farm-path path-vertical" aria-hidden="true"></div>
-            <div class="farm-bed bed-one" aria-hidden="true"></div>
-            <div class="farm-bed bed-two" aria-hidden="true"></div>
-            <div class="farm-bed bed-three" aria-hidden="true"></div>
-            <div class="farm-bed bed-four" aria-hidden="true"></div>
-            <div class="farm-prop crate" aria-hidden="true"></div>
-            <div class="farm-prop barrel" aria-hidden="true"></div>
-            <div class="farm-decoration oak oak-left" aria-hidden="true"></div>
-            <div class="farm-decoration oak oak-right" aria-hidden="true"></div>
-            <div class="farm-decoration bush bush-left" aria-hidden="true"></div>
-            <div class="farm-decoration bush bush-right" aria-hidden="true"></div>
-            <div class="farm-decoration flowers flowers-left" aria-hidden="true"></div>
-            <div class="farm-decoration flowers flowers-right" aria-hidden="true"></div>
-            <div class="farm-decoration rock" aria-hidden="true"></div>
-            <div class="farm-decoration hay" aria-hidden="true"></div>
-            <div class="farm-decoration chicken" aria-hidden="true"></div>
-            <div class="spring-prop spring-bench" aria-hidden="true"></div>
-            <div class="spring-prop spring-pot" aria-hidden="true"></div>
-            <div class="spring-prop spring-tulips tulips-one" aria-hidden="true"></div>
-            <div class="spring-prop spring-tulips tulips-two" aria-hidden="true"></div>
-            <div class="spring-prop spring-daffodils daffodils-one" aria-hidden="true"></div>
-            <div class="spring-prop spring-daffodils daffodils-two" aria-hidden="true"></div>
-            <div class="spring-pond" aria-hidden="true">
-              <span class="pond-nw"></span><span class="pond-ne"></span>
-              <span class="pond-sw"></span><span class="pond-se"></span>
+      <main class="journal-view" id="journal-view" role="tabpanel" aria-labelledby="journal-tab" hidden>
+        <section class="journal-panel">
+          <p class="eyebrow">Private and local</p>
+          <h2>Your journal</h2>
+          <section class="journal-calendar" aria-labelledby="journal-calendar-title">
+            <div class="calendar-preview-heading">
+              <h3 id="journal-calendar-title">Calendar</h3>
+              <button class="button small" id="google-calendar-connect" type="button">Connect Google Calendar</button>
             </div>
-            <div class="garden-plot" id="garden-plot" aria-live="polite"></div>
-            <div class="game-character" id="game-character" aria-hidden="true"></div>
-            <div class="robot-follower" id="robot-follower" aria-label="Salus follows you"><img src="favicon.svg" alt=""></div>
-            <div class="game-help">WASD / arrows to move · click nearby plants</div>
-          </div>
-          <aside class="plant-panel" id="plant-panel" aria-label="Garden information and controls">
-            <div class="robot-dialogue" id="robot-dialogue" role="status" aria-live="polite" hidden>
-              <strong>Salus</strong><p id="robot-dialogue-text"></p><button type="button" id="dialogue-close">OK</button>
-            </div>
-            <p class="eyebrow">Plant guide</p>
-            <div id="plant-empty">Choose a plant to see what it needs.</div>
-            <div id="plant-details" hidden>
-              <div class="plant-large" id="plant-large" aria-hidden="true"></div>
-              <h3 id="plant-name"></h3>
-              <p id="plant-about"></p>
-              <p class="plant-state" id="plant-state"></p>
-              <button class="button primary" id="plant-care" type="button"></button>
-              <button class="button quiet" id="plant-tell" type="button">Tell me about it</button>
-              <p class="result" id="garden-result" role="status"></p>
-              <p class="hardware-hint">Robot: turn the knob to choose a plant · press the main button or knob to care for it</p>
-            </div>
-          </aside>
-          <aside class="garden-tools" id="garden-tools" aria-label="Seeds, developer options and garden journal"></aside>
-        </section>
-
-        <section class="care-game" id="care-game" hidden aria-labelledby="care-game-title">
-          <div class="care-game-card">
-            <p class="eyebrow" id="care-game-type">Daily care</p>
-            <h3 id="care-game-title">Care activity</h3>
-            <p id="care-game-copy"></p>
-            <div class="care-stage" id="care-stage"></div>
-            <div class="care-progress" aria-hidden="true"><span id="care-progress"></span></div>
-            <p id="care-game-status" role="status"></p>
-            <button class="button quiet" id="care-cancel" type="button">Not now</button>
-          </div>
-        </section>
-
-        <details class="seed-shelf" id="seed-shelf">
-          <summary>Seed shelf</summary>
-          <div class="section-heading"><div><p class="eyebrow">Seed shelf</p><h3>Add a plant</h3></div></div>
-          <form id="seed-form">
-            <div class="seed-list" id="seed-list"></div>
-            <label>Nickname <input id="plant-nickname" type="text" maxlength="30" placeholder="Optional"></label>
-            <button class="button" type="submit">Plant it</button>
+            <p id="google-calendar-status" role="status"></p>
+            <div id="journal-calendar-events"></div>
+          </section>
+          <form id="journal-form">
+            <label for="journal-entry">Write something down</label>
+            <textarea id="journal-entry" rows="5" placeholder="What happened today?"></textarea>
+            <button class="button primary" type="submit">Save entry</button>
+            <span id="journal-save-status" role="status"></span>
           </form>
-        </details>
-
-        <details class="admin-tools" id="admin-tools">
-          <summary>Developer options</summary>
-          <p>Test progress without waiting for real days.</p>
-          <a class="screen-preview-link" href="screen.html" target="_blank" rel="noopener">Open live robot screen</a>
-          <div class="admin-actions">
-            <button class="button" type="button" data-admin="advance_day">Advance one day</button>
-            <button class="button" type="button" data-admin="grow_all">Grow everything</button>
-            <button class="button" type="button" data-admin="make_due">Make all care due</button>
-            <button class="button" type="button" data-admin="flower_all">Flower everything</button>
-          </div>
-        </details>
-        <details class="garden-journal" id="garden-journal">
-          <summary>Garden journal</summary>
-          <div id="garden-history"></div>
-        </details>
-        <p class="asset-credit">Garden art: Tulipmere Village Lite by Zmuda KI and Cozy Farm Lite by Spaceyyy. Additional plants: SpiderDave, CC0.</p>
+          <div id="journal-entries" class="journal-entries"></div>
+        </section>
+        <section class="journal-panel journal-chat">
+          <p class="eyebrow">Talk with Salus</p>
+          <h2>Conversation</h2>
+          <p class="privacy-note">Salus can refer to journal entries and add an event when you say, for example, “Add coffee with Alex tomorrow at 3pm.”</p>
+          <div id="journal-messages" class="journal-messages" aria-live="polite"></div>
+          <form id="journal-chat-form" class="journal-chat-form">
+            <label class="sr-only" for="journal-chat-input">Message Salus</label>
+            <input id="journal-chat-input" autocomplete="off" placeholder="Say something or add a calendar event…">
+            <button class="button" id="journal-mic" type="button">Start live chat</button>
+            <button class="button primary" type="submit">Send</button>
+          </form>
+          <p id="journal-chat-status" role="status"></p>
+        </section>
       </main>
 
       <main class="stage" id="stage" role="tabpanel" aria-labelledby="home-tab">

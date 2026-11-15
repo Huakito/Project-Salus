@@ -65,7 +65,7 @@
   --alarm-edge: #7a1510;
   --on-alarm: #fff6f2;
   --font: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
-  --mono: var(--font); /* the Movement and Garden tabs ask for this by name */
+  --mono: var(--font); /* the Movement interface asks for this by name */
 }
 
 /* The same palette, deeper, for a computer set to its dark appearance. */
@@ -1766,6 +1766,25 @@ input[type="number"] {
   font-size: 0.86rem;
 }
 
+.voice-test-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.voice-test {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+}
+
+#game-voice-provider {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
 .camera-shell {
   border-color: #30363c;
   border-radius: 16px;
@@ -2591,3 +2610,109 @@ body:has(.play-view:not([hidden])) .topbar-inner,
   text-decoration-thickness: 2px;
   text-underline-offset: 0.18em;
 }
+
+/* Movable live robot display, shown only while the Movement page is open. */
+.floating-screen {
+  position: fixed;
+  z-index: 100;
+  width: 230px;
+  border: 1px solid var(--edge);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 8px 10px 0 rgb(19 42 33 / .28);
+}
+
+.floating-screen.dragging {
+  opacity: .9;
+  box-shadow: 12px 14px 0 rgb(19 42 33 / .22);
+}
+
+.floating-screen-handle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  padding-left: 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--field);
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+
+.floating-screen-handle strong {
+  font-size: .72rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.floating-screen-handle button {
+  align-self: stretch;
+  width: 42px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.1rem;
+}
+
+.floating-screen-body { padding: 10px; }
+
+.floating-screen-body canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border: 8px solid #0e1915;
+  background: #000;
+  image-rendering: pixelated;
+}
+
+.floating-screen-body span {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: .65rem;
+  text-align: right;
+}
+
+.floating-screen-handle:focus-visible {
+  outline: 3px solid var(--note);
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .floating-screen { width: 200px; }
+}
+.calendar-preview {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.calendar-preview-heading, .calendar-event {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+}
+.calendar-preview-heading > span { color: #78dca2; font-size: .8rem; }
+.calendar-event { padding: .55rem 0; border-bottom: 1px solid var(--line); }
+.calendar-event time { color: var(--muted); white-space: nowrap; }
+.calendar-event span { text-align: right; }
+.journal-view { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.journal-view[hidden] { display: none; }
+.journal-panel { border: 1px solid var(--line); background: var(--panel); padding: 1.5rem; min-width: 0; }
+.journal-panel h2 { margin-top: .25rem; }
+.journal-calendar { margin: 1rem 0 1.5rem; padding: 1rem; border: 1px solid var(--line); background: rgba(0,0,0,.1); }
+.journal-calendar h3 { margin: 0; }
+.journal-panel textarea, .journal-chat-form input { width: 100%; }
+.journal-panel form .button { margin-top: .75rem; }
+.journal-entries { display: grid; gap: 1rem; margin-top: 1.5rem; max-height: 58vh; overflow: auto; }
+.journal-entry-card { padding: 1rem; border-left: 3px solid var(--accent); background: rgba(0,0,0,.12); }
+.journal-entry-card time { color: var(--muted); font-size: .85rem; }
+.journal-entry-card p { margin-bottom: 0; }
+.journal-messages { min-height: 340px; max-height: 48vh; overflow: auto; padding: 1rem; background: rgba(0,0,0,.16); display: flex; flex-direction: column; gap: .75rem; }
+.journal-message { max-width: 82%; padding: .75rem 1rem; margin: 0; }
+.journal-message.person { align-self: flex-end; background: var(--accent); color: #102f29; }
+.journal-message.salus { align-self: flex-start; border: 1px solid var(--line); }
+.journal-chat-form { display: grid; grid-template-columns: 1fr auto auto; gap: .5rem; align-items: end; margin-top: 1rem; }
+.journal-chat-form .button { margin: 0; }
+@media (max-width: 800px) { .journal-view { grid-template-columns: 1fr; } .journal-chat-form { grid-template-columns: 1fr 1fr; } .journal-chat-form input { grid-column: 1 / -1; } }

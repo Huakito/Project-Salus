@@ -15,6 +15,8 @@ class HistoryStore:
         self.db_path = data_dir / "salus.db"
         self.doc_path = data_dir / "history.md"
         self.library = json.loads(library_path.read_text(encoding="utf-8"))["questions"]
+        demo_path = Path(__file__).with_name("demo_memories.md")
+        self.demo_memories = demo_path.read_text(encoding="utf-8") if demo_path.exists() else ""
         data_dir.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS check_ins (
@@ -28,6 +30,16 @@ class HistoryStore:
             db.execute("""CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL
             )""")
+            db.execute("""CREATE TABLE IF NOT EXISTS conversation_meta (
+                key TEXT PRIMARY KEY, value TEXT NOT NULL
+            )""")
+            if not db.execute(
+                "SELECT 1 FROM conversation_meta WHERE key='question_stage_v1'"
+            ).fetchone():
+                db.execute(
+                    "INSERT INTO conversation_meta VALUES ('question_stage_v1', ?)",
+                    (datetime.now(timezone.utc).isoformat(),),
+                )
 
     def settings(self) -> dict[str, object]:
         defaults = {"spoken_guidance": True, "spoken_check_ins": True, "robot_colour": "#1a6964"}
@@ -52,18 +64,41 @@ class HistoryStore:
         with self._connect() as db:
             row = db.execute("SELECT summary FROM memory WHERE id=1").fetchone()
             recent = db.execute(
-                "SELECT question, answer FROM check_ins ORDER BY id DESC LIMIT 5"
+                "SELECT question, answer, response FROM check_ins ORDER BY id DESC LIMIT 5"
             ).fetchall()
         summary = row[0] if row else "No saved preferences yet."
-        turns = "\n".join(f"- Q: {q}\n  A: {a}" for q, a in reversed(recent))
-        return f"Saved notes:\n{summary}\n\nRecent answers:\n{turns or 'None yet.'}"[:5000]
+        turns = "\n".join(
+            f"- Salus asked: {question}\n  Person said: {answer}\n  Salus replied: {response}"
+            for question, answer, response in reversed(recent)
+        )
+        return (
+            f"Fictional demo memories:\n{self.demo_memories or 'None.'}\n\n"
+            f"Saved notes:\n{summary}\n\nRecent conversation:\n{turns or 'None yet.'}"
+        )[:5000]
 
-    def next_question(self) -> dict[str, str]:
+    def next_question(self, calendar_question: dict[str, str] | None = None) -> dict[str, str]:
         with self._connect() as db:
             used = {row[0] for row in db.execute(
                 "SELECT question_id FROM check_ins WHERE question_id IS NOT NULL ORDER BY id DESC LIMIT 4"
             )}
-        choices = [item for item in self.library if item["id"] not in used] or self.library
+            conversation_count = db.execute(
+                """SELECT COUNT(*) FROM check_ins
+                   WHERE safety_pause=0 AND recorded_at >= (
+                     SELECT value FROM conversation_meta WHERE key='question_stage_v1'
+                   )"""
+            ).fetchone()[0]
+        if conversation_count < 5:
+            allowed_levels = {"light"}
+        elif conversation_count < 15:
+            allowed_levels = {"light", "familiar"}
+        else:
+            allowed_levels = {"light", "familiar", "reflective"}
+        # Calendar context should feel occasional, not like the robot is reading
+        # the person's diary every time it speaks.
+        if calendar_question and calendar_question["id"] not in used and conversation_count % 3 == 1:
+            return calendar_question
+        level_choices = [item for item in self.library if item.get("level", "light") in allowed_levels]
+        choices = [item for item in level_choices if item["id"] not in used] or level_choices
         return random.choice(choices)
 
     def record(self, *, question_id: str | None, question: str, answer: str, response: str,
